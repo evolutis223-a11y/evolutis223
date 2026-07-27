@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<style>body{margin:0;background:#0d0d0d;font-family:-apple-system,'Segoe UI',sans-serif;}</style>
+</helmet>
+<div style="min-width:1300px;padding:40px;color:#e0e0e0;box-sizing:border-box;position:relative;cursor:crosshair;" onClick="{{ onCanvasClick }}">
+
+  <div style="position:sticky;top:0;z-index:60;background:#ff6a3d;color:#000;padding:10px 16px;border-radius:8px;font-size:12.5px;font-weight:700;margin-bottom:20px;">📍 Cliquez n'importe où sur la page (même sur un écran) pour poser une remarque à cet endroit précis.</div>
+
+  <sc-for list="{{ pinsList }}" as="p" hint-placeholder-count="0">
+    <div style="{{ p.wrapStyle }}" onClick="{{ p.onStop }}">
+      <div style="display:flex;justify-content:space-between;align-items:center;background:#ff6a3d;padding:4px 8px;border-radius:6px 6px 0 0;">
+        <span style="font-size:10px;font-weight:700;color:#000;">Remarque</span>
+        <span onClick="{{ p.onRemove }}" style="cursor:pointer;font-size:12px;color:#000;font-weight:700;">✕</span>
+      </div>
+      <textarea autoFocus="{{ true }}" value="{{ p.text }}" onChange="{{ p.onText }}" placeholder="Votre remarque…" style="width:220px;min-height:70px;background:#1a1a1a;border:1px solid #ff6a3d;border-top:none;border-radius:0 0 6px 6px;color:#fff;font-size:12px;padding:8px;box-sizing:border-box;font-family:inherit;resize:vertical;"></textarea>
+    </div>
+  </sc-for>
+
+  <div style="margin-bottom:24px;">
+    <div style="font-size:10.5px;color:#ff6a3d;text-transform:uppercase;letter-spacing:0.14em;margin-bottom:6px;">EVOLUTIS223 — Catalogue</div>
+    <div style="font-size:22px;font-weight:700;color:#fff;">Parcours de sélection — étape par étape (corrigé)</div>
+    <div style="font-size:12.5px;color:#888;margin-top:4px;">Il y a deux entrées possibles, pas une seule. On repart de zéro proprement.</div>
+  </div>
+
+  <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:14px;">Étape 0 — Point de départ : deux chemins</div>
+  <div style="display:flex;gap:16px;margin-bottom:28px;">
+    <div style="flex:1;background:#141d18;border:1px solid #1c4030;border-radius:8px;padding:20px 22px;">
+      <div style="font-size:10.5px;color:#6ee7b7;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Chemin court — Modèle standard</div>
+      <div style="font-size:12.5px;color:#bfe;line-height:1.7;">Le client choisit un produit déjà fait dans une petite galerie de modèles (visuel + prix déjà fixé). Il envoie son logo (ou plusieurs, si le modèle a plusieurs zones). Rien d'autre à configurer.</div>
+      <div style="font-size:11px;color:#5a9;margin-top:10px;">→ va directement à l'envoi de logo, puis au récapitulatif. Pas de support/zones/finitions à choisir un par un.</div>
+    </div>
+    <div style="flex:1;background:#141414;border:1px solid #333;border-radius:8px;padding:20px 22px;">
+      <div style="font-size:10.5px;color:#ff6a3d;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Chemin long — Configuration à la carte</div>
+      <div style="font-size:12.5px;color:#ccc;line-height:1.7;">Le client (ou vendeur) ne veut aucun des modèles proposés → construit son article de A à Z : support, zones de marquage, finitions, taille/quantité, livraison.</div>
+      <div style="font-size:11px;color:#888;margin-top:10px;">→ c'est ce parcours-là qu'on détaillait avant (Support = étape 1 de CE chemin, pas de l'ensemble).</div>
+    </div>
+  </div>
+
+  <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:14px;">Chemin court — détail (ordre corrigé)</div>
+  <div style="display:flex;flex-direction:column;gap:0;margin-bottom:28px;">
+
+    <div style="display:flex;gap:16px;align-items:stretch;">
+      <div style="width:40px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#10b981;color:#022c22;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">1</div>
+        <div style="width:2px;flex:1;background:#1c4030;margin-top:4px;"></div>
+      </div>
+      <div style="flex:1;background:#141d18;border:1px solid #1c4030;border-radius:8px;padding:14px 18px;margin-bottom:10px;">
+        <div style="font-size:12.5px;font-weight:700;color:#6ee7b7;margin-bottom:4px;">Choix du modèle</div>
+        <div style="font-size:12px;color:#bfe;line-height:1.6;">Galerie de modèles déjà faits (visuel + gamme de prix indicative).</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:16px;align-items:stretch;">
+      <div style="width:40px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#10b981;color:#022c22;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">2</div>
+        <div style="width:2px;flex:1;background:#1c4030;margin-top:4px;"></div>
+      </div>
+      <div style="flex:1;background:#141d18;border:1px solid #1c4030;border-radius:8px;padding:14px 18px;margin-bottom:10px;">
+        <div style="font-size:12.5px;font-weight:700;color:#6ee7b7;margin-bottom:4px;">Taille (+ quantité par taille)</div>
+        <div style="font-size:12px;color:#bfe;line-height:1.6;">Choisie avant la couleur — logique côté vente : on fixe d'abord combien / quelle taille.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:16px;align-items:stretch;">
+      <div style="width:40px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#10b981;color:#022c22;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">3</div>
+        <div style="width:2px;flex:1;background:#1c4030;margin-top:4px;"></div>
+      </div>
+      <div style="flex:1;background:#141d18;border:1px solid #1c4030;border-radius:8px;padding:14px 18px;margin-bottom:10px;">
+        <div style="font-size:12.5px;font-weight:700;color:#6ee7b7;margin-bottom:4px;">Couleur &amp; type de support</div>
+        <div style="font-size:12px;color:#bfe;line-height:1.6;">Couleur du vêtement + type (ex : polo classique vs col zippé, coupe...). Reste dans les options prévues par le modèle, pas de configuration libre.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:16px;align-items:stretch;">
+      <div style="width:40px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#10b981;color:#022c22;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">4</div>
+        <div style="width:2px;flex:1;background:#1c4030;margin-top:4px;"></div>
+      </div>
+      <div style="flex:1;background:#141d18;border:1px solid #1c4030;border-radius:8px;padding:14px 18px;margin-bottom:10px;">
+        <div style="font-size:12.5px;font-weight:700;color:#6ee7b7;margin-bottom:4px;">Envoi du logo</div>
+        <div style="font-size:12px;color:#bfe;line-height:1.6;">Le client dépose son fichier logo (une zone de dépôt par emplacement prévu dans le modèle).</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:16px;align-items:stretch;">
+      <div style="width:40px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#10b981;color:#022c22;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">5</div>
+        <div style="width:2px;flex:1;background:#1c4030;margin-top:4px;"></div>
+      </div>
+      <div style="flex:1;background:#141d18;border:1px solid #1c4030;border-radius:8px;padding:14px 18px;margin-bottom:10px;">
+        <div style="font-size:12.5px;font-weight:700;color:#6ee7b7;margin-bottom:4px;">Présentation avec son logo</div>
+        <div style="font-size:12px;color:#bfe;line-height:1.6;">Rendu visuel généré : le modèle choisi, dans la couleur choisie, avec le logo du client positionné à l'emplacement prévu.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:16px;align-items:stretch;">
+      <div style="width:40px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#10b981;color:#022c22;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">6</div>
+        <div style="width:2px;flex:1;background:#1c4030;margin-top:4px;"></div>
+      </div>
+      <div style="flex:1;background:#141d18;border:1px solid #1c4030;border-radius:8px;padding:14px 18px;margin-bottom:10px;">
+        <div style="font-size:12.5px;font-weight:700;color:#6ee7b7;margin-bottom:4px;">Affichage du prix</div>
+        <div style="font-size:12px;color:#bfe;line-height:1.6;">Prix total calculé (modèle × taille/quantité), affiché avant validation.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:16px;align-items:stretch;">
+      <div style="width:40px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#10b981;color:#022c22;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">7</div>
+        <div style="width:2px;flex:1;background:#1c4030;margin-top:4px;"></div>
+      </div>
+      <div style="flex:1;background:#141d18;border:1px solid #1c4030;border-radius:8px;padding:14px 18px;margin-bottom:10px;">
+        <div style="font-size:12.5px;font-weight:700;color:#6ee7b7;margin-bottom:4px;">Validation</div>
+        <div style="font-size:12px;color:#bfe;line-height:1.6;">Le client confirme — la ligne d'affaire est créée, figée avec sa config (modèle, taille, couleur, logo, prix).</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:16px;align-items:stretch;">
+      <div style="width:40px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#10b981;color:#022c22;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">8</div>
+        <div style="width:2px;flex:1;background:#1c4030;margin-top:4px;"></div>
+      </div>
+      <div style="flex:1;background:#141d18;border:1px solid #1c4030;border-radius:8px;padding:14px 18px;margin-bottom:10px;">
+        <div style="font-size:12.5px;font-weight:700;color:#6ee7b7;margin-bottom:4px;">Paiement</div>
+        <div style="font-size:12px;color:#bfe;line-height:1.6;">Enregistrement du règlement (total ou acompte) — même logique que le module Règlements existant.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:16px;align-items:stretch;">
+      <div style="width:40px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#10b981;color:#022c22;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">9</div>
+      </div>
+      <div style="flex:1;background:#141d18;border:1px solid #1c4030;border-radius:8px;padding:14px 18px;">
+        <div style="font-size:12.5px;font-weight:700;color:#6ee7b7;margin-bottom:4px;">Livraison</div>
+        <div style="font-size:12px;color:#bfe;line-height:1.6;">Mode (retrait / livraison), adresse du client si livraison, et date de livraison annoncée.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="background:#0d1810;border:1px solid #1c4030;border-radius:8px;padding:12px 20px;margin-bottom:32px;">
+    <div style="font-size:11.5px;color:#6ee7b7;">✓ Chemin court validé — 9 étapes actées.</div>
+  </div>
+
+  <div style="height:1px;background:#333;margin-bottom:32px;"></div>
+
+  <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px;">Chemin long — configuration à la carte (polo &amp; t-shirt)</div>
+  <div style="font-size:12.5px;color:#888;margin-bottom:24px;">Un seul point à la fois. On reste sur le point 1 tant qu'il n'est pas validé.</div>
+
+  <div style="display:flex;gap:8px;margin-bottom:24px;">
+    <div style="padding:6px 14px;border-radius:999px;background:#ff6a3d;color:#000;font-size:11.5px;font-weight:700;">Point 1 · Support</div>
+    <div style="padding:6px 14px;border-radius:999px;background:#1a1a1a;color:#555;font-size:11.5px;">Point 2 · à venir</div>
+    <div style="padding:6px 14px;border-radius:999px;background:#1a1a1a;color:#555;font-size:11.5px;">Point 3 · à venir</div>
+  </div>
+
+  <div style="background:#141414;border:1px solid #333;border-radius:8px;padding:20px 22px;margin-bottom:16px;">
+    <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;">Point 1 — Support (polo &amp; t-shirt uniquement, rien d'autre)</div>
+    <div style="font-size:12px;color:#ccc;line-height:1.7;margin-bottom:14px;">Ce que le client/vendeur choisit pour définir le vêtement de base, avant tout marquage :</div>
+    <ul style="margin:0;padding-left:18px;font-size:12.5px;color:#ccc;line-height:2;">
+      <li><b style="color:#fff;">Couleur</b> — commun aux deux</li>
+      <li><b style="color:#fff;">Coupe</b> (Homme/Femme/Enfant) — commun aux deux</li>
+      <li><b style="color:#fff;">Encolure</b> (rond/V) — t-shirt seulement, masqué pour le polo</li>
+      <li><b style="color:#fff;">Manches</b> (courtes/longues) — t-shirt seulement, masqué pour le polo</li>
+    </ul>
+    <div style="font-size:11px;color:#666;margin-top:14px;border-top:1px solid #262626;padding-top:10px;">Chaque ligne a un interrupteur admin (Catalogue) : activé = demandé au vendeur, désactivé = valeur fixe unique pour l'article. Rien lié à une technique de marquage ici — ça viendra au point 2.</div>
+  </div>
+
+  <div style="background:#141414;border:1px solid #333;border-radius:8px;padding:20px 22px;margin-bottom:16px;">
+    <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:12px;">Comment le client choisit la couleur — mécanique précise</div>
+    <div style="display:flex;gap:24px;">
+      <div style="flex:1;">
+        <div style="font-size:11px;color:#666;text-transform:uppercase;margin-bottom:8px;">Ce qu'il voit</div>
+        <div style="display:flex;gap:10px;margin-bottom:10px;">
+          <div style="width:34px;height:34px;border-radius:50%;background:#111;border:2px solid #ff6a3d;"></div>
+          <div style="width:34px;height:34px;border-radius:50%;background:#1e3a8a;border:1px solid #333;"></div>
+          <div style="width:34px;height:34px;border-radius:50%;background:#7f1d1d;border:1px solid #333;"></div>
+          <div style="width:34px;height:34px;border-radius:50%;background:#e5e5e5;border:1px solid #333;"></div>
+        </div>
+        <div style="font-size:12px;color:#ccc;line-height:1.7;">Un rond de couleur par teinte réellement disponible pour <b style="color:#fff;">cet article précis</b> (pas toutes les couleurs du monde — seulement celles que l'admin a déclarées en stock/catalogue pour ce polo ou ce t-shirt).</div>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:11px;color:#666;text-transform:uppercase;margin-bottom:8px;">Ce qui se passe au clic</div>
+        <div style="font-size:12px;color:#ccc;line-height:1.7;">1. Le rond cliqué se marque (bordure orange). <br/>2. La photo du vêtement affichée à l'écran change immédiatement pour la vraie photo produit dans cette couleur (pas une teinte appliquée artificiellement sur une photo générique — une photo par couleur, déposée par l'admin en Catalogue).<br/>3. Si la couleur choisie a un stock à 0, le rond est visible mais grisé/non cliquable, avec une mention "rupture".</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:#666;margin-top:14px;border-top:1px solid #262626;padding-top:10px;">Donc : couleur = choix visuel direct sur pastille, pas de liste déroulante. La photo suit en temps réel.</div>
+  </div>
+
+  <div style="background:#1a1410;border:1px solid #4a2f18;border-radius:8px;padding:16px 20px;">
+  <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:12px;">Écran — Point 1 : Support (polo, exemple)</div>
+  <div style="display:flex;gap:20px;margin-bottom:12px;">
+    <div style="width:520px;flex-shrink:0;background:#000;border:1px solid #262626;border-radius:12px;overflow:hidden;">
+      <div style="display:flex;">
+        <div style="width:170px;flex-shrink:0;background:#000;border-right:1px solid #1a1a1a;padding:22px 18px;">
+          <div style="font-size:10px;color:#ff6a3d;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:2px;">Polo personnalisé</div>
+          <div style="font-size:10.5px;color:#666;margin-bottom:18px;">Étape 1 / 5</div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="padding:8px 10px;border-radius:6px;background:#1a1a1a;font-size:11.5px;color:#fff;font-weight:700;">① Support</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">② Zones marquage</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">③ Finitions</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">④ Taille / qté</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">⑤ Récap</div>
+          </div>
+        </div>
+        <div style="flex:1;padding:22px 20px;display:flex;flex-direction:column;">
+          <div style="flex:1;background:#0a0a0a;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;min-height:170px;">
+            <div style="width:110px;height:130px;background:#111;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#444;">photo polo — noir</div>
+          </div>
+          <div style="font-size:11px;color:#888;margin-bottom:8px;">Couleur</div>
+          <div style="display:flex;gap:8px;margin-bottom:14px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:#111;border:2px solid #ff6a3d;"></div>
+            <div style="width:28px;height:28px;border-radius:50%;background:#1e3a8a;border:1px solid #333;"></div>
+            <div style="width:28px;height:28px;border-radius:50%;background:#7f1d1d;border:1px solid #333;"></div>
+            <div style="width:28px;height:28px;border-radius:50%;background:#555;border:1px solid #333;opacity:0.35;position:relative;"></div>
+          </div>
+          <div style="font-size:11px;color:#888;margin-bottom:8px;">Coupe</div>
+          <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <div style="padding:6px 14px;border-radius:6px;border:1px solid #ff6a3d;background:#ff6a3d;color:#000;font-size:11.5px;font-weight:700;">Homme</div>
+            <div style="padding:6px 14px;border-radius:6px;border:1px solid #333;color:#999;font-size:11.5px;">Femme</div>
+          </div>
+          <button style="width:100%;background:#ff6a3d;color:#000;border:none;padding:10px;border-radius:8px;font-size:12.5px;font-weight:700;">Suivant →</button>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+
+  <div style="background:#1a1410;border:1px solid #4a2f18;border-radius:8px;padding:16px 20px;margin-bottom:32px;">
+    <div style="font-size:12px;color:#6ee7b7;">✓ Point 1 — Support : détails intégrés, validé.</div>
+  </div>
+
+  <div style="height:1px;background:#333;margin-bottom:24px;"></div>
+
+  <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:12px;">Écran — Point 2 : Zones de marquage (polo, exemple)</div>
+  <div style="display:flex;gap:20px;margin-bottom:12px;">
+    <div style="width:520px;flex-shrink:0;background:#000;border:1px solid #262626;border-radius:12px;overflow:hidden;">
+      <div style="display:flex;">
+        <div style="width:170px;flex-shrink:0;background:#000;border-right:1px solid #1a1a1a;padding:22px 18px;">
+          <div style="font-size:10px;color:#ff6a3d;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:2px;">Polo personnalisé</div>
+          <div style="font-size:10.5px;color:#666;margin-bottom:18px;">Étape 2 / 5</div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">① Support</div>
+            <div style="padding:8px 10px;border-radius:6px;background:#1a1a1a;font-size:11.5px;color:#fff;font-weight:700;">② Zones marquage</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">③ Finitions</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">④ Taille / qté</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">⑤ Récap</div>
+          </div>
+        </div>
+        <div style="flex:1;padding:22px 20px;display:flex;flex-direction:column;">
+          <div style="flex:1;background:#0a0a0a;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;min-height:170px;position:relative;">
+            <div style="width:110px;height:130px;background:#111;border-radius:6px;position:relative;">
+              <div style="position:absolute;top:24px;left:24px;width:14px;height:14px;border-radius:50%;background:#ff6a3d;border:2px solid #fff;"></div>
+              <div style="position:absolute;top:60px;left:44px;width:14px;height:14px;border-radius:50%;border:2px solid #555;"></div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:#888;margin-bottom:8px;">Zones activées</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;background:#141414;border:1px solid #ff6a3d;border-radius:6px;padding:8px 10px;margin-bottom:8px;">
+            <span style="font-size:11.5px;color:#fff;">Poitrine gauche</span>
+            <span style="font-size:10.5px;color:#ff6a3d;">Broderie ▾</span>
+          </div>
+          <div style="font-size:10.5px;color:#666;margin-bottom:14px;">📎 fichier client déposé — logo.png</div>
+          <button style="width:100%;background:#ff6a3d;color:#000;border:none;padding:10px;border-radius:8px;font-size:12.5px;font-weight:700;">Suivant →</button>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+
+  <div style="background:#1a1410;border:1px solid #4a2f18;border-radius:8px;padding:16px 20px;margin-bottom:32px;">
+    <div style="font-size:12px;color:#6ee7b7;">✓ Point 2 — Zones de marquage : validé.</div>
+  </div>
+
+  <div style="height:1px;background:#333;margin-bottom:24px;"></div>
+
+  <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:12px;">Écran — Point 3 : Finitions (polo &amp; t-shirt, textile — pas de pelliculage/relief, ça c'est pour le papier)</div>
+  <div style="display:flex;gap:20px;margin-bottom:12px;">
+    <div style="width:520px;flex-shrink:0;background:#000;border:1px solid #262626;border-radius:12px;overflow:hidden;">
+      <div style="display:flex;">
+        <div style="width:170px;flex-shrink:0;background:#000;border-right:1px solid #1a1a1a;padding:22px 18px;">
+          <div style="font-size:10px;color:#ff6a3d;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:2px;">Polo personnalisé</div>
+          <div style="font-size:10.5px;color:#666;margin-bottom:18px;">Étape 3 / 5</div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">① Support</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">② Zones marquage</div>
+            <div style="padding:8px 10px;border-radius:6px;background:#1a1a1a;font-size:11.5px;color:#fff;font-weight:700;">③ Finitions</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">④ Taille / qté</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">⑤ Récap</div>
+          </div>
+        </div>
+        <div style="flex:1;padding:22px 20px;display:flex;flex-direction:column;">
+          <div style="font-size:11.5px;color:#888;margin-bottom:14px;line-height:1.6;">Options cumulables, propres au textile — cochez celles qui s'appliquent.</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#141414;border:1px solid #ff6a3d;border-radius:6px;padding:10px 12px;">
+              <span style="font-size:12px;color:#fff;">☑ Broderie relief 3D (au lieu de broderie plate)</span>
+              <span style="font-size:11px;color:#ff6a3d;">+800 F</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#141414;border:1px solid #333;border-radius:6px;padding:10px 12px;">
+              <span style="font-size:12px;color:#ccc;">☐ Patch tissé cousu (au lieu de brodé directement)</span>
+              <span style="font-size:11px;color:#888;">+500 F</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#141414;border:1px solid #333;border-radius:6px;padding:10px 12px;">
+              <span style="font-size:12px;color:#ccc;">☐ Étiquette personnalisée (col ou ourlet)</span>
+              <span style="font-size:11px;color:#888;">+300 F</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#141414;border:1px solid #333;border-radius:6px;padding:10px 12px;">
+              <span style="font-size:12px;color:#ccc;">☐ Emballage individuel (pochette + pliage soigné)</span>
+              <span style="font-size:11px;color:#888;">+150 F</span>
+            </div>
+          </div>
+          <button style="width:100%;background:#ff6a3d;color:#000;border:none;padding:10px;border-radius:8px;font-size:12.5px;font-weight:700;">Suivant →</button>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+
+  <div style="background:#1a1410;border:1px solid #4a2f18;border-radius:8px;padding:16px 20px;margin-bottom:32px;">
+    <div style="font-size:12px;color:#6ee7b7;">✓ Point 3 — Finitions : validé.</div>
+  </div>
+
+  <div style="height:1px;background:#333;margin-bottom:24px;"></div>
+
+  <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:12px;">Écran — Point 4 : Taille &amp; quantité (polo &amp; t-shirt)</div>
+  <div style="display:flex;gap:20px;margin-bottom:12px;">
+    <div style="width:520px;flex-shrink:0;background:#000;border:1px solid #262626;border-radius:12px;overflow:hidden;">
+      <div style="display:flex;">
+        <div style="width:170px;flex-shrink:0;background:#000;border-right:1px solid #1a1a1a;padding:22px 18px;">
+          <div style="font-size:10px;color:#ff6a3d;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:2px;">Polo personnalisé</div>
+          <div style="font-size:10.5px;color:#666;margin-bottom:18px;">Étape 4 / 5</div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">① Support</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">② Zones marquage</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">③ Finitions</div>
+            <div style="padding:8px 10px;border-radius:6px;background:#1a1a1a;font-size:11.5px;color:#fff;font-weight:700;">④ Taille / qté</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">⑤ Récap</div>
+          </div>
+        </div>
+        <div style="flex:1;padding:22px 20px;display:flex;flex-direction:column;">
+          <div style="font-size:11.5px;color:#888;margin-bottom:14px;line-height:1.6;">Une quantité par taille — le total se calcule automatiquement.</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#141414;border:1px solid #333;border-radius:6px;padding:8px 12px;">
+              <span style="font-size:12px;color:#ccc;">S</span><input placeholder="0" style="width:50px;background:#000;border:1px solid #333;color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;text-align:center;"/>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#141414;border:1px solid #ff6a3d;border-radius:6px;padding:8px 12px;">
+              <span style="font-size:12px;color:#fff;">M</span><input placeholder="8" style="width:50px;background:#000;border:1px solid #ff6a3d;color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;text-align:center;"/>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#141414;border:1px solid #ff6a3d;border-radius:6px;padding:8px 12px;">
+              <span style="font-size:12px;color:#fff;">L</span><input placeholder="4" style="width:50px;background:#000;border:1px solid #ff6a3d;color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;text-align:center;"/>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#141414;border:1px solid #333;border-radius:6px;padding:8px 12px;">
+              <span style="font-size:12px;color:#ccc;">XL</span><input placeholder="0" style="width:50px;background:#000;border:1px solid #333;color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;text-align:center;"/>
+            </div>
+          </div>
+          <div style="font-size:12px;color:#888;margin-bottom:14px;">Total : <b style="color:#fff;">12 pièces</b></div>
+          <button style="width:100%;background:#ff6a3d;color:#000;border:none;padding:10px;border-radius:8px;font-size:12.5px;font-weight:700;">Suivant →</button>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+
+  <div style="background:#1a1410;border:1px solid #4a2f18;border-radius:8px;padding:16px 20px;margin-bottom:32px;">
+    <div style="font-size:12px;color:#6ee7b7;">✓ Point 4 — Taille &amp; quantité : validé (question douzaines en attente de réponse).</div>
+  </div>
+
+  <div style="height:1px;background:#333;margin-bottom:24px;"></div>
+
+  <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:12px;">Écran — Point 5 : Récapitulatif + prix (dernier écran du parcours)</div>
+  <div style="display:flex;gap:20px;margin-bottom:12px;">
+    <div style="width:520px;flex-shrink:0;background:#000;border:1px solid #262626;border-radius:12px;overflow:hidden;">
+      <div style="display:flex;">
+        <div style="width:170px;flex-shrink:0;background:#000;border-right:1px solid #1a1a1a;padding:22px 18px;">
+          <div style="font-size:10px;color:#ff6a3d;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:2px;">Polo personnalisé</div>
+          <div style="font-size:10.5px;color:#666;margin-bottom:18px;">Étape 5 / 5</div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">① Support</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">② Zones marquage</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">③ Finitions</div>
+            <div style="padding:8px 10px;border-radius:6px;font-size:11.5px;color:#555;">④ Taille / qté</div>
+            <div style="padding:8px 10px;border-radius:6px;background:#1a1a1a;font-size:11.5px;color:#fff;font-weight:700;">⑤ Récap</div>
+          </div>
+        </div>
+        <div style="flex:1;padding:22px 20px;display:flex;flex-direction:column;">
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;font-size:11.5px;">
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1e1e1e;"><span style="color:#888;">Support</span><span style="color:#fff;">Polo Noir — Homme</span></div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1e1e1e;"><span style="color:#888;">Marquage</span><span style="color:#fff;">Poitrine G — Broderie</span></div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1e1e1e;"><span style="color:#888;">Finitions</span><span style="color:#fff;">Broderie relief 3D</span></div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1e1e1e;"><span style="color:#888;">Quantité</span><span style="color:#fff;">8×M, 4×L (12 pcs)</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:14px;font-size:11px;color:#666;">
+            <div style="display:flex;justify-content:space-between;"><span>Base (12 × 8 500 F)</span><span>102 000 F</span></div>
+            <div style="display:flex;justify-content:space-between;"><span>Broderie relief (12 × 800 F)</span><span>9 600 F</span></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #262626;padding-top:12px;margin-bottom:14px;">
+            <span style="font-size:12px;color:#ccc;">Total</span>
+            <span style="font-size:20px;font-weight:700;color:#fff;">111 600 F</span>
+          </div>
+          <button style="width:100%;background:#2a7a4f;color:#fff;border:none;padding:10px;border-radius:8px;font-size:12.5px;font-weight:700;">✓ Valider</button>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+
+  <div style="background:#1a1410;border:1px solid #4a2f18;border-radius:8px;padding:16px 20px;margin-bottom:32px;">
+    <div style="font-size:12px;color:#6ee7b7;">✓ Point 5 — Récapitulatif + prix : validé. Les 5 écrans du chemin long (polo/t-shirt) sont bouclés.</div>
+  </div>
+
+  <div style="height:1px;background:#333;margin-bottom:24px;"></div>
+
+  <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px;">Chemin court — écrans (polo &amp; t-shirt)</div>
+  <div style="font-size:12.5px;color:#888;margin-bottom:24px;">Même exercice sur le chemin court (modèle déjà prêt). Un écran à la fois.</div>
+
+  <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:12px;">Écran — Point 1 : Choix du modèle</div>
+  <div style="display:flex;gap:20px;margin-bottom:12px;">
+    <div style="width:520px;flex-shrink:0;background:#000;border:1px solid #262626;border-radius:12px;overflow:hidden;padding:22px 20px;">
+      <div style="font-size:10px;color:#ff6a3d;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:14px;">Modèles disponibles</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div style="background:#141414;border:2px solid #ff6a3d;border-radius:8px;padding:12px;">
+          <div style="width:100%;aspect-ratio:4/5;background:#0a0a0a;border-radius:6px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#444;">photo</div>
+          <div style="font-size:11.5px;color:#fff;">Polo — logo poitrine</div>
+          <div style="font-size:11px;color:#ff6a3d;font-weight:700;">à partir de 8 500 F</div>
+        </div>
+        <div style="background:#141414;border:1px solid #333;border-radius:8px;padding:12px;">
+          <div style="width:100%;aspect-ratio:4/5;background:#0a0a0a;border-radius:6px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#444;">photo</div>
+          <div style="font-size:11.5px;color:#ccc;">Polo — logo poitrine + dos</div>
+          <div style="font-size:11px;color:#888;">à partir de 9 800 F</div>
+        </div>
+        <div style="background:#141414;border:1px solid #333;border-radius:8px;padding:12px;">
+          <div style="width:100%;aspect-ratio:4/5;background:#0a0a0a;border-radius:6px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#444;">photo</div>
+          <div style="font-size:11.5px;color:#ccc;">T-shirt — logo poitrine</div>
+          <div style="font-size:11px;color:#888;">à partir de 5 200 F</div>
+        </div>
+        <div style="background:#141414;border:1px solid #333;border-radius:8px;padding:12px;">
+          <div style="width:100%;aspect-ratio:4/5;background:#0a0a0a;border-radius:6px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#444;">photo</div>
+          <div style="font-size:11.5px;color:#ccc;">T-shirt — logo dos grand format</div>
+          <div style="font-size:11px;color:#888;">à partir de 5 800 F</div>
+        </div>
+      </div>
+      <button style="width:100%;background:none;border:1px solid #333;color:#999;padding:9px;border-radius:8px;font-size:12px;">Aucun modèle ne convient → configuration à la carte</button>
+    </div>
+
+
+  </div>
+
+  <div style="background:#1a1410;border:1px solid #4a2f18;border-radius:8px;padding:16px 20px;margin-bottom:32px;">
+    <div style="font-size:12px;color:#6ee7b7;">✓ Chemin court — Point 1 (Choix du modèle) : validé.</div>
+  </div>
+
+  <div style="height:1px;background:#333;margin-bottom:24px;"></div>
+
+  <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:12px;">Écran — Point 2 : Taille (+ quantité par taille)</div>
+  <div style="display:flex;gap:20px;margin-bottom:12px;">
+    <div style="width:520px;flex-shrink:0;background:#000;border:1px solid #262626;border-radius:12px;overflow:hidden;padding:22px 20px;">
+      <div style="font-size:10px;color:#ff6a3d;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:2px;">Polo — logo poitrine</div>
+      <div style="font-size:10.5px;color:#666;margin-bottom:16px;">Combien de pièces, dans quelle(s) taille(s) ?</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;background:#141414;border:1px solid #333;border-radius:6px;padding:8px 12px;">
+          <span style="font-size:12px;color:#ccc;">S</span><input placeholder="0" style="width:50px;background:#000;border:1px solid #333;color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;text-align:center;"/>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;background:#141414;border:1px solid #ff6a3d;border-radius:6px;padding:8px 12px;">
+          <span style="font-size:12px;color:#fff;">M</span><input placeholder="6" style="width:50px;background:#000;border:1px solid #ff6a3d;color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;text-align:center;"/>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;background:#141414;border:1px solid #ff6a3d;border-radius:6px;padding:8px 12px;">
+          <span style="font-size:12px;color:#fff;">L</span><input placeholder="6" style="width:50px;background:#000;border:1px solid #ff6a3d;color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;text-align:center;"/>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;background:#141414;border:1px solid #333;border-radius:6px;padding:8px 12px;">
+          <span style="font-size:12px;color:#ccc;">XL</span><input placeholder="0" style="width:50px;background:#000;border:1px solid #333;color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;text-align:center;"/>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#888;margin-bottom:14px;">Total : <b style="color:#fff;">12 pièces</b></div>
+      <button style="width:100%;background:#ff6a3d;color:#000;border:none;padding:10px;border-radius:8px;font-size:12.5px;font-weight:700;">Suivant →</button>
+    </div>
+
+
+  </div>
+
+  <div style="background:#1a1410;border:1px solid #4a2f18;border-radius:8px;padding:16px 20px;">
+    <div style="font-size:12px;color:#d4a373;">Identique à l'écran taille/qté du chemin long — un seul écran partagé entre les deux chemins, logique ?</div>
+  </div>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { pins: [] };
+  onCanvasClick(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left, y = e.clientY - rect.top;
+    const id = Date.now() + Math.random();
+    this.setState(s => ({ pins: [...s.pins, { id, x, y, text: '' }] }));
+  }
+  updatePinText(id, val) {
+    this.setState(s => ({ pins: s.pins.map(p => p.id === id ? { ...p, text: val } : p) }));
+  }
+  removePin(id) {
+    this.setState(s => ({ pins: s.pins.filter(p => p.id !== id) }));
+  }
+  renderVals() {
+    return {
+      onCanvasClick: (e) => this.onCanvasClick(e),
+      pinsList: this.state.pins.map(p => ({
+        id: p.id, text: p.text,
+        wrapStyle: `position:absolute;left:${p.x}px;top:${p.y}px;z-index:70;box-shadow:0 4px 14px rgba(0,0,0,0.5);`,
+        onText: (e) => this.updatePinText(p.id, e.target.value),
+        onRemove: (e) => { e.stopPropagation(); this.removePin(p.id); },
+        onStop: (e) => e.stopPropagation()
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

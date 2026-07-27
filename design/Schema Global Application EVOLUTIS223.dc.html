@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style id="__om-edit-overrides"></style>
+</helmet>
+<script src="./doc-page.js"></script>
+<style>doc-page:not(:defined){visibility:hidden}</style>
+<doc-page orientation="landscape">
+
+<section class="page" data-screen-label="01-Couverture" style="display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;background:linear-gradient(160deg,#0f172a,#1e293b);color:#fff;padding:60px;box-sizing:border-box;">
+  <div style="font-size:13px;letter-spacing:0.25em;color:#93c5fd;text-transform:uppercase;margin-bottom:18px;">EVOLUTIS223 — Documentation interne</div>
+  <h1 style="font-size:40px;font-weight:800;margin:0 0 14px;max-width:940px;">Schéma global de l'application — tous les modules, cible complète</h1>
+  <div style="font-size:15px;color:#cbd5e1;max-width:800px;line-height:1.6;">La carte complète du fonctionnement cible, avant développement : approvisionnement (5 familles), stock, catalogue, vente, livraisons, trésorerie, rapport, droits d'accès et journal d'audit (boîte noire).</div>
+  <div style="margin-top:32px;font-size:12px;color:#64748b;">Document de référence évolutif — certaines étapes ne sont pas encore codées, ce document sert de cible à suivre</div>
+</section>
+
+<section class="page" data-screen-label="02-Legende" style="padding:34px 42px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:21px;margin:0 0 4px;">Légende</h2>
+  <div style="font-size:12px;color:#64748b;margin-bottom:18px;">À lire avant les pages suivantes. Ce document est vivant : il sera précisé et corrigé module par module, mais la structure d'ensemble ci-dessous ne change pas.</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;">
+    <div style="background:#eff6ff;border:2px solid #93c5fd;border-radius:8px;padding:10px 12px;font-size:11px;color:#1d4ed8;font-weight:800;">▮ Bleu — Approvisionnement / Fournisseurs</div>
+    <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:8px;padding:10px 12px;font-size:11px;color:#15803d;font-weight:800;">▮ Vert — Stock / Marketing</div>
+    <div style="background:#fefce8;border:2px solid #fde047;border-radius:8px;padding:10px 12px;font-size:11px;color:#a16207;font-weight:800;">▮ Jaune — Catalogue / RH</div>
+    <div style="background:#fff1f2;border:2px solid #fda4af;border-radius:8px;padding:10px 12px;font-size:11px;color:#be123c;font-weight:800;">▮ Rose — Vente / Livraisons</div>
+    <div style="background:#f5f3ff;border:2px solid #c4b5fd;border-radius:8px;padding:10px 12px;font-size:11px;color:#6d28d9;font-weight:800;">▮ Violet — Documents / Rapport</div>
+    <div style="background:#0f172a;border:2px solid #334155;border-radius:8px;padding:10px 12px;font-size:11px;color:#4ade80;font-weight:800;">▮ Fond sombre — Trésorerie / résultats</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div style="font-size:10.5px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:8px;">Symboles</div>
+      <div style="font-size:11.5px;color:#334155;line-height:1.9;">→ ↓ ligne pleine : flux normal, systématique<br/>┈┈ ligne pointillée : lecture/écriture transversale (droits d'accès, journal d'audit) — présente à CHAQUE étape, pas dessinée à chaque fois pour rester lisible<br/><b>Case sombre</b> : résultat / synthèse chiffrée</div>
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div style="font-size:10.5px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:8px;">Ce que ce document couvre</div>
+      <div style="font-size:11.5px;color:#334155;line-height:1.7;">1 schéma global (page suivante) + 1 page par famille d'approvisionnement + moteur de vente + modules périphériques + droits d'accès + journal d'audit + trésorerie + rapport (jour/semaine/mois/semestre/an, toutes activités).</div>
+    </div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="03-Schema-flowchart" style="padding:26px 36px;box-sizing:border-box;color:#0f172a;display:flex;flex-direction:column;">
+  <h2 style="font-size:19px;margin:0 0 2px;">Schéma global — flux complet de l'application</h2>
+  <div style="font-size:10.5px;color:#64748b;margin-bottom:10px;">Deux rails transversaux (droits d'accès, journal d'audit) s'appliquent à CHAQUE étape de la colonne centrale.</div>
+  <div style="display:grid;grid-template-columns:150px 1fr 150px;gap:10px;flex:1;min-height:0;">
+
+    <div style="border-right:3px dashed #94a3b8;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px 4px;">
+      <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:10.5px;font-weight:800;color:#334155;text-transform:uppercase;letter-spacing:0.08em;">Droits d'accès — filtre chaque action selon le rôle</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;align-items:stretch;">
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+        <div style="background:#eff6ff;border:2px solid #93c5fd;border-radius:8px;padding:7px 9px;font-size:10px;font-weight:800;color:#1d4ed8;text-align:center;">FOURNISSEURS</div>
+        <div style="background:#fefce8;border:2px solid #fde047;border-radius:8px;padding:7px 9px;font-size:10px;font-weight:800;color:#a16207;text-align:center;">RH</div>
+        <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:8px;padding:7px 9px;font-size:10px;font-weight:800;color:#15803d;text-align:center;">MARKETING</div>
+        <div style="background:#fdf4ff;border:2px solid #e9d5ff;border-radius:8px;padding:7px 9px;font-size:10px;font-weight:800;color:#a21caf;text-align:center;">CLIENTS</div>
+      </div>
+      <div style="display:flex;justify-content:center;"><div style="width:2px;height:12px;background:#94a3b8;"></div></div>
+
+      <div style="background:#1e293b;border-radius:8px;padding:9px 12px;text-align:center;">
+        <div style="font-size:11px;font-weight:800;color:#93c5fd;">APPROVISIONNEMENT — 5 familles</div>
+        <div style="font-size:9px;color:#cbd5e1;margin-top:2px;">A. Textile douzaine · B. Unité simple · C. Service · D. Fabrication sur commande · E. Produit composé</div>
+      </div>
+      <div style="display:flex;justify-content:center;"><div style="width:2px;height:12px;background:#94a3b8;"></div></div>
+
+      <div style="background:#fefce8;border:2px solid #fde047;border-radius:8px;padding:9px 12px;text-align:center;">
+        <div style="font-size:11px;font-weight:800;color:#a16207;">STOCK — source unique de quantité</div>
+        <div style="font-size:9px;color:#713f12;margin-top:2px;">Qté vendable · Réservé perso · Lots tracés · Seuils d'alerte</div>
+      </div>
+      <div style="display:flex;justify-content:center;"><div style="width:2px;height:12px;background:#94a3b8;"></div></div>
+
+      <div style="background:#f5f3ff;border:2px solid #c4b5fd;border-radius:8px;padding:9px 12px;text-align:center;">
+        <div style="font-size:11px;font-weight:800;color:#6d28d9;">CATALOGUE (interne) → NOS PRODUITS (vitrine, publication manuelle)</div>
+      </div>
+      <div style="display:flex;justify-content:center;"><div style="width:2px;height:12px;background:#94a3b8;"></div></div>
+
+      <div style="background:#fff1f2;border:2px solid #fda4af;border-radius:8px;padding:9px 12px;text-align:center;">
+        <div style="font-size:11px;font-weight:800;color:#be123c;">NOUVELLE AFFAIRE — VENTE</div>
+        <div style="font-size:9px;color:#881337;margin-top:2px;">Contrôle stock par famille · jamais d'échec silencieux</div>
+      </div>
+      <div style="display:flex;justify-content:center;"><div style="width:2px;height:12px;background:#94a3b8;"></div></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="background:#f5f3ff;border:2px solid #c4b5fd;border-radius:8px;padding:7px 9px;font-size:10px;font-weight:800;color:#6d28d9;text-align:center;">LIVRAISONS</div>
+        <div style="background:#eef2ff;border:2px solid #a5b4fc;border-radius:8px;padding:7px 9px;font-size:10px;font-weight:800;color:#4338ca;text-align:center;">DOCUMENTS</div>
+      </div>
+      <div style="display:flex;justify-content:center;"><div style="width:2px;height:12px;background:#94a3b8;"></div></div>
+
+      <div style="background:#0f172a;border-radius:8px;padding:9px 12px;text-align:center;">
+        <div style="font-size:11px;font-weight:800;color:#4ade80;">TRÉSORERIE — règlements, valeur de stock, marge, commissions</div>
+      </div>
+      <div style="display:flex;justify-content:center;"><div style="width:2px;height:12px;background:#94a3b8;"></div></div>
+
+      <div style="background:#0f172a;border-radius:8px;padding:9px 12px;text-align:center;">
+        <div style="font-size:11px;font-weight:800;color:#fbbf24;">RAPPORT — finance, RH, incidents, prévisions · jour / semaine / mois / semestre / an</div>
+      </div>
+
+    </div>
+
+    <div style="border-left:3px dashed #94a3b8;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px 4px;">
+      <div style="writing-mode:vertical-rl;font-size:10.5px;font-weight:800;color:#334155;text-transform:uppercase;letter-spacing:0.08em;">Journal d'audit (boîte noire) — enregistre chaque création, modification, suppression</div>
+    </div>
+
+  </div>
+</section>
+
+<section class="page" data-screen-label="04-Cinq-familles" style="padding:34px 42px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:21px;margin:0 0 4px;">Les 5 familles d'approvisionnement</h2>
+  <div style="font-size:12px;color:#64748b;margin-bottom:18px;">Chaque article créé dans le Catalogue appartient à UNE seule famille. Elle détermine comment son stock est constitué, affiché et vendu.</div>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+    <div style="background:#eff6ff;border:2px solid #93c5fd;border-radius:10px;padding:13px;">
+      <div style="font-size:22px;">🧵</div>
+      <div style="font-size:11px;font-weight:800;color:#1d4ed8;text-transform:uppercase;margin-top:6px;">A. Textile par douzaine</div>
+      <div style="font-size:10.5px;color:#334155;margin-top:6px;line-height:1.5;">Polo, T-shirt... Achat par douzaine, réparti par taille/couleur, réserve perso possible.</div>
+    </div>
+    <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:10px;padding:13px;">
+      <div style="font-size:22px;">📦</div>
+      <div style="font-size:11px;font-weight:800;color:#15803d;text-transform:uppercase;margin-top:6px;">B. Unité simple</div>
+      <div style="font-size:10.5px;color:#334155;margin-top:6px;line-height:1.5;">Mug, stylo, casquette unie... Une quantité, un seuil, pas de variantes.</div>
+    </div>
+    <div style="background:#fefce8;border:2px solid #fde047;border-radius:10px;padding:13px;">
+      <div style="font-size:22px;">🎓</div>
+      <div style="font-size:11px;font-weight:800;color:#a16207;text-transform:uppercase;margin-top:6px;">C. Service sans stock</div>
+      <div style="font-size:10.5px;color:#334155;margin-top:6px;line-height:1.5;">Relooking, reportage photo... Pas de quantité, toujours disponible.</div>
+    </div>
+    <div style="background:#fff1f2;border:2px solid #fda4af;border-radius:10px;padding:13px;">
+      <div style="font-size:22px;">🏭</div>
+      <div style="font-size:11px;font-weight:800;color:#be123c;text-transform:uppercase;margin-top:6px;">D. Fabrication sur commande</div>
+      <div style="font-size:10.5px;color:#334155;margin-top:6px;line-height:1.5;">Signalétique, impression grand format... Pas de stock fini, une commande de fabrication par vente.</div>
+    </div>
+    <div style="background:#f5f3ff;border:2px solid #c4b5fd;border-radius:10px;padding:13px;">
+      <div style="font-size:22px;">🧩</div>
+      <div style="font-size:11px;font-weight:800;color:#6d28d9;text-transform:uppercase;margin-top:6px;">E. Produit composé</div>
+      <div style="font-size:10.5px;color:#334155;margin-top:6px;line-height:1.5;">Kit assemblant plusieurs articles existants. Pas de stock propre — calculé.</div>
+    </div>
+  </div>
+  <div style="margin-top:20px;background:#1e293b;color:#e2e8f0;border-radius:10px;padding:14px 18px;font-size:11.5px;line-height:1.65;">
+    Toutes convergent vers le même Stock et le même Catalogue — seule la façon de <b style="color:#93c5fd;">renseigner la quantité disponible</b> change (pages suivantes, une par famille).
+  </div>
+</section>
+
+<section class="page" data-screen-label="05-Textile-douzaine" style="padding:34px 42px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:21px;margin:0 0 4px;">A. Textile par douzaine — process complet</h2>
+  <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Le cas déjà en place (Polo, T-shirt).</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div style="font-size:10.5px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:8px;">Approvisionnement</div>
+      <ol style="margin:0;padding-left:16px;font-size:11px;color:#334155;line-height:1.7;">
+        <li>Saisie : douzaines achetées + répartition par taille (par douzaine) + couleurs + réserve perso (en PIÈCES)</li>
+        <li>Calcul : total produit par taille = répartition × douzaines</li>
+        <li>Réserve retirée du total, au prorata par taille (jamais ajoutée en plus)</li>
+        <li>Un lot de production est enregistré (traçabilité), horodaté</li>
+      </ol>
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div style="font-size:10.5px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:8px;">Stock résultant</div>
+      <div style="font-size:11px;color:#334155;line-height:1.7;">Une ligne de stock <b>vendable en détail</b> par taille/couleur + une ligne <b>réserve personnalisation</b> séparée par taille/couleur (non vendable en détail, exclue des suggestions de vente).</div>
+    </div>
+  </div>
+  <div style="margin-top:14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px 16px;font-size:11px;color:#9a3412;line-height:1.6;">Vente : décrément FIFO du plus ancien lot en premier, sur la ligne détail uniquement. Réapprovisionnement = nouveau lot additionné.</div>
+</section>
+
+<section class="page" data-screen-label="06-Unite-simple" style="padding:34px 42px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:21px;margin:0 0 4px;">B. Article à l'unité simple — process cible</h2>
+  <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Mug, stylo, casquette unie, objet publicitaire sans variante.</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div style="font-size:10.5px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:8px;">Approvisionnement</div>
+      <ol style="margin:0;padding-left:16px;font-size:11px;color:#334155;line-height:1.7;">
+        <li>Saisie directe : quantité initiale en stock + seuil d'alerte</li>
+        <li>Pas de taille/couleur, pas de répartition — un seul nombre</li>
+        <li>Réapprovisionnement : un lot simple {date, quantité ajoutée, prix d'achat} — même logique de traçabilité que le textile, sans la dimension taille/couleur</li>
+      </ol>
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div style="font-size:10.5px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:8px;">Stock résultant</div>
+      <div style="font-size:11px;color:#334155;line-height:1.7;">Une seule ligne de stock par article. Réserve personnalisation possible (même principe : un nombre de pièces retiré du total, dans une ligne "Réserve" séparée) si l'objet peut être personnalisé (ex. mug à sublimer).</div>
+    </div>
+  </div>
+  <div style="margin-top:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;font-size:11px;color:#166534;line-height:1.6;">C'est le cas le plus simple : le textile par douzaine EST un cas particulier de celui-ci, avec une couche de répartition taille/couleur en plus. Le moteur de vente (contrôle de stock, FIFO par lot) est identique.</div>
+</section>
+
+<section class="page" data-screen-label="07-Service" style="padding:34px 42px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:21px;margin:0 0 4px;">C. Service sans stock — process cible</h2>
+  <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Relooking & identité visuelle, reportage photo-vidéo — aucune quantité physique à gérer.</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div style="font-size:10.5px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:8px;">Approvisionnement</div>
+      <div style="font-size:11px;color:#334155;line-height:1.7;">Aucun. Le service est créé une fois dans le Catalogue avec un prix (fixe ou "sur devis"). Il n'y a ni quantité, ni seuil, ni lot.</div>
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div style="font-size:10.5px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:8px;">Stock résultant</div>
+      <div style="font-size:11px;color:#334155;line-height:1.7;">Colonne Stock affichée comme "—" (illimité). Toujours vendable, jamais de rupture, jamais de contrôle de quantité à la vente.</div>
+    </div>
+  </div>
+  <div style="margin-top:14px;background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;font-size:11px;color:#a16207;line-height:1.6;">Ce que "vendre" un service déclenche à la place d'un décrément de stock : une entrée dans Livraisons/Agenda (planification de l'intervention) plutôt qu'un mouvement de stock.</div>
+</section>
+
+<section class="page" data-screen-label="08-Fabrication" style="padding:34px 42px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:21px;margin:0 0 4px;">D. Fabrication interne sur commande — process cible</h2>
+  <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Signalétique, impression grand format, kakémono — fabriqué au moment de la vente, pas de stock de produit fini.</div>
+  <div style="display:flex;flex-direction:column;gap:9px;">
+    <div style="display:flex;align-items:center;gap:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:11px 15px;"><div style="font-size:16px;font-weight:800;color:#1d4ed8;">1</div><div style="font-size:11px;color:#1e293b;">Article créé au Catalogue avec un prix — pas de quantité initiale (ou une quantité de matière première, optionnelle).</div></div>
+    <div style="display:flex;align-items:center;gap:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:11px 15px;"><div style="font-size:16px;font-weight:800;color:#15803d;">2</div><div style="font-size:11px;color:#1e293b;">Vente enregistrée normalement dans Nouvelle affaire — aucune vérification de stock fini (il n'existe pas).</div></div>
+    <div style="display:flex;align-items:center;gap:12px;background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:11px 15px;"><div style="font-size:16px;font-weight:800;color:#a16207;">3</div><div style="font-size:11px;color:#1e293b;">La vente crée automatiquement un ordre de fabrication dans <b>Livraisons</b> (étapes : conception → production → contrôle → livraison), avec un pilote assigné.</div></div>
+    <div style="display:flex;align-items:center;gap:12px;background:#fff1f2;border:1px solid #fecdd3;border-radius:10px;padding:11px 15px;"><div style="font-size:16px;font-weight:800;color:#be123c;">4</div><div style="font-size:11px;color:#1e293b;">Si des matières premières sont suivies (ex. rouleau de bâche), leur stock à elles décrémente au lancement de la production — c'est un stock de matière, pas de produit fini.</div></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="09-Compose" style="padding:34px 42px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:21px;margin:0 0 4px;">E. Produit composé / kit — process cible détaillé</h2>
+  <div style="font-size:12px;color:#64748b;margin-bottom:14px;">Un produit vendu qui assemble plusieurs articles déjà existants dans le Stock (ex. "Kit Rentrée" = 1 tenue scolaire + 1 sac + 1 stylo).</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div style="font-size:10.5px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:8px;">1. Définition (Catalogue)</div>
+      <ol style="margin:0;padding-left:16px;font-size:11px;color:#334155;line-height:1.65;">
+        <li>Type d'article = "Produit composé"</li>
+        <li>Liste de lignes : article existant + quantité nécessaire par unité vendue</li>
+        <li>Prix de vente du kit fixé indépendamment (souvent &lt; somme des composants)</li>
+        <li>Aucune saisie de quantité propre — le composé n'a pas de stock à lui</li>
+      </ol>
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div style="font-size:10.5px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:8px;">2. Stock disponible (calculé, jamais saisi)</div>
+      <div style="font-size:11px;color:#334155;line-height:1.65;">Pour chaque composant : stock du composant ÷ quantité requise, arrondi au plus bas. Le stock du kit = le plus petit de ces résultats (le "goulot d'étranglement").</div>
+      <div style="margin-top:8px;background:#fff;border:1px dashed #cbd5e1;border-radius:6px;padding:8px;font-size:10.5px;color:#475569;">Ex. : sac (10 dispo, besoin 1) → 10 kits · stylo (18 dispo, besoin 2) → 9 kits · tenue (4 dispo, besoin 1) → 4 kits.<br/><b>Stock du kit affiché = 4</b> (le composant le plus limitant), avec une alerte "limité par : tenue scolaire".</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px;">
+    <div style="background:#fff1f2;border:1px solid #fda4af;border-radius:10px;padding:14px;">
+      <div style="font-size:10.5px;font-weight:800;color:#be123c;text-transform:uppercase;margin-bottom:8px;">3. Vente</div>
+      <div style="font-size:11px;color:#334155;line-height:1.6;">Vendre 1 kit décrémente CHAQUE composant de sa quantité requise (donc plusieurs lignes de Stock touchées en une seule vente). Le contrôle de stock du kit se fait sur le nombre déjà calculé — refus si demande &gt; disponible.</div>
+    </div>
+    <div style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:10px;padding:14px;">
+      <div style="font-size:10.5px;font-weight:800;color:#6d28d9;text-transform:uppercase;margin-bottom:8px;">4. Catalogue / Nos produits</div>
+      <div style="font-size:11px;color:#334155;line-height:1.6;">La fiche affiche la composition (liste des composants + quantités), le stock calculé, et le composant limitant. Publiable dans "Nos produits" comme n'importe quel article.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="10-Vente-unifiee" style="padding:34px 42px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:21px;margin:0 0 4px;">Nouvelle affaire — un seul moteur de vente, 5 comportements</h2>
+  <div style="font-size:12px;color:#64748b;margin-bottom:14px;">Le formulaire de vente reste unique. Ce qui change selon la famille de l'article sélectionné :</div>
+  <table style="width:100%;border-collapse:collapse;font-size:11px;">
+    <tr style="background:#f1f5f9;"><th style="text-align:left;padding:8px;border-bottom:2px solid #cbd5e1;">Famille</th><th style="text-align:left;padding:8px;border-bottom:2px solid #cbd5e1;">Contrôle à la vente</th><th style="text-align:left;padding:8px;border-bottom:2px solid #cbd5e1;">Ce qui est décrémenté</th><th style="text-align:left;padding:8px;border-bottom:2px solid #cbd5e1;">Effet annexe</th></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">A. Textile douzaine</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">Qté ≤ stock détail</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">Ligne taille/couleur (FIFO lot)</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">—</td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">B. Unité simple</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">Qté ≤ stock</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">Ligne unique (FIFO lot)</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">—</td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">C. Service</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">Aucun</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">Rien</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">Entrée Agenda/Livraisons</td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">D. Fabrication commande</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">Aucun (ou matière 1re)</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">Matière première si suivie</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">Ordre de fabrication → Livraisons</td></tr>
+    <tr><td style="padding:7px 8px;font-weight:700;">E. Produit composé</td><td style="padding:7px 8px;">Qté ≤ stock calculé (min composants)</td><td style="padding:7px 8px;">Chaque composant, à due proportion</td><td style="padding:7px 8px;">—</td></tr>
+  </table>
+  <div style="margin-top:16px;background:#1e293b;color:#e2e8f0;border-radius:10px;padding:13px 16px;font-size:11px;line-height:1.6;">Dans tous les cas : client + au moins un article obligatoires, réserve personnalisation jamais proposée à la vente directe, message d'erreur visible si le contrôle échoue — jamais d'échec silencieux.</div>
+</section>
+
+<section class="page" data-screen-label="11-Modules-peripheriques" style="padding:34px 42px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:21px;margin:0 0 4px;">Modules périphériques et leurs connexions</h2>
+  <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Aucun ne fonctionne isolément — chacun lit ou écrit dans le cœur (Stock/Catalogue/Affaires).</div>
+  <table style="width:100%;border-collapse:collapse;font-size:11px;">
+    <tr style="background:#f1f5f9;"><th style="text-align:left;padding:8px;border-bottom:2px solid #cbd5e1;">Module</th><th style="text-align:left;padding:8px;border-bottom:2px solid #cbd5e1;">Reçoit de</th><th style="text-align:left;padding:8px;border-bottom:2px solid #cbd5e1;">Alimente</th></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">Fournisseurs</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Saisie manuelle (contact, délais)</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Approvisionnement (prix d'achat, origine des lots)</td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">Clients</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Affaires enregistrées</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Historique, solde dû, Trésorerie</td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">RH</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Saisie manuelle (employés/partenaires)</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Commissions calculées sur les Affaires → Trésorerie</td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">Marketing</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Articles du Catalogue</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Promos appliquées au prix de vente, demandes devis → Affaires</td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">Livraisons</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Affaires (retrait/livraison), fabrications D</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Statut livré → clôture de l'affaire</td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">Documents</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Chaque affaire (Devis/Facture/Reçu/Bon)</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Archive imprimable, aucune saisie propre</td></tr>
+    <tr><td style="padding:7px 8px;font-weight:700;">Rapport</td><td style="padding:7px 8px;color:#64748b;">Affaires, Stock, Dépenses/Charges, Commissions, Livraisons — TOUS les modules</td><td style="padding:7px 8px;color:#64748b;">Tableaux de bord jour/semaine/mois/semestre/an (page dédiée)</td></tr>
+  </table>
+</section>
+
+<section class="page" data-screen-label="12-Droits-acces" style="padding:34px 42px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:21px;margin:0 0 4px;">Droits d'accès — qui peut faire quoi</h2>
+  <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Un rail transversal : chaque action du schéma global passe par ce filtre, sans exception.</div>
+  <table style="width:100%;border-collapse:collapse;font-size:11px;">
+    <tr style="background:#f1f5f9;"><th style="text-align:left;padding:8px;border-bottom:2px solid #cbd5e1;">Rôle</th><th style="text-align:left;padding:8px;border-bottom:2px solid #cbd5e1;">Accès</th><th style="text-align:left;padding:8px;border-bottom:2px solid #cbd5e1;">Restrictions cible</th></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">Super Admin</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Tout, y compris prix d'achat, journal d'audit, gestion des rôles</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Aucune — seul rôle pouvant modifier les droits d'un autre utilisateur</td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">Admin</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Vente, stock, catalogue, validations (remises, retours)</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Prix d'achat masqué sauf autorisation explicite ; ne modifie pas les droits</td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">Responsable Commercial</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Vente, clients, validation des remises jusqu'à un plafond</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Remises au-delà du plafond transmises à la hiérarchie</td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">Vendeur / Freelance</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Vente uniquement, ses propres affaires et commissions</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Affaires en attente de validation avant clôture ; pas d'accès stock/achat</td></tr>
+    <tr><td style="padding:7px 8px;font-weight:700;">Comptabilité</td><td style="padding:7px 8px;color:#64748b;">Trésorerie, Rapport, règlements</td><td style="padding:7px 8px;color:#64748b;">Pas de modification du stock ni du catalogue</td></tr>
+  </table>
+  <div style="margin-top:16px;background:#1e293b;color:#e2e8f0;border-radius:10px;padding:13px 16px;font-size:11px;line-height:1.6;">Chaque tentative d'action hors droit doit être refusée avec un message explicite (jamais un blocage silencieux) — et journalisée dans la boîte noire (page suivante).</div>
+</section>
+
+<section class="page" data-screen-label="13-Boite-noire" style="padding:34px 42px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:21px;margin:0 0 4px;">Journal d'audit ("boîte noire") — cible</h2>
+  <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Un registre unique, transversal à toute l'application : rien ne se crée, ne se modifie ou ne se supprime sans y laisser une trace.</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div style="font-size:10.5px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:8px;">Ce qui est enregistré, pour CHAQUE événement</div>
+      <ul style="margin:0;padding-left:16px;font-size:11px;color:#334155;line-height:1.8;">
+        <li>Qui (utilisateur + rôle)</li>
+        <li>Quoi (module, article/affaire/fiche concerné)</li>
+        <li>Quand (date + heure exacte)</li>
+        <li>Type d'action : création / modification / suppression</li>
+        <li>Valeur avant → valeur après (pour une modification)</li>
+      </ul>
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div style="font-size:10.5px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:8px;">Ce que ça couvre</div>
+      <div style="font-size:11px;color:#334155;line-height:1.75;">Articles et lots (création, suppression de lot), ventes et remises, prix modifiés, stock ajusté manuellement, suppression de client/employé, changement de droits d'accès, connexions/déconnexions.</div>
+    </div>
+  </div>
+  <div style="font-size:10.5px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:8px;">Exigences cible</div>
+  <ul style="margin:0;padding-left:18px;font-size:11.5px;color:#334155;line-height:1.85;">
+    <li>Consultable par Super Admin uniquement, avec filtre par utilisateur / module / période</li>
+    <li>Jamais modifiable ni supprimable, y compris par un Super Admin (append-only)</li>
+    <li>Conservé indéfiniment (ou selon durée légale à définir)</li>
+    <li>Une suppression de lot ou d'article y reste visible même après disparition de l'élément lui-même</li>
+  </ul>
+</section>
+
+<section class="page" data-screen-label="14-Tresorerie-cible" style="padding:34px 42px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:21px;margin:0 0 4px;">Trésorerie — vue consolidée cible</h2>
+  <div style="font-size:12px;color:#64748b;margin-bottom:14px;">Point d'arrivée du flux financier — rien n'y est saisi qui ne vienne pas d'un autre module.</div>
+  <table style="width:100%;border-collapse:collapse;font-size:11.5px;">
+    <tr style="background:#f1f5f9;"><th style="text-align:left;padding:8px;border-bottom:2px solid #cbd5e1;">Indicateur</th><th style="text-align:left;padding:8px;border-bottom:2px solid #cbd5e1;">Source</th></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">Règlements / CA</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Affaires (Facture/Reçu) + Règlements</td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">Valeur de stock</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Stock réel × PMP (familles A, B ; E = valeur des composants)</td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;">Commissions</td><td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">RH × Affaires validées</td></tr>
+    <tr><td style="padding:7px 8px;">Dépenses/Charges</td><td style="padding:7px 8px;color:#64748b;">Livraisons (familles C, D) + saisies manuelles</td></tr>
+  </table>
+</section>
+
+<section class="page" data-screen-label="15-Rapport" style="padding:34px 42px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:21px;margin:0 0 4px;">Rapport — toutes les activités, toutes les périodicités</h2>
+  <div style="font-size:12px;color:#64748b;margin-bottom:14px;">Le Rapport n'est pas limité à la finance : il synthétise TOUTE l'activité de l'application, à 5 fréquences.</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
+    <div style="background:#eff6ff;border:2px solid #93c5fd;border-radius:8px;padding:9px;text-align:center;"><div style="font-size:11px;font-weight:800;color:#1d4ed8;">FINANCE</div><div style="font-size:9.5px;color:#334155;margin-top:3px;">CA, bénéfice brut/net, valeur de stock, marge</div></div>
+    <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:8px;padding:9px;text-align:center;"><div style="font-size:11px;font-weight:800;color:#15803d;">RH</div><div style="font-size:9.5px;color:#334155;margin-top:3px;">Ventes/commissions par vendeur, présence, paie</div></div>
+    <div style="background:#fff1f2;border:2px solid #fda4af;border-radius:8px;padding:9px;text-align:center;"><div style="font-size:11px;font-weight:800;color:#be123c;">INCIDENTS</div><div style="font-size:9.5px;color:#334155;margin-top:3px;">Retours, litiges, ruptures de stock, réclamations</div></div>
+    <div style="background:#f5f3ff;border:2px solid #c4b5fd;border-radius:8px;padding:9px;text-align:center;"><div style="font-size:11px;font-weight:800;color:#6d28d9;">PRÉVISIONS</div><div style="font-size:9.5px;color:#334155;margin-top:3px;">Tendance des ventes, ruptures à venir, réappro conseillé</div></div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:14px;">
+    <tr style="background:#f1f5f9;"><th style="text-align:left;padding:7px 8px;border-bottom:2px solid #cbd5e1;">Fréquence</th><th style="text-align:left;padding:7px 8px;border-bottom:2px solid #cbd5e1;">Rôle du rapport</th></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">Quotidien</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Suivi instantané : bénéfice brut/net du jour, incidents du jour, recalculé à chaque affaire</td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">Hebdomadaire</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Tendance de la semaine, comparaison aux semaines précédentes</td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">Mensuel</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Bilan complet du mois (finance + RH + incidents), base de décision</td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;">Semestriel</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;color:#64748b;">Suivi particulier : évolution structurelle, saisonnalité</td></tr>
+    <tr><td style="padding:6px 8px;font-weight:700;">Annuel</td><td style="padding:6px 8px;color:#64748b;">Bilan global, comparaison année sur année, prévisions pour l'année suivante</td></tr>
+  </table>
+  <div style="background:#1e293b;color:#e2e8f0;border-radius:10px;padding:12px 16px;font-size:11px;line-height:1.6;">Bénéfice brut = CA − coût d'achat des ventes. Bénéfice net = brut − dépenses/charges/commissions de la période. Les deux sont recalculés en continu, jamais saisis à la main, quelle que soit la fréquence affichée.</div>
+</section>
+
+</doc-page>
+<template id="__bundler_thumbnail"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#1e293b"/><text x="50" y="58" font-size="40" fill="#93c5fd" text-anchor="middle" font-family="sans-serif">🗺️</text></svg></template>
+</x-dc>
+</body>
+</html>

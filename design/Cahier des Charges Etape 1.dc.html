@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./doc-page.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<style id="__om-edit-overrides"></style>
+<style>
+doc-page:not(:defined){visibility:hidden}
+.spec-body h1,.spec-body h2,.spec-body h3{font-family:Helvetica,Arial,sans-serif;color:#0f172a;}
+.spec-body p,.spec-body li,.spec-body td,.spec-body th{font-family:Helvetica,Arial,sans-serif;color:#1e293b;}
+.spec-body table{border-collapse:collapse;width:100%;}
+.spec-body th{background:#f1f5f9;text-align:left;padding:8px 10px;border-bottom:2px solid #cbd5e1;font-size:12px;text-transform:uppercase;letter-spacing:0.03em;}
+.spec-body td{padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:12.5px;vertical-align:top;}
+.chapitre{break-before:page;}
+.mermaid{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin:14px 0;break-inside:avoid;}
+.regle-list li{margin-bottom:6px;line-height:1.55;}
+.callout{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:12.5px;color:#1e3a5f;line-height:1.6;margin:12px 0;break-inside:avoid;}
+</style>
+</helmet>
+<doc-page margin="0.85in">
+<div class="spec-body">
+
+<div style="font-size:11px;letter-spacing:0.2em;color:#64748b;text-transform:uppercase;margin-bottom:6px;">EVOLUTIS223 — Cahier des charges — Étape 1</div>
+<h1 style="font-size:26px;margin:0 0 8px;">Fondations fonctionnelles : Lexique, Architecture, Processus</h1>
+<p style="font-size:12.5px;color:#475569;line-height:1.6;margin:0 0 4px;">Ce document est la première étape du plan de fabrication. Il fixe le vocabulaire exact, l'architecture générale des flux de données, et les règles précises des quatre processus fondateurs de l'application. Le détail écran par écran viendra à l'étape suivante — ce socle doit d'abord être validé sans ambiguïté.</p>
+
+<h2 style="font-size:19px;margin:26px 0 10px;">1. Lexique complet et détaillé</h2>
+<table>
+<thead><tr><th style="width:20%;">Terme</th><th style="width:40%;">Définition métier</th><th style="width:40%;">Définition technique</th></tr></thead>
+<tbody>
+<tr><td><b>Affaire</b></td><td>Toute transaction commerciale enregistrée (devis, facture, reçu/ticket) liant un client à une ou plusieurs lignes d'articles.</td><td>Objet unique identifié par un numéro (ex. A-26-XXXX) : type, statut de validation, lignes, montants, solde.</td></tr>
+<tr><td><b>Commande en attente</b></td><td>Commande reçue (souvent en ligne) pas encore transformée en affaire validée.</td><td>Enregistrement distinct tant qu'il n'est pas converti ; visible dans une file avant intégration au Kanban.</td></tr>
+<tr><td><b>Ordre de Fabrication (OF)</b></td><td>Instruction de production déclenchée par la vente d'un article Famille D ou d'un Kit nécessitant assemblage.</td><td>Enregistrement lié à l'affaire d'origine : étapes (conception/production/contrôle/livraison), pilote assigné, suivi au Kanban Livraisons.</td></tr>
+<tr><td><b>Bon de caisse / Bon de décaissement</b></td><td>Pièce justificative obligatoire pour toute sortie d'argent liquide, catégorisée. Remplace toute écriture libre.</td><td>Enregistrement horodaté : catégorie obligatoire, montant, motif, auteur, validation selon seuil.</td></tr>
+<tr><td><b>Acompte</b></td><td>Montant versé par le client avant livraison/facturation finale, réduisant le solde dû.</td><td>Paiement partiel sur une affaire dont le statut reste "en cours" tant que solde &gt; 0.</td></tr>
+<tr><td><b>Solde</b></td><td>Montant restant dû (ou trop perçu) sur une affaire.</td><td>Solde = TTC − Σ règlements enregistrés ; peut être négatif (reliquat en faveur du client).</td></tr>
+<tr><td><b>Famille d'article</b></td><td>Catégorie qui détermine le mode d'approvisionnement et de vente : A Textile/douzaine, B Unité simple, C Service, D Fabrication sur commande, E Produit composé.</td><td>Champ obligatoire de la fiche article ; conditionne formulaires et calculs de stock.</td></tr>
+<tr><td><b>Variante</b></td><td>Déclinaison vendable d'un article textile selon taille et/ou couleur.</td><td>Ligne de stock distincte rattachée à un article parent (variantOf), quantité et seuil propres.</td></tr>
+<tr><td><b>Archive immuable</b></td><td>Version figée d'un document officiel qui ne peut plus être modifiée ni supprimée après émission.</td><td>Copie PDF horodatée stockée séparément de l'affaire vivante ; correction uniquement via un Avoir.</td></tr>
+<tr><td><b>Lot de production</b></td><td>Enregistrement d'un approvisionnement précis, permettant de tracer l'origine de chaque unité en stock.</td><td>Horodaté, lié à un article : produit / réservé / vendu / restant, par variante.</td></tr>
+<tr><td><b>Réserve personnalisation</b></td><td>Quantité mise de côté à l'approvisionnement, destinée aux articles personnalisés, non vendable en direct.</td><td>Ligne de stock séparée (reservePerso=true), exclue des suggestions de vente directe.</td></tr>
+<tr><td><b>PMP</b> (Prix Moyen Pondéré)</td><td>Coût d'achat moyen d'un article en stock, utilisé pour valoriser le stock et la marge.</td><td>Recalculé à chaque entrée de lot à un prix différent.</td></tr>
+<tr><td><b>Stock disponible</b></td><td>Quantité réellement vendable en détail à l'instant T.</td><td>Quantité du/des lot(s) − réserve − déjà vendu.</td></tr>
+<tr><td><b>Kanban</b></td><td>Tableau visuel des commandes/fabrications en cours, organisé par étape.</td><td>Vue des Livraisons/OF groupés par statut (colonnes), cartes déplaçables.</td></tr>
+<tr><td><b>Devis (V1, V2…)</b></td><td>Proposition commerciale chiffrée, non engageante, révisable avant acceptation.</td><td>Type d'affaire "Devis", versionné ; converti en Bon de commande à l'acceptation.</td></tr>
+<tr><td><b>Bon de commande</b></td><td>Confirmation formelle de la commande par le client, engageant les deux parties.</td><td>Généré à la conversion du devis accepté ; précède la facturation.</td></tr>
+<tr><td><b>Facture</b></td><td>Document comptable définitif réclamant paiement, non annulable.</td><td>Type d'affaire "Facture" ; archive immuable dès émission, correction uniquement par Avoir.</td></tr>
+<tr><td><b>Ticket / Reçu</b></td><td>Preuve d'achat simplifiée pour une vente comptant.</td><td>Type d'affaire "Reçu" ; généralement sans délai de paiement.</td></tr>
+<tr><td><b>Avoir</b></td><td>Document correctif qui annule ou réduit une facture déjà émise, sans la supprimer.</td><td>Nouvelle affaire type "Avoir", liée au numéro d'origine, montant négatif.</td></tr>
+<tr><td><b>Produit composé / Kit</b></td><td>Article vendu qui assemble plusieurs articles existants en une seule offre, à prix propre.</td><td>Fiche "recette" (composants + quantités requises) ; pas de stock propre — calculé.</td></tr>
+<tr><td><b>Clôture de caisse</b></td><td>Vérification quotidienne obligatoire de correspondance entre argent physique et solde théorique.</td><td>Processus journalier ; calcule un écart, exige justification si écart ≠ 0.</td></tr>
+<tr><td><b>Écart de caisse</b></td><td>Différence entre ce que l'application attend en caisse et ce qui y est physiquement compté.</td><td>Écart = comptage réel − solde théorique ; tracé dans le Journal d'audit si non nul.</td></tr>
+<tr><td><b>Boîte noire / Journal d'audit</b></td><td>Registre inviolable de toutes les actions (créations, modifications, suppressions).</td><td>Append-only, non modifiable (même Super Admin), horodaté, lié à l'auteur.</td></tr>
+<tr><td><b>Droits d'accès / Rôle</b></td><td>Ensemble des actions autorisées selon la fonction (Super Admin, Admin, Responsable Commercial, Vendeur, Comptabilité…).</td><td>Filtre appliqué à chaque action ; refus explicite si non autorisé, jamais silencieux.</td></tr>
+<tr><td><b>Client Boutique</b></td><td>Client particulier achetant au comptant, sans contrat préalable.</td><td>Parcours standard : paiement immédiat requis avant validation de l'affaire.</td></tr>
+<tr><td><b>Client ONG / Contrat</b></td><td>Client institutionnel avec contrat-cadre, pouvant commander avec paiement différé.</td><td>Parcours dérogatoire : Bon de commande signé déclenche la production, paiement selon les termes du contrat.</td></tr>
+<tr><td><b>Trésorerie</b></td><td>Vision consolidée de l'argent réellement disponible et de sa provenance.</td><td>Calculée depuis Affaires, Règlements, Dépenses/Charges — jamais saisie directement.</td></tr>
+<tr><td><b>Fonds en circulation</b></td><td>Espèces encaissées par un livreur lors d'une livraison, pas encore remises et validées au centre.</td><td>Statut transitoire attaché au livreur (non à la Trésorerie centrale) ; solde du livreur = Σ encaissements terrain non validés ; n'impacte la Trésorerie qu'après validation manuelle Administrateur.</td></tr>
+</tbody>
+</table>
+
+<h2 style="font-size:19px;margin:26px 0 6px;" class="chapitre">2. Schéma d'architecture générale — flux de données</h2>
+<p style="font-size:12px;color:#475569;line-height:1.6;margin:0 0 6px;">Interface Utilisateur → Serveur logique (moteurs métier) → Base de données, avec le Journal d'audit et les Droits d'accès transversaux à tous les modules.</p>
+<div class="mermaid">
+flowchart TD
+  subgraph UI["Interface Utilisateur"]
+    UI1["Boutique en ligne"]
+    UI2["Back-office / Guichet"]
+  end
+  subgraph SRV["Serveur logique (moteurs métier)"]
+    M1["Moteur Ventes / Commandes"]
+    M2["Moteur Stock / Kits"]
+    M3["Moteur Trésorerie / Caisse"]
+    M4["Moteur Documents"]
+    M6["Droits d'accès"]
+    M5["Journal d'audit"]
+  end
+  subgraph DB["Base de données"]
+    D1[("Articles & Variantes")]
+    D2[("Stock & Lots")]
+    D3[("Affaires & Commandes")]
+    D4[("Trésorerie & Caisse")]
+    D5[("Documents archivés")]
+    D6[("Journal d'audit")]
+  end
+  UI1 -->|commande en ligne| M1
+  UI2 -->|vente guichet| M1
+  M1 -->|vérifie disponibilité| M2
+  M2 <--> D1
+  M2 <--> D2
+  M1 --> D3
+  M1 -->|encaissement| M3
+  M3 <--> D4
+  M1 -->|génère| M4
+  M4 <--> D5
+  M6 -.filtre.-> M1
+  M6 -.filtre.-> M2
+  M6 -.filtre.-> M3
+  M1 -.trace.-> M5
+  M2 -.trace.-> M5
+  M3 -.trace.-> M5
+  M4 -.trace.-> M5
+  M5 <--> D6
+</div>
+<div class="callout">Règle générale : aucun module n'écrit directement dans la Base de données sans passer par son moteur logique — cela garantit qu'aucune saisie ne contourne les contrôles (droits d'accès, stock, traçabilité).</div>
+
+<h2 style="font-size:19px;margin:0 0 6px;" class="chapitre">Chapitre 1 — Flux des Commandes et Production</h2>
+<ol class="regle-list" style="font-size:12.5px;margin:0 0 10px;padding-left:20px;">
+<li>Toute commande (boutique en ligne ou guichet) entre d'abord comme <b>Commande en attente</b> — jamais directement comme affaire validée.</li>
+<li>Le type de client détermine la suite : <b>Boutique/Particulier</b> exige un paiement (total ou acompte) avant validation ; <b>ONG/Contrat</b> peut être validée sur simple Bon de commande signé, paiement différé selon les termes contractuels.</li>
+<li>Une fois validée, l'affaire entre dans le <b>Kanban Livraisons</b> à l'étape "Conception".</li>
+<li>Si l'article vendu est de Famille D (fabrication sur commande) ou un Kit nécessitant assemblage, un <b>Ordre de Fabrication</b> est déclenché automatiquement, lié à l'affaire.</li>
+<li>L'OF progresse dans le Kanban (Conception → Production → Contrôle qualité → Livraison/Retrait) ; chaque changement d'étape est journalisé.</li>
+<li>La clôture de l'affaire n'intervient qu'après confirmation de livraison/retrait.</li>
+</ol>
+<div class="mermaid">
+flowchart TD
+  A["Commande reçue"] --> B{"Type de client"}
+  B -->|"Boutique / Particulier"| C["Paiement immédiat (total ou acompte)"]
+  B -->|"ONG / Contrat"| D["Bon de commande signé, paiement différé autorisé"]
+  C --> E["Commande validée"]
+  D --> E
+  E --> F["Entrée au Kanban Livraisons"]
+  F --> G["Étape Conception"]
+  G --> H["Étape Production"]
+  H --> I["Étape Contrôle qualité"]
+  I --> J["Étape Livraison / Retrait"]
+  J --> K["Clôture de l'affaire"]
+  E -.si Famille D ou Kit.-> L["Ordre de Fabrication créé"]
+  L --> H
+</div>
+
+<h2 style="font-size:19px;margin:0 0 6px;" class="chapitre">Chapitre 2 — Flux de Trésorerie et Dépenses Espèces</h2>
+<ol class="regle-list" style="font-size:12.5px;margin:0 0 10px;padding-left:20px;">
+<li>Aucune écriture libre n'est autorisée : toute sortie d'argent liquide exige un <b>Bon de décaissement</b>.</li>
+<li>Le bon est obligatoirement catégorisé (Achat marchandise, Charge/frais général, RH/Salaire-Commission) — la catégorie conditionne son imputation en Trésorerie et en Rapport.</li>
+<li>Au-delà d'un seuil défini, le décaissement exige une validation hiérarchique avant exécution.</li>
+<li>Chaque jour, une <b>Clôture de caisse</b> est obligatoire : comptage physique de la caisse, comparé au solde théorique calculé par l'application.</li>
+<li>Un <b>écart</b> (comptage réel − solde théorique) différent de zéro bloque la clôture tant qu'une justification n'est pas saisie ; l'écart et sa justification sont tracés dans le Journal d'audit.</li>
+<li>Toute livraison encaissée en espèces sur le terrain ne rejoint jamais directement la caisse centrale : l'argent reste au statut <b>Fonds en circulation</b>, sous la responsabilité du livreur, tant qu'il n'a pas été remis.</li>
+<li>La remise de fonds par le livreur exige une <b>validation manuelle de l'Administrateur</b> (rapprochement montant remis / montant attendu selon les livraisons confirmées) ; ce n'est qu'à cet instant que le montant impacte la Trésorerie centrale.</li>
+<li>Tant que la validation n'a pas eu lieu, le solde du livreur reste visible séparément (jamais fondu dans la Trésorerie) ; tout écart à la remise est tracé au Journal d'audit.</li>
+</ol>
+<div class="mermaid">
+flowchart TD
+  A["Besoin de sortie de caisse"] --> B["Création obligatoire d'un Bon de décaissement"]
+  B --> C{"Catégorie"}
+  C -->|"Achat marchandise"| D1["Catégorie Achat"]
+  C -->|"Frais général"| D2["Catégorie Charge"]
+  C -->|"Salaire / Commission"| D3["Catégorie RH"]
+  D1 --> E["Validation hiérarchique si seuil dépassé"]
+  D2 --> E
+  D3 --> E
+  E --> F["Décaissement enregistré (jamais en écriture libre)"]
+  F --> G["Fin de journée : Clôture de caisse obligatoire"]
+  G --> H["Comptage physique de la caisse"]
+  H --> I["Écart = Comptage réel − Solde théorique"]
+  I --> J{"Écart = 0 ?"}
+  J -->|"Oui"| K["Clôture validée"]
+  J -->|"Non"| L["Justification obligatoire, tracée au Journal d'audit"]
+  L --> K
+  M["Livraison payée en espèces (terrain)"] --> N["Statut : Fonds en circulation (chez le livreur)"]
+  N --> O["Remise des fonds par le livreur"]
+  O --> P{"Validation manuelle Administrateur"}
+  P -->|"Montant conforme"| Q["Impact effectif sur Trésorerie centrale"]
+  P -->|"Écart constaté"| R["Écart tracé au Journal d'audit"]
+  R --> Q
+</div>
+
+<h2 style="font-size:19px;margin:0 0 6px;" class="chapitre">Chapitre 3 — Calcul du Stock des Produits Composés (Kits)</h2>
+<ol class="regle-list" style="font-size:12.5px;margin:0 0 10px;padding-left:20px;">
+<li>Un Kit ne possède jamais de quantité en stock saisie directement — elle est <b>toujours recalculée</b> depuis sa recette.</li>
+<li>La recette fixe, définie sur la fiche article, liste chaque composant, la quantité requise par kit vendu, et — si le composant est un article textile — la <b>variante exacte exigée</b> (taille et/ou couleur précise), jamais une famille entière de tailles.</li>
+<li>Si le client choisit une variante au moment de la commande (ex. Polo Noir XL dans un kit "Polo + accessoire"), le contrôle de disponibilité et la décrémentation ciblent <b>uniquement cette variante précise</b> — jamais la somme de toutes les variantes vendables du composant.</li>
+<li>La réserve personnalisation d'une variante n'est jamais comptée dans son stock disponible pour un kit.</li>
+<li>Pour chaque composant : stock possible = stock disponible de <b>la variante exacte requise</b> ÷ quantité requise par kit, arrondi à l'entier inférieur.</li>
+<li>Le stock affiché du Kit = le plus petit résultat parmi tous les composants (le "goulot d'étranglement"), avec le nom du composant et de la <b>variante</b> limitante affichés en clair.</li>
+<li>Si la variante précise demandée est épuisée, la vente du Kit est <b>bloquée</b> même si d'autres variantes du même composant sont disponibles en stock.</li>
+<li>Vendre un Kit décrémente chaque composant sur sa variante exacte (plusieurs lignes de stock touchées en une seule vente) ; le contrôle de disponibilité se fait variante par variante, jamais sur un total agrégé.</li>
+</ol>
+<div class="mermaid">
+flowchart TD
+  A["Fiche Kit : recette fixe de composants + variante exacte requise"] --> B["Pour chaque composant : quantité requise par kit"]
+  B --> C{"Composant à variantes taille/couleur ?"}
+  C -->|"Oui"| D["Stock disponible = stock de LA variante exacte requise uniquement (réserve exclue)"]
+  C -->|"Non"| E["Stock disponible = quantité simple en stock"]
+  D --> F["Stock possible = stock disponible ÷ quantité requise (arrondi bas)"]
+  E --> F
+  F --> G["Répéter pour tous les composants, variante par variante"]
+  G --> H["Stock du Kit = MINIMUM de tous les résultats"]
+  H --> I{"Stock du Kit < demande ?"}
+  I -->|"Oui"| J["Blocage de la vente + composant/variante limitant affiché en clair"]
+  I -->|"Non"| K["Vente autorisée : décrémentation de la variante exacte par composant"]
+</div>
+
+<h2 style="font-size:19px;margin:0 0 6px;" class="chapitre">Chapitre 4 — Gestion et Archivage des Documents</h2>
+<ol class="regle-list" style="font-size:12.5px;margin:0 0 10px;padding-left:20px;">
+<li>Un <b>Devis</b> peut être révisé (V1, V2…) tant qu'il n'est pas accepté ; chaque révision archive la version précédente sans la supprimer.</li>
+<li>L'acceptation du devis génère un <b>Bon de commande</b>, qui engage les deux parties.</li>
+<li>Selon le mode de vente, le Bon de commande aboutit à un <b>Ticket</b> (vente comptant guichet) ou une <b>Facture</b> (vente à crédit ou institutionnelle).</li>
+<li>Dès émission, Ticket et Facture deviennent une <b>Archive PDF immuable</b> : aucune modification, aucune suppression possible, par personne, y compris Super Admin.</li>
+<li>Toute erreur constatée après émission se corrige exclusivement par un <b>Avoir</b> — jamais par suppression ni modification du document d'origine.</li>
+</ol>
+<div class="mermaid">
+flowchart TD
+  A["Devis V1"] -->|"modification demandée"| B["Devis V2 (V1 archivé)"]
+  B --> C["Devis accepté"]
+  C --> D["Bon de commande généré"]
+  D --> E{"Mode de vente"}
+  E -->|"Vente comptant guichet"| F["Ticket de caisse"]
+  E -->|"Vente à crédit / institutionnelle"| G["Facture"]
+  F --> H["Archive PDF immuable"]
+  G --> H
+  H --> I{"Erreur constatée après émission ?"}
+  I -->|"Oui"| J["Création obligatoire d'un Avoir (jamais de suppression)"]
+  I -->|"Non"| K["Document clos"]
+  J --> H
+</div>
+
+<div class="callout" style="margin-top:20px;">Fin de l'Étape 1. Prochaine étape annoncée par l'utilisateur : détail écran par écran de chaque module.</div>
+
+</div>
+</doc-page>
+<template id="__bundler_thumbnail"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#0f172a"/><text x="50" y="58" font-size="38" fill="#93c5fd" text-anchor="middle" font-family="sans-serif">📘</text></svg></template>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    this.initMermaid();
+  }
+  async initMermaid() {
+    let tries = 0;
+    while (!window.mermaid && tries < 60) { await new Promise(r => setTimeout(r, 100)); tries++; }
+    if (!window.mermaid) return;
+    try {
+      window.mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose', fontFamily: 'Helvetica, Arial, sans-serif' });
+      await window.mermaid.run({ querySelector: '.mermaid' });
+    } catch (e) { console.error('mermaid render error', e); }
+  }
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

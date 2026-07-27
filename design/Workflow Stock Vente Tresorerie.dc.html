@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style id="__om-edit-overrides"></style>
+</helmet>
+<script src="./doc-page.js"></script>
+<style>doc-page:not(:defined){visibility:hidden}</style>
+<doc-page orientation="landscape">
+
+<section class="page" data-screen-label="01-Couverture" style="display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;background:linear-gradient(160deg,#0f172a,#1e293b);color:#fff;padding:60px;box-sizing:border-box;">
+  <div style="font-size:13px;letter-spacing:0.25em;color:#93c5fd;text-transform:uppercase;margin-bottom:18px;">EVOLUTIS223 — Documentation interne</div>
+  <h1 style="font-size:46px;font-weight:800;margin:0 0 14px;max-width:900px;">Workflow complet : Achat → Stock → Catalogue → Vente → Trésorerie</h1>
+  <div style="font-size:16px;color:#cbd5e1;max-width:780px;line-height:1.6;">Schéma détaillé du fonctionnement réel de l'application : d'où viennent les quantités affichées, comment les modules sont connectés, et pourquoi.</div>
+  <div style="margin-top:40px;font-size:12px;color:#64748b;">Document de référence — à conserver</div>
+</section>
+
+<section class="page" data-screen-label="02-Vue-ensemble" style="padding:40px 46px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:22px;margin:0 0 6px;">Vue d'ensemble du circuit</h2>
+  <div style="font-size:12.5px;color:#64748b;margin-bottom:22px;">Un seul flux, six étapes. Chaque étape alimente automatiquement la suivante — rien n'est recopié à la main.</div>
+  <div style="display:flex;align-items:stretch;gap:0;">
+    <div style="flex:1;background:#eff6ff;border:2px solid #93c5fd;border-radius:10px;padding:14px;">
+      <div style="font-size:11px;font-weight:800;color:#1d4ed8;text-transform:uppercase;">1. Fiche article</div>
+      <div style="font-size:11.5px;color:#334155;margin-top:6px;line-height:1.5;">Catalogue → Nouvel article. On saisit douzaines, tailles, couleurs, réserve perso.</div>
+    </div>
+    <div style="display:flex;align-items:center;padding:0 8px;font-size:20px;color:#94a3b8;">→</div>
+    <div style="flex:1;background:#f0fdf4;border:2px solid #86efac;border-radius:10px;padding:14px;">
+      <div style="font-size:11px;font-weight:800;color:#15803d;text-transform:uppercase;">2. Lot de production</div>
+      <div style="font-size:11.5px;color:#334155;margin-top:6px;line-height:1.5;">Un enregistrement horodaté : douzaines, répartition par taille, réserve — la preuve du calcul.</div>
+    </div>
+    <div style="display:flex;align-items:center;padding:0 8px;font-size:20px;color:#94a3b8;">→</div>
+    <div style="flex:1;background:#fefce8;border:2px solid #fde047;border-radius:10px;padding:14px;">
+      <div style="font-size:11px;font-weight:800;color:#a16207;text-transform:uppercase;">3. Stock</div>
+      <div style="font-size:11.5px;color:#334155;margin-top:6px;line-height:1.5;">Une ligne par taille/couleur en vente directe + une ligne réserve personnalisation, séparées.</div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:center;padding:8px 0;font-size:20px;color:#94a3b8;">↓</div>
+  <div style="display:flex;align-items:stretch;gap:0;">
+    <div style="flex:1;background:#fdf4ff;border:2px solid #e9d5ff;border-radius:10px;padding:14px;">
+      <div style="font-size:11px;font-weight:800;color:#a21caf;text-transform:uppercase;">6. Trésorerie</div>
+      <div style="font-size:11.5px;color:#334155;margin-top:6px;line-height:1.5;">Règlements, valeur de stock, marge : calculés à partir des affaires et du stock réel.</div>
+    </div>
+    <div style="display:flex;align-items:center;padding:0 8px;font-size:20px;color:#94a3b8;transform:scaleX(-1);">→</div>
+    <div style="flex:1;background:#fff1f2;border:2px solid #fda4af;border-radius:10px;padding:14px;">
+      <div style="font-size:11px;font-weight:800;color:#be123c;text-transform:uppercase;">5. Nouvelle affaire (vente)</div>
+      <div style="font-size:11.5px;color:#334155;margin-top:6px;line-height:1.5;">Choix de l'article → contrôle du stock disponible → décrément du bon lot (FIFO).</div>
+    </div>
+    <div style="display:flex;align-items:center;padding:0 8px;font-size:20px;color:#94a3b8;transform:scaleX(-1);">→</div>
+    <div style="flex:1;background:#f5f3ff;border:2px solid #c4b5fd;border-radius:10px;padding:14px;">
+      <div style="font-size:11px;font-weight:800;color:#6d28d9;text-transform:uppercase;">4. Catalogue / Nos produits</div>
+      <div style="font-size:11.5px;color:#334155;margin-top:6px;line-height:1.5;">Le Stock alimente le Catalogue interne automatiquement. "Nos produits" (vitrine) exige une publication manuelle.</div>
+    </div>
+  </div>
+  <div style="margin-top:26px;background:#f1f5f9;border-radius:10px;padding:16px 18px;font-size:12px;color:#334155;line-height:1.6;">
+    <b>Règle d'or :</b> il n'existe qu'UNE seule source de vérité pour la quantité — le Stock. Le Catalogue, "Nos produits" et la fiche article l'affichent tous, ils ne la recalculent jamais séparément. Si un nombre paraît faux, il vient toujours du Stock (donc d'un Lot de production ou d'une vente).
+  </div>
+</section>
+
+<section class="page" data-screen-label="03-Approvisionnement" style="padding:40px 46px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:22px;margin:0 0 6px;">Étape 1 → 3 : Approvisionnement d'un textile (ex. Polo)</h2>
+  <div style="font-size:12.5px;color:#64748b;margin-bottom:18px;">Ce que vous saisissez sur la fiche, et ce que l'application en déduit — pas à pas.</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;">
+      <div style="font-size:11px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:10px;">Ce que vous saisissez</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tr><td style="padding:5px 0;color:#64748b;">Combien de douzaines achetées</td><td style="padding:5px 0;text-align:right;font-weight:700;">2</td></tr>
+        <tr><td style="padding:5px 0;color:#64748b;">Répartition par taille (pour 1 douzaine)</td><td style="padding:5px 0;text-align:right;font-weight:700;">M:2 · L:4 · XL:4 · XXL:2</td></tr>
+        <tr><td style="padding:5px 0;color:#64748b;">Réservé pour personnalisation</td><td style="padding:5px 0;text-align:right;font-weight:700;color:#dc2626;">saisi en PIÈCES, pas en douzaines</td></tr>
+      </table>
+      <div style="margin-top:12px;padding:10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;font-size:11.5px;color:#9a3412;line-height:1.55;">
+        ⚠ Piège fréquent : taper <b>« 1 »</b> dans ce champ réserve <b>1 pièce</b>, pas 1 douzaine. Pour réserver l'équivalent d'1 douzaine sur 2 achetées, il faut saisir <b>12</b> (la moitié du total produit).
+      </div>
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;">
+      <div style="font-size:11px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:10px;">Ce que l'application calcule</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tr><td style="padding:5px 0;color:#64748b;">Total produit (2 douz. × répartition)</td><td style="padding:5px 0;text-align:right;font-weight:700;">M:4 · L:8 · XL:8 · XXL:4 = 24 pièces</td></tr>
+        <tr><td style="padding:5px 0;color:#64748b;">Réserve demandée (ex. 12 pièces)</td><td style="padding:5px 0;text-align:right;font-weight:700;">répartie au prorata de chaque taille</td></tr>
+        <tr><td style="padding:5px 0;color:#64748b;">Résultat si 12 réservées</td><td style="padding:5px 0;text-align:right;font-weight:700;color:#15803d;">M:2 · L:4 · XL:4 · XXL:2</td></tr>
+        <tr><td style="padding:5px 0;color:#64748b;">Stock vente directe = total − réserve</td><td style="padding:5px 0;text-align:right;font-weight:700;">M:2 · L:4 · XL:4 · XXL:2</td></tr>
+      </table>
+      <div style="margin-top:12px;padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11.5px;color:#166534;line-height:1.55;">
+        La réserve n'est jamais ajoutée en plus du stock : elle est retirée du total produit, taille par taille. Un lot de production est enregistré avec ces chiffres exacts.
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:18px;background:#1e293b;color:#e2e8f0;border-radius:10px;padding:14px 18px;font-size:12px;line-height:1.6;">
+    <b style="color:#93c5fd;">Réapprovisionner</b> refait exactement ce calcul et ADDITIONNE au lot existant — chaque réapprovisionnement crée un nouveau lot, visible séparément dans le ledger "Lots de production" (fiche Stock / Catalogue).
+  </div>
+</section>
+
+<section class="page" data-screen-label="04-Stock-Catalogue" style="padding:40px 46px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:22px;margin:0 0 6px;">Étape 3 → 4 : Stock et Catalogue (synchronisés automatiquement)</h2>
+  <div style="font-size:12.5px;color:#64748b;margin-bottom:18px;">Deux vues du même chiffre — jamais deux calculs différents.</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;">
+      <div style="font-size:11px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:10px;">Page Stocks</div>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:#334155;line-height:1.7;">
+        <li>Une ligne par variante (taille + couleur)</li>
+        <li>Colonne <b>Qté</b> = vendable en détail (réserve déjà exclue)</li>
+        <li>Colonne <b>Réservé</b> = quantité mise de côté pour la personnalisation, pour cette même taille/couleur</li>
+        <li>Fiche détail : lots de production de cette taille/couleur, avec vendu / restant</li>
+      </ul>
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;">
+      <div style="font-size:11px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:10px;">Page Catalogue</div>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:#334155;line-height:1.7;">
+        <li>Même liste d'articles que le Stock, avec prix de vente et catégorie</li>
+        <li>La ligne "Réserve personnalisation" apparaît comme un article à part — elle n'est PAS vendable en vente directe</li>
+        <li>Fiche article : même ledger de lots, même bouton "Supprimer ce lot"</li>
+        <li>Un lot ne peut être supprimé que s'il n'a encore rien vendu ni libéré</li>
+      </ul>
+    </div>
+  </div>
+  <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 18px;font-size:12px;color:#9a3412;line-height:1.6;">
+    <b>Pourquoi les nombres semblent parfois "bizarres" (ex. 6 / 11 / 11 / 6) :</b> ce sont presque toujours plusieurs lots additionnés (des tests répétés, des réapprovisionnements successifs), chacun avec sa propre répartition et sa propre réserve. Le ledger de lots existe précisément pour retrouver l'origine de chaque chiffre — ouvrez-le avant de suspecter un bug.
+  </div>
+</section>
+
+<section class="page" data-screen-label="05-Nos-produits" style="padding:40px 46px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:22px;margin:0 0 6px;">Étape 4 : "Nos produits" — vitrine publique</h2>
+  <div style="font-size:12.5px;color:#64748b;margin-bottom:18px;">Ce menu n'est PAS le Catalogue : c'est une sélection volontaire, à montrer au client.</div>
+  <div style="display:flex;gap:18px;">
+    <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;">
+      <div style="font-size:11px;font-weight:800;color:#1e293b;text-transform:uppercase;margin-bottom:10px;">Comportement attendu</div>
+      <ol style="margin:0;padding-left:18px;font-size:12px;color:#334155;line-height:1.8;">
+        <li>Un article créé dans le Catalogue N'APPARAÎT PAS automatiquement dans "Nos produits"</li>
+        <li>Il faut l'activer explicitement : bouton "Publier" sur sa fiche Catalogue (bascule "🌐 Publié sur la boutique en ligne")</li>
+        <li>Une fois publié, il apparaît dans "Nos produits" avec sa photo (à déposer), son prix public et sa catégorie</li>
+        <li>Les variantes réserve personnalisation ne sont jamais publiables — elles ne sont pas des produits à vendre</li>
+      </ol>
+    </div>
+    <div style="flex:1;background:#f5f3ff;border:1px solid #c4b5fd;border-radius:10px;padding:16px;">
+      <div style="font-size:11px;font-weight:800;color:#6d28d9;text-transform:uppercase;margin-bottom:10px;">Pourquoi ce choix</div>
+      <div style="font-size:12px;color:#334155;line-height:1.7;">"Nos produits" est une vitrine tablette/boutique : elle ne doit montrer que des articles avec photo et prix soignés, pas chaque variante technique de test. La publication manuelle évite d'exposer au client des brouillons, des réserves internes ou des articles hors-stock exceptionnels.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="06-Nouvelle-affaire" style="padding:40px 46px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:22px;margin:0 0 6px;">Étape 5 : Nouvelle affaire (vente)</h2>
+  <div style="font-size:12.5px;color:#64748b;margin-bottom:18px;">De la sélection de l'article jusqu'au décrément réel du stock.</div>
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <div style="display:flex;align-items:center;gap:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;">
+      <div style="font-size:18px;font-weight:800;color:#1d4ed8;">1</div>
+      <div style="font-size:12px;color:#1e293b;">Recherche d'article : seules les variantes vendables en détail apparaissent — les réserves personnalisation sont exclues des suggestions.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;">
+      <div style="font-size:18px;font-weight:800;color:#15803d;">2</div>
+      <div style="font-size:12px;color:#1e293b;">Saisie du client + des lignes (article, quantité, prix). Un client vide ou aucun article bloque l'enregistrement, avec un message explicite à l'écran.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;">
+      <div style="font-size:18px;font-weight:800;color:#a16207;">3</div>
+      <div style="font-size:12px;color:#1e293b;">Contrôle de stock à l'enregistrement (Facture / Reçu) : si la quantité demandée dépasse le stock disponible, ou si l'article est une réserve personnalisation, la vente est refusée avec un message clair — jamais de stock négatif silencieux.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;background:#fff1f2;border:1px solid #fecdd3;border-radius:10px;padding:12px 16px;">
+      <div style="font-size:18px;font-weight:800;color:#be123c;">4</div>
+      <div style="font-size:12px;color:#1e293b;">Décrément du stock ET du lot d'origine (le plus ancien en premier — FIFO). Le ledger "Lots de production" se met à jour : vendu / restant, par taille/couleur.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:12px 16px;">
+      <div style="font-size:18px;font-weight:800;color:#6d28d9;">5</div>
+      <div style="font-size:12px;color:#1e293b;">L'affaire (Devis/Facture/Reçu) est créée dans "Affaires" — elle nourrit la Trésorerie (règlements, chiffre d'affaires, marge).</div>
+    </div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="07-Tresorerie" style="padding:40px 46px;box-sizing:border-box;color:#0f172a;">
+  <h2 style="font-size:22px;margin:0 0 6px;">Étape 6 : Trésorerie</h2>
+  <div style="font-size:12.5px;color:#64748b;margin-bottom:18px;">Tout part des affaires réellement enregistrées et du stock réel — aucun chiffre saisi à la main.</div>
+  <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+    <tr style="background:#f1f5f9;"><th style="text-align:left;padding:10px;border-bottom:2px solid #cbd5e1;">Indicateur</th><th style="text-align:left;padding:10px;border-bottom:2px solid #cbd5e1;">Calculé à partir de</th></tr>
+    <tr><td style="padding:9px 10px;border-bottom:1px solid #e2e8f0;">Règlements / encaissements</td><td style="padding:9px 10px;border-bottom:1px solid #e2e8f0;color:#64748b;">Montants reçus saisis sur chaque affaire (Facture/Reçu)</td></tr>
+    <tr><td style="padding:9px 10px;border-bottom:1px solid #e2e8f0;">Valeur du stock</td><td style="padding:9px 10px;border-bottom:1px solid #e2e8f0;color:#64748b;">Quantité en stock réelle × prix d'achat (PMP), variante par variante</td></tr>
+    <tr><td style="padding:9px 10px;border-bottom:1px solid #e2e8f0;">Marge potentielle</td><td style="padding:9px 10px;border-bottom:1px solid #e2e8f0;color:#64748b;">(Prix de vente − prix d'achat) × quantité en stock</td></tr>
+    <tr><td style="padding:9px 10px;border-bottom:1px solid #e2e8f0;">Chiffre d'affaires / commissions</td><td style="padding:9px 10px;border-bottom:1px solid #e2e8f0;color:#64748b;">Somme des affaires validées (Facture/Reçu), par vendeur et par période</td></tr>
+    <tr><td style="padding:9px 10px;">Dépenses / charges</td><td style="padding:9px 10px;color:#64748b;">Saisies manuelles dans Dépenses / Charges, indépendantes du stock</td></tr>
+  </table>
+  <div style="margin-top:22px;background:#1e293b;color:#e2e8f0;border-radius:10px;padding:16px 18px;font-size:12.5px;line-height:1.7;">
+    <b style="color:#93c5fd;">Conclusion :</b> aucun module ne fonctionne isolément. Un article créé sans lot cohérent, ou une vente enregistrée sans contrôle de stock, fausse immédiatement la Trésorerie en aval. C'est pour cela que le Stock est la source unique de vérité, que chaque lot est tracé, et que la vente est bloquée — avec un message visible — dès que la quantité ou la disponibilité ne correspond pas à la réalité.
+  </div>
+</section>
+
+</doc-page>
+<template id="__bundler_thumbnail"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#1e293b"/><text x="50" y="58" font-size="40" fill="#93c5fd" text-anchor="middle" font-family="sans-serif">📋</text></svg></template>
+</x-dc>
+</body>
+</html>

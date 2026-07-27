@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./doc-page.js"></script>
+<style id="__om-edit-overrides"></style>
+<style>
+doc-page:not(:defined){visibility:hidden}
+.spec-body h1,.spec-body h2,.spec-body h3{font-family:Helvetica,Arial,sans-serif;color:#0f172a;}
+.spec-body p,.spec-body li{font-family:Helvetica,Arial,sans-serif;color:#1e293b;}
+.spec-body pre{background:#0f172a;color:#e2e8f0;border-radius:8px;padding:14px 16px;overflow-x:auto;font-size:11.5px;line-height:1.55;font-family:"SF Mono",Consolas,Monaco,monospace;break-inside:avoid;margin:10px 0 18px;}
+.spec-body code{font-family:"SF Mono",Consolas,Monaco,monospace;}
+.chapitre{break-before:page;}
+.callout{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:12.5px;color:#1e3a5f;line-height:1.6;margin:12px 0;break-inside:avoid;}
+.tbl{border-collapse:collapse;width:100%;margin:8px 0 16px;}
+.tbl th{background:#f1f5f9;text-align:left;padding:6px 8px;border-bottom:2px solid #cbd5e1;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;font-family:Helvetica,Arial,sans-serif;}
+.tbl td{padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;font-family:Helvetica,Arial,sans-serif;}
+</style>
+</helmet>
+<doc-page margin="0.85in">
+<div class="spec-body">
+
+<div style="font-size:11px;letter-spacing:0.2em;color:#64748b;text-transform:uppercase;margin-bottom:6px;">EVOLUTIS223 — Document de référence technique</div>
+<h1 style="font-size:24px;margin:0 0 6px;">Spécifications Techniques et Schéma SQL de Référence</h1>
+<p style="font-size:12.5px;color:#475569;line-height:1.6;margin:0 0 4px;">Structure de base de données figée (tables + clés étrangères) et algorithme de validation du stock des Kits (Moteur 1). Aucune modification de ces structures sans revalidation explicite.</p>
+
+<div class="callout">Statut : <b>figé</b> — sert de base contractuelle au développement. Toute évolution de schéma doit être proposée comme diff sur ce document.</div>
+
+<h2 style="font-size:18px;margin:22px 0 8px;">1. Table des matières</h2>
+<table class="tbl">
+<tr><td>1.1</td><td>Identité / Droits — Rôles, Utilisateurs</td></tr>
+<tr><td>1.2</td><td>Clients</td></tr>
+<tr><td>1.3</td><td>Articles, Variantes, Lots, Mouvements de stock</td></tr>
+<tr><td>1.4</td><td>Kits (composants de recette)</td></tr>
+<tr><td>1.5</td><td>Affaires, Lignes d'affaire, Règlements, Ordres de Fabrication</td></tr>
+<tr><td>1.6</td><td>Trésorerie — Bons de décaissement, Clôtures de caisse, Fonds en circulation</td></tr>
+<tr><td>1.7</td><td>Documents archivés, Journal d'audit</td></tr>
+<tr><td>2</td><td>Algorithme de validation du stock des Kits (JavaScript)</td></tr>
+</table>
+
+<h2 style="font-size:18px;margin:0 0 8px;" class="chapitre">1. Schéma SQL complet (PostgreSQL)</h2>
+
+<h3 style="font-size:14px;margin:16px 0 4px;">1.1 Identité / Droits</h3>
+<pre>CREATE TABLE roles (
+  id            SERIAL PRIMARY KEY,
+  code          VARCHAR(30) UNIQUE NOT NULL, -- SUPER_ADMIN, ADMIN, RESP_COMMERCIAL, VENDEUR, COMPTABILITE, LIVREUR
+  libelle       VARCHAR(60) NOT NULL
+);
+
+CREATE TABLE utilisateurs (
+  id            SERIAL PRIMARY KEY,
+  nom           VARCHAR(100) NOT NULL,
+  email         VARCHAR(150) UNIQUE NOT NULL,
+  role_id       INTEGER NOT NULL REFERENCES roles(id),
+  actif         BOOLEAN NOT NULL DEFAULT TRUE
+);</pre>
+
+<h3 style="font-size:14px;margin:16px 0 4px;">1.2 Clients</h3>
+<pre>CREATE TABLE clients (
+  id            SERIAL PRIMARY KEY,
+  type_client   VARCHAR(20) NOT NULL CHECK (type_client IN ('BOUTIQUE','ONG_CONTRAT')),
+  nom           VARCHAR(150) NOT NULL,
+  contact       VARCHAR(150),
+  contrat_ref   VARCHAR(60),          -- rempli si ONG_CONTRAT
+  paiement_differe_jours INTEGER      -- termes du contrat, NULL si Boutique
+);</pre>
+
+<h3 style="font-size:14px;margin:16px 0 4px;">1.3 Articles, Variantes, Lots, Mouvements de stock</h3>
+<pre>CREATE TABLE articles (
+  id            SERIAL PRIMARY KEY,
+  code          VARCHAR(30) UNIQUE NOT NULL,
+  nom           VARCHAR(150) NOT NULL,
+  famille       CHAR(1) NOT NULL CHECK (famille IN ('A','B','C','D','E')),
+  -- A: Textile/douzaine, B: Unité simple, C: Service, D: Fabrication sur commande, E: Kit/Produit composé
+  prix_vente    NUMERIC(12,2) NOT NULL,
+  pmp           NUMERIC(12,2) NOT NULL DEFAULT 0, -- prix moyen pondéré, recalculé à chaque lot
+  a_variantes   BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE variantes (
+  id            SERIAL PRIMARY KEY,
+  article_id    INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+  taille        VARCHAR(20),
+  couleur       VARCHAR(30),
+  seuil_alerte  INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (article_id, taille, couleur)
+);
+
+CREATE TABLE lots (
+  id                  SERIAL PRIMARY KEY,
+  article_id          INTEGER NOT NULL REFERENCES articles(id),
+  reference           VARCHAR(40),
+  date_reception      TIMESTAMP NOT NULL DEFAULT now(),
+  prix_achat_unitaire NUMERIC(12,2) NOT NULL
+);
+
+-- répartition d'un lot par variante (une réception peut couvrir plusieurs tailles/couleurs)
+CREATE TABLE lot_variantes (
+  id                 SERIAL PRIMARY KEY,
+  lot_id             INTEGER NOT NULL REFERENCES lots(id) ON DELETE CASCADE,
+  variante_id        INTEGER NOT NULL REFERENCES variantes(id),
+  quantite_produite  INTEGER NOT NULL CHECK (quantite_produite >= 0),
+  UNIQUE (lot_id, variante_id)
+);
+
+-- registre append-only de tout mouvement affectant une variante : source unique de vérité du stock
+CREATE TABLE stock_mouvements (
+  id             SERIAL PRIMARY KEY,
+  variante_id    INTEGER NOT NULL REFERENCES variantes(id),
+  lot_id         INTEGER REFERENCES lots(id),
+  type           VARCHAR(20) NOT NULL CHECK (type IN
+                   ('ENTREE','VENTE','RESERVE_PERSO','LIBERATION_RESERVE','AJUSTEMENT')),
+  quantite       INTEGER NOT NULL, -- signé : + pour entrée/libération, - pour vente/réserve
+  affaire_id     INTEGER, -- renseigné si type = VENTE ; FK ajoutée après création de la table affaires
+  auteur_id      INTEGER NOT NULL REFERENCES utilisateurs(id),
+  date_mouvement TIMESTAMP NOT NULL DEFAULT now()
+);
+-- FK différée (affaires est créée en section 1.5) :
+-- ALTER TABLE stock_mouvements ADD CONSTRAINT fk_mvt_affaire FOREIGN KEY (affaire_id) REFERENCES affaires(id);
+
+-- Stock disponible = ENTREE + LIBERATION_RESERVE + AJUSTEMENT - VENTE - RESERVE_PERSO (réserve perso exclue de la vente directe)
+CREATE VIEW v_stock_variante AS
+SELECT
+  v.id AS variante_id,
+  v.article_id,
+  COALESCE(SUM(CASE WHEN m.type = 'RESERVE_PERSO' THEN m.quantite ELSE 0 END), 0) AS reserve_perso,
+  COALESCE(SUM(m.quantite), 0) AS stock_disponible
+FROM variantes v
+LEFT JOIN stock_mouvements m ON m.variante_id = v.id
+GROUP BY v.id, v.article_id;</pre>
+
+<h3 style="font-size:14px;margin:16px 0 4px;">1.4 Kits (composants de recette)</h3>
+<pre>CREATE TABLE kit_composants (
+  id                    SERIAL PRIMARY KEY,
+  kit_article_id        INTEGER NOT NULL REFERENCES articles(id), -- doit être famille = 'E'
+  composant_article_id  INTEGER NOT NULL REFERENCES articles(id),
+  variante_id           INTEGER REFERENCES variantes(id), -- OBLIGATOIRE si composant textile : variante EXACTE requise
+  quantite_requise      INTEGER NOT NULL CHECK (quantite_requise > 0),
+  CHECK (kit_article_id <> composant_article_id)
+);
+-- Contrainte métier (validée en appli) : si composant_article_id.a_variantes = TRUE, variante_id est obligatoire.</pre>
+
+<h3 style="font-size:14px;margin:16px 0 4px;">1.5 Affaires, Lignes d'affaire, Règlements, Ordres de Fabrication</h3>
+<pre>CREATE TABLE affaires (
+  id                 SERIAL PRIMARY KEY,
+  numero             VARCHAR(20) UNIQUE NOT NULL, -- ex A-26-0001
+  type               VARCHAR(20) NOT NULL CHECK (type IN
+                       ('COMMANDE_ATTENTE','DEVIS','BON_COMMANDE','TICKET','FACTURE','AVOIR')),
+  statut             VARCHAR(20) NOT NULL DEFAULT 'EN_COURS'
+                       CHECK (statut IN ('EN_ATTENTE','EN_COURS','VALIDEE','CLOTUREE','ANNULEE')),
+  client_id          INTEGER NOT NULL REFERENCES clients(id),
+  devis_parent_id    INTEGER REFERENCES affaires(id), -- chaîne de versions V1 -> V2...
+  version            INTEGER NOT NULL DEFAULT 1,
+  affaire_origine_id INTEGER REFERENCES affaires(id), -- pour un AVOIR : référence la facture corrigée
+  montant_ttc        NUMERIC(12,2) NOT NULL DEFAULT 0,
+  date_creation      TIMESTAMP NOT NULL DEFAULT now(),
+  auteur_id          INTEGER NOT NULL REFERENCES utilisateurs(id),
+  immuable           BOOLEAN NOT NULL DEFAULT FALSE -- TRUE dès émission Ticket/Facture
+);
+
+CREATE TABLE lignes_affaire (
+  id            SERIAL PRIMARY KEY,
+  affaire_id    INTEGER NOT NULL REFERENCES affaires(id) ON DELETE CASCADE,
+  article_id    INTEGER NOT NULL REFERENCES articles(id),
+  variante_id   INTEGER REFERENCES variantes(id), -- obligatoire si article à variantes ou composant de kit
+  quantite      INTEGER NOT NULL CHECK (quantite > 0),
+  prix_unitaire NUMERIC(12,2) NOT NULL
+);
+
+CREATE TABLE reglements (
+  id             SERIAL PRIMARY KEY,
+  affaire_id     INTEGER NOT NULL REFERENCES affaires(id),
+  montant        NUMERIC(12,2) NOT NULL,
+  mode           VARCHAR(20) NOT NULL, -- ESPECES, MOBILE_MONEY, VIREMENT...
+  date_reglement TIMESTAMP NOT NULL DEFAULT now(),
+  auteur_id      INTEGER NOT NULL REFERENCES utilisateurs(id)
+);
+-- Solde = affaires.montant_ttc - SUM(reglements.montant)
+
+CREATE TABLE ordres_fabrication (
+  id               SERIAL PRIMARY KEY,
+  affaire_id       INTEGER NOT NULL REFERENCES affaires(id),
+  ligne_affaire_id INTEGER NOT NULL REFERENCES lignes_affaire(id),
+  etape            VARCHAR(20) NOT NULL DEFAULT 'CONCEPTION'
+                     CHECK (etape IN ('CONCEPTION','PRODUCTION','CONTROLE_QUALITE','LIVRAISON')),
+  pilote_id        INTEGER REFERENCES utilisateurs(id),
+  date_creation    TIMESTAMP NOT NULL DEFAULT now()
+);</pre>
+
+<h3 style="font-size:14px;margin:16px 0 4px;">1.6 Trésorerie — Bons de décaissement, Clôtures de caisse, Fonds en circulation</h3>
+<pre>CREATE TABLE bons_decaissement (
+  id            SERIAL PRIMARY KEY,
+  categorie     VARCHAR(20) NOT NULL CHECK (categorie IN ('ACHAT_MARCHANDISE','CHARGE_GENERAL','RH_SALAIRE')),
+  montant       NUMERIC(12,2) NOT NULL,
+  motif         TEXT NOT NULL,
+  auteur_id     INTEGER NOT NULL REFERENCES utilisateurs(id),
+  validateur_id INTEGER REFERENCES utilisateurs(id), -- requis si montant > seuil
+  date_creation TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE clotures_caisse (
+  id              SERIAL PRIMARY KEY,
+  date_cloture    DATE NOT NULL UNIQUE,
+  solde_theorique NUMERIC(12,2) NOT NULL,
+  comptage_reel   NUMERIC(12,2) NOT NULL,
+  ecart           NUMERIC(12,2) GENERATED ALWAYS AS (comptage_reel - solde_theorique) STORED,
+  justification   TEXT, -- obligatoire si ecart <> 0
+  auteur_id       INTEGER NOT NULL REFERENCES utilisateurs(id)
+);
+
+CREATE TABLE fonds_circulation (
+  id              SERIAL PRIMARY KEY,
+  livreur_id      INTEGER NOT NULL REFERENCES utilisateurs(id),
+  affaire_id      INTEGER NOT NULL REFERENCES affaires(id),
+  montant_attendu NUMERIC(12,2) NOT NULL,
+  statut          VARCHAR(20) NOT NULL DEFAULT 'EN_CIRCULATION' CHECK (statut IN ('EN_CIRCULATION','VALIDE')),
+  montant_remis   NUMERIC(12,2),
+  validateur_id   INTEGER REFERENCES utilisateurs(id),
+  date_remise     TIMESTAMP
+);</pre>
+
+<h3 style="font-size:14px;margin:16px 0 4px;">1.7 Documents archivés, Journal d'audit</h3>
+<pre>CREATE TABLE documents_archives (
+  id             SERIAL PRIMARY KEY,
+  affaire_id     INTEGER NOT NULL REFERENCES affaires(id),
+  type           VARCHAR(20) NOT NULL,
+  fichier_path   TEXT NOT NULL,
+  hash_integrite VARCHAR(64) NOT NULL, -- SHA-256 du PDF, garantit l'immuabilité
+  date_emission  TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE journal_audit (
+  id                BIGSERIAL PRIMARY KEY,
+  table_cible       VARCHAR(60) NOT NULL,
+  enregistrement_id INTEGER NOT NULL,
+  action            VARCHAR(20) NOT NULL, -- CREATION, MODIFICATION, SUPPRESSION, VALIDATION
+  utilisateur_id    INTEGER NOT NULL REFERENCES utilisateurs(id),
+  details           JSONB,
+  date_action       TIMESTAMP NOT NULL DEFAULT now()
+);
+-- Aucun UPDATE/DELETE autorisé sur journal_audit (GRANT restreint / trigger REVOKE).</pre>
+
+<div class="callout">Note d'ordre de création : les tables référencées par clé étrangère (roles, utilisateurs, clients, articles, variantes, lots, affaires) doivent être créées avant celles qui les référencent — respecter l'ordre des sections 1.1 → 1.7.</div>
+
+<h2 style="font-size:18px;margin:0 0 8px;" class="chapitre">2. Algorithme de validation du stock des Kits (Moteur 1)</h2>
+<p style="font-size:12.5px;color:#475569;line-height:1.6;margin:0 0 8px;">Contrôle variante par variante (jamais agrégé) ; exclut la réserve personnalisation ; bloque la vente si la variante exacte requise est en rupture, même si d'autres variantes du même composant sont disponibles.</p>
+<pre>/**
+ * Vérifie la disponibilité d'un Kit variante par variante (jamais agrégée)
+ * et bloque la vente si une variante exacte requise est en rupture.
+ *
+ * recette: [{ composantArticleId, varianteId (jamais null pour un composant textile), quantiteRequise }]
+ * getStockDisponible(varianteId): quantité disponible RÉELLE (réserve perso déjà exclue, cf v_stock_variante)
+ */
+function verifierDisponibiliteKit(recette, quantiteDemandee, getStockDisponible) {
+  let stockKit = Infinity;
+  let composantLimitant = null;
+
+  for (const ligne of recette) {
+    if (ligne.varianteId == null) {
+      throw new Error(
+        `Composant ${ligne.composantArticleId} sans variante exacte définie : recette invalide.`
+      );
+    }
+
+    const stockVariante = getStockDisponible(ligne.varianteId); // exclut déjà la réserve perso
+    const stockPossible = Math.floor(stockVariante / ligne.quantiteRequise);
+
+    if (stockPossible < stockKit) {
+      stockKit = stockPossible;
+      composantLimitant = { ...ligne, stockVariante, stockPossible };
+    }
+  }
+
+  const venteAutorisee = stockKit >= quantiteDemandee;
+
+  return {
+    stockKitCalcule: stockKit,
+    venteAutorisee,
+    composantLimitant: venteAutorisee ? null : composantLimitant,
+    message: venteAutorisee
+      ? null
+      : `Rupture : variante exacte requise (id ${composantLimitant.varianteId}) ` +
+        `insuffisante — stock possible ${composantLimitant.stockPossible}, demandé ${quantiteDemandee}.`
+  };
+}
+
+/**
+ * Exécute la vente : contrôle puis décrémente chaque composant sur sa variante exacte.
+ * Chaque décrémentation = un mouvement stock_mouvements distinct (jamais un total agrégé).
+ */
+function vendreKit({ recette, quantiteDemandee, affaireId, auteurId, getStockDisponible, enregistrerMouvement }) {
+  const verif = verifierDisponibiliteKit(recette, quantiteDemandee, getStockDisponible);
+
+  if (!verif.venteAutorisee) {
+    return { statut: 'BLOQUEE', ...verif };
+  }
+
+  for (const ligne of recette) {
+    enregistrerMouvement({
+      varianteId: ligne.varianteId,
+      type: 'VENTE',
+      quantite: -(ligne.quantiteRequise * quantiteDemandee),
+      affaireId,
+      auteurId,
+      dateMouvement: new Date()
+    });
+  }
+
+  return { statut: 'AUTORISEE', ...verif };
+}
+
+module.exports = { verifierDisponibiliteKit, vendreKit };</pre>
+
+<div class="callout" style="margin-top:10px;">Fin du document de référence technique. Schéma et algorithme figés pour la phase de développement.</div>
+
+</div>
+</doc-page>
+<template id="__bundler_thumbnail"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#0f172a"/><text x="50" y="58" font-size="34" fill="#93c5fd" text-anchor="middle" font-family="monospace">SQL</text></svg></template>
+</x-dc>
+</body>
+</html>

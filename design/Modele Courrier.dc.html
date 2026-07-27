@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+<style>html,body{margin:0;background:#2b2b2b;}doc-page:not(:defined){visibility:hidden}</style>
+<script src="./doc-page.js"></script>
+</helmet>
+<div style="text-align:center;color:#fff;font-size:15px;font-weight:700;padding:14px 0 6px;font-family:Arial,sans-serif;">MODÈLE — COURRIER / LETTRE À EN-TÊTE</div>
+<doc-page margin="0.9in" size="a4">
+  <div slot="header" style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:12px;font-family:Arial,sans-serif;">
+    <img src="assets/logo.png" style="height:34px;width:118px;"/>
+    <div style="font-size:9px;color:#666;">Bamako, Mali</div>
+  </div>
+  <div slot="footer" style="border-top:1px solid #000;padding-top:6px;text-align:center;font-size:8px;color:#333;font-family:Arial,sans-serif;">
+    Badalabougou - Rue 90 - Porte 307 - N°RCCM: MA.BKO.2022.A03394 - NINA: 32209195100049N - NIF: 085149443X — Tel: 0023 74 74 40 82 — evolutis223@gmail.com
+  </div>
+
+  <div style="font-family:Georgia,'Times New Roman',serif;color:#1a1a1a;font-size:13px;line-height:1.6;">
+    <div style="text-align:right;margin-bottom:28px;">Bamako, le 22 juillet 2026</div>
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:48px;">
+      <div style="font-size:13.5px;">
+        <b>Destinataire :</b><br/>
+        Kawthar Sarl<br/>
+        Kati Koko, près du lycée Mamby<br/>
+        À l'attention de la Direction
+      </div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=EVOLUTIS223-COURRIER" style="width:90px;height:90px;flex-shrink:0;"/>
+    </div>
+
+    <div style="margin-bottom:24px;"><b>Objet :</b> [Objet du courrier]</div>
+
+    <p>Madame, Monsieur,</p>
+    <p>
+      [Corps du courrier — texte à rédiger selon le contexte : information, relance, confirmation de commande, réponse à une demande, etc. Ce paragraphe illustre l'espace réservé au contenu principal de la lettre, avec un interlignage confortable pour une lecture aisée.]
+    </p>
+    <p>
+      Nous restons à votre disposition pour toute information complémentaire et vous prions d'agréer, Madame, Monsieur, l'expression de nos salutations distinguées.
+    </p>
+
+    <div style="margin-top:48px;margin-bottom:60px;text-align:right;">
+      <div style="height:50px;"></div>
+      <div style="font-weight:700;">[Nom, Prénom]</div>
+      <div style="font-size:11.5px;color:#555;">[Titre — Directeur / Comptable / Responsable Commercial…]</div>
+    </div>
+  </div>
+</doc-page>
+<template id="__bundler_thumbnail">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#2b2b2b"/><text x="50" y="58" font-size="30" fill="#fff" text-anchor="middle">✉</text></svg>
+</template>
+
+</x-dc>
+</body>
+</html>

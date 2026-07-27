@@ -1,0 +1,23 @@
+# Next.js
+.next/
+out/
+build/
+
+# Dependencies
+node_modules/
+
+# Env — jamais de secret en clair dans le dépôt
+.env
+.env*.local
+
+# Drizzle
+drizzle/meta/
+
+# Divers
+.DS_Store
+*.log
+npm-debug.log*
+.vercel
+
+# Archive source d'origine (13 Mo, déjà extraite dans design/)
+Gestion d'Evolutis 223 (2).zip
