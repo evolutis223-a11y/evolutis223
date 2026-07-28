@@ -12,6 +12,7 @@ import { logout } from "./actions";
 // tant que leur page n'existe pas.
 const MODULE_ROUTES: Partial<Record<ModuleName, string>> = {
   Catalogue: "/catalogue",
+  "Nos produits": "/boutique",
   Stocks: "/stocks",
   Production: "/production",
   Clients: "/clients",
