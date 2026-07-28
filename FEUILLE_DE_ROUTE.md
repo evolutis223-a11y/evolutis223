@@ -100,7 +100,7 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 
 | Étape | Contenu |
 |---|---|
-| 3.1 | **Maquette Artifact du configurateur** (chemin long, 5 points) — validation visuelle avec toi avant tout code, comme convenu |
+| 3.1 | ✅ Maquette Artifact du configurateur (chemin long, 5 points) — validée avec toi avant tout code. |
 | 3.2 | ✅ Vitrine publique `/boutique` — aucune authentification (route publique dans `proxy.ts`), respecte `publie_boutique`, stock affiché = réserve détail uniquement (jamais le stock gros). Vérifié en base réelle. |
 | 3.3 | Configurateur chemin long + chemin court (écran Taille/Quantité partagé, tire sur la réserve détail) |
 | 3.4 | Paiement Mobile Money — intégration agrégateur, clés de test |
@@ -118,4 +118,4 @@ RH, Fournisseurs, Achats, Dépenses, Charges, Rapports, Marketing/R&D — chacun
 
 ## Points à garder en tête pendant la construction (§16)
 
-Aucun ne bloque le démarrage, mais à trancher avant la phase concernée : rôles Marketing/Agent marketing (avant phase 0.5), seuil décaissement (avant phase 1.6), sécurité PIN — hachage/blocage (avant phase 0.4), sauvegardes BDD (avant mise en production, pas avant développement).
+Aucun ne bloque le démarrage, mais à trancher avant la phase concernée : rôles Marketing/Agent marketing (avant phase 0.5), seuil décaissement (avant phase 1.6), sauvegardes BDD (avant mise en production, pas avant développement). ✅ Sécurité PIN — hachage/blocage : résolu 2026-07-28 (§16.2), fait plus tard que prévu mais avant d'en avoir vraiment besoin (pas encore en production).

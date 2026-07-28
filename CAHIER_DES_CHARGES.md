@@ -802,7 +802,7 @@ Build solo (l'utilisateur + Claude Code, pas d'équipe externe). Estimation en *
 ## 16. Points ouverts / risques (à traiter avant ou pendant le développement, ne bloquent pas le démarrage)
 
 1. **Sauvegardes / plan de reprise** pour les données de stock et de trésorerie — pas encore désigné, juste supposé "géré par le fournisseur de BDD managée".
-2. **Sécurité de l'authentification** — hachage du PIN, blocage après tentatives échouées : pas encore spécifié.
+2. ~~**Sécurité de l'authentification**~~ — **RÉSOLU 2026-07-28.** Hachage du PIN : bcrypt, déjà en place depuis la Phase 0. Blocage après tentatives échouées : implémenté (`app/login/actions.ts`) — 5 tentatives PIN incorrectes déclenchent un blocage de 15 minutes (`utilisateurs.tentatives_echouees`/`bloque_jusqua`), remis à zéro à la connexion réussie ; le blocage s'applique même si le bon PIN est ensuite saisi. Vérifié en base réelle (5 échecs → blocage → refus du bon PIN pendant le blocage → déblocage après expiration simulée → connexion normale).
 3. **Migration de données existantes** — inconnu si des données papier ou d'un système antérieur doivent être reprises au lancement.
 4. **Fournisseur SMS fiable au Mali** (Orange/Moov) pour le flux téléphone+PIN — coût estimé, pas vérifié auprès d'un vrai fournisseur (à ne pas surestimer non plus, même logique que le paiement mobile ci-dessus — probablement plus simple que prévu).
 5. **Incohérence Marketing/Agent marketing** dans les rôles du prototype (§6) — à trancher.

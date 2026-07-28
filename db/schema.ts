@@ -37,6 +37,10 @@ export const utilisateurs = pgTable("utilisateurs", {
     .notNull()
     .references(() => roles.id),
   actif: boolean("actif").notNull().default(true),
+  // AJOUT 2026-07-28 (§16.2) : blocage après tentatives échouées — remis à zéro à la connexion
+  // réussie. Le hachage renforcé (bcrypt) existait déjà depuis Phase 0 ; seul le blocage manquait.
+  tentativesEchouees: integer("tentatives_echouees").notNull().default(0),
+  bloqueJusqua: timestamp("bloque_jusqua"),
 });
 
 // §4.2 — Clients
