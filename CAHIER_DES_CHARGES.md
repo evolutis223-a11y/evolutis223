@@ -545,6 +545,15 @@ Rôles cibles (fusion du schéma SQL d'origine, du prototype et des décisions d
 5. L'OF progresse (Conception → Production → Contrôle qualité → Livraison/Retrait) ; chaque changement d'étape est journalisé.
 6. Clôture de l'affaire uniquement après confirmation de livraison/retrait.
 
+**CORRECTION 2026-07-28 (point 3 et 5)** : "Conception" comme point d'entrée universel du Kanban OF n'a pas de sens — un Kit assemblé depuis du stock existant, ou une signalétique en réédition d'un visuel déjà validé, ne se "conçoivent" pas. Séquence corrigée :
+
+1. **Réception** — remplace Conception comme point d'entrée universel : l'OF entre ici dès la validation réussie de l'affaire (même moment que le décrément de stock/FIFO). Valable pour tout OF.
+2. **Conception** — étape optionnelle, seulement si la ligne est marquée **personnalisée** (nouveau visuel/design à faire). Un article **standard** — Kit assemblé, ou Famille D en réédition d'un modèle déjà validé — passe directement de Réception à Production.
+3. **Production** → **Contrôle qualité** → **Prêt**.
+4. **Prêt** remplace "Livraison/Retrait" comme dernière étape de l'OF — le Retrait/Livraison proprement dit reste géré par **Commandes** (point 6, déjà existant), pas dupliqué dans le Kanban OF.
+
+**Implémenté et vérifié en base réelle (2026-07-28)** : `personnalise` capturé à la vente sur `lignes_affaire` (Famille D uniquement, case à cocher dans l'éditeur de ligne, coché par défaut) et copié sur `ordres_fabrication` à la création. `articles.necessite_assemblage` (Famille E uniquement, bascule dans la fiche Catalogue) décide si un Kit déclenche un OF. Création automatique de l'OF intégrée à `validerAffaire` (`app/affaires/actions.ts`), dans la même transaction que le décrément — jamais manuelle. Écran `/production` (module "Production", rôles Admin/Super Admin/Manager/Employé) : tableau Kanban à 5 colonnes, glisser-déposer, transitions strictement séquentielles selon la séquence propre à l'OF (avec ou sans Conception), assignation de pilote, chaque changement d'étape tracé au journal d'audit. Testé de bout en bout : un OF personnalisé (Famille D) parcourt les 5 étapes, un OF standard (Kit) saute directement de Réception à Production — dans les deux cas, une transition hors séquence (ex. Réception→Production pour un OF personnalisé) est rejetée côté serveur.
+
 ### 8.2 Flux Trésorerie et Dépenses espèces
 
 1. Aucune écriture libre : toute sortie d'argent liquide exige un **Bon de décaissement**, catégorisé (Achat marchandise / Charge générale / RH-Salaire).

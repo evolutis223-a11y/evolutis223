@@ -119,6 +119,18 @@ export function LigneEditorRow({
             placeholder="Prix unitaire"
           />
         </div>
+
+        {article?.famille === "D" && (
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={ligne.personnalise ?? true}
+              onChange={(e) => onChange({ ...ligne, personnalise: e.target.checked })}
+            />
+            Nouveau visuel/design à concevoir (décocher si modèle déjà validé — l&apos;OF ira
+            directement en Production)
+          </label>
+        )}
       </div>
       <button onClick={onRemove} className="text-muted-foreground hover:text-destructive" aria-label="Retirer">
         &times;

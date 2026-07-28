@@ -85,6 +85,9 @@ export const articles = pgTable(
     // jugée centrale, confirmé par le client). URL vers le stockage objet (§3.2) ; peut rester NULL
     // pour les familles sans photo pertinente (C/D), l'UI retombe alors sur une icône de famille.
     photoUrl: text("photo_url"),
+    // AJOUT 2026-07-28 : Famille E (Kit) uniquement — décide si la vente déclenche un Ordre de
+    // Fabrication (§8.1 point 4). Sans effet pour les autres familles (D déclenche toujours un OF).
+    necessiteAssemblage: boolean("necessite_assemblage").notNull().default(false),
   },
   (table) => [
     check("articles_famille_check", sql`${table.famille} in ('A','B','C','D','E')`),
@@ -276,6 +279,10 @@ export const lignesAffaire = pgTable(
     varianteId: integer("variante_id").references(() => variantes.id),
     quantite: integer("quantite").notNull(),
     prixUnitaire: numeric("prix_unitaire", { precision: 12, scale: 2 }).notNull(),
+    // AJOUT 2026-07-28 : Famille D uniquement — capturé à la vente, décide si l'OF généré passe
+    // par l'étape Conception (nouveau visuel/design) ou va directement en Production (modèle
+    // standard déjà validé). Sans effet pour les autres familles.
+    personnalise: boolean("personnalise").notNull().default(true),
   },
   (table) => [check("lignes_affaire_quantite_check", sql`${table.quantite} > 0`)]
 );
@@ -313,14 +320,22 @@ export const ordresFabrication = pgTable(
     ligneAffaireId: integer("ligne_affaire_id")
       .notNull()
       .references(() => lignesAffaire.id),
-    etape: varchar("etape", { length: 20 }).notNull().default("CONCEPTION"),
+    // CORRECTION 2026-07-28 : "Conception" comme point d'entrée universel n'avait pas de sens
+    // (un Kit assemblé ou une réédition standard ne se "conçoivent" pas) — "Réception" est le
+    // point d'entrée réel (validation de l'affaire), Conception devient une étape optionnelle
+    // (voir `personnalise`), et "Prêt" remplace "Livraison" : le Retrait/Livraison reste le
+    // Commandes (§8.1), pas dupliqué ici.
+    etape: varchar("etape", { length: 20 }).notNull().default("RECEPTION"),
+    // Copié depuis lignes_affaire.personnalise au moment de la création — décide si cet OF passe
+    // par Conception (true) ou va directement de Réception à Production (false, ex. Kit).
+    personnalise: boolean("personnalise").notNull().default(true),
     piloteId: integer("pilote_id").references(() => utilisateurs.id),
     dateCreation: timestamp("date_creation").notNull().defaultNow(),
   },
   (table) => [
     check(
       "ordres_fabrication_etape_check",
-      sql`${table.etape} in ('CONCEPTION','PRODUCTION','CONTROLE_QUALITE','LIVRAISON')`
+      sql`${table.etape} in ('RECEPTION','CONCEPTION','PRODUCTION','CONTROLE_QUALITE','PRET')`
     ),
   ]
 );

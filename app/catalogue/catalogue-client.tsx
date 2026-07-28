@@ -4,7 +4,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { articles, branches } from "@/db/schema";
-import { createArticle, togglePublieBoutique, type CreateArticleState } from "./actions";
+import { createArticle, toggleNecessiteAssemblage, togglePublieBoutique, type CreateArticleState } from "./actions";
 import { FAMILLES, FamilleIcon, familleMeta, type FamilleId } from "./familles";
 
 type Article = typeof articles.$inferSelect;
@@ -272,6 +272,20 @@ export function CatalogueClient({
                       ? familleMeta(detailArticle.famille).guidance
                       : "Stock pas encore configuré — variantes, approvisionnement et lots se renseignent dans Stocks (Phase 1.2)."}
                 </div>
+                {detailArticle.famille === "E" && (
+                  <label className="mt-3 flex items-center gap-2 text-sm text-foreground">
+                    <input
+                      type="checkbox"
+                      checked={detailArticle.necessiteAssemblage}
+                      onChange={(e) => {
+                        const next = e.target.checked;
+                        toggleNecessiteAssemblage(detailArticle.id, next);
+                        setDetailArticle({ ...detailArticle, necessiteAssemblage: next });
+                      }}
+                    />
+                    Nécessite assemblage — déclenche un Ordre de Fabrication à la vente (§8.1)
+                  </label>
+                )}
               </div>
             </div>
             <div className="flex justify-end gap-2 border-t border-border p-4">

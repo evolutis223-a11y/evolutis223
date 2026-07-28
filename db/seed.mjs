@@ -32,6 +32,7 @@ const DEV_USERS = [
   { nom: "Compte de test — Vendeur", telephone: "+22300000001", pin: "1234", roleCode: "VENDEUR" },
   { nom: "Compte de test — Comptable", telephone: "+22300000002", pin: "1234", roleCode: "COMPTABLE" },
   { nom: "Compte de test — Livreur", telephone: "+22300000003", pin: "1234", roleCode: "LIVREUR" },
+  { nom: "Ibrahim Diarra", telephone: "+22300000004", pin: "1234", roleCode: "EMPLOYE" },
 ];
 
 async function main() {

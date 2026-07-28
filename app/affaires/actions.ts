@@ -11,6 +11,7 @@ import {
   livraisons,
   lots,
   lotVariantes,
+  ordresFabrication,
   reglements,
   stockMouvements,
   vStockVariante,
@@ -54,6 +55,9 @@ export interface LigneInput {
   varianteId: number | null;
   quantite: number;
   prixUnitaire: number;
+  // Famille D uniquement (§8.1) — décide si l'OF généré passe par Conception. true par défaut
+  // (nouveau visuel/design), à décocher si c'est une réédition d'un modèle déjà validé.
+  personnalise?: boolean;
 }
 
 export async function creerAffaire(
@@ -94,6 +98,7 @@ export async function creerAffaire(
           varianteId: l.varianteId,
           quantite: l.quantite,
           prixUnitaire: l.prixUnitaire.toFixed(2),
+          personnalise: l.personnalise ?? true,
         });
       }
 
@@ -200,6 +205,8 @@ export async function validerAffaire(
         quantite: lignesAffaire.quantite,
         famille: articles.famille,
         articleNom: articles.nom,
+        personnalise: lignesAffaire.personnalise,
+        necessiteAssemblage: articles.necessiteAssemblage,
       })
       .from(lignesAffaire)
       .innerJoin(articles, eq(articles.id, lignesAffaire.articleId))
@@ -275,6 +282,27 @@ export async function validerAffaire(
           await decrementerKit(tx, l.articleId, l.quantite, affaireId, session.userId);
         } else if (l.varianteId) {
           await decrementerFifo(tx, l.varianteId, l.quantite, affaireId, session.userId);
+        }
+
+        // Ordre de Fabrication (§8.1 point 4) : toujours pour Famille D, seulement si la recette
+        // du Kit est marquée « nécessite assemblage » pour Famille E. Jamais pour A/B/C.
+        const declencheOf = l.famille === "D" || (l.famille === "E" && l.necessiteAssemblage);
+        if (declencheOf) {
+          const [of_] = await tx
+            .insert(ordresFabrication)
+            .values({
+              affaireId,
+              ligneAffaireId: l.id,
+              personnalise: l.famille === "D" ? l.personnalise : false,
+            })
+            .returning();
+          await enregistrerAudit(tx, {
+            tableCible: "ordres_fabrication",
+            enregistrementId: of_.id,
+            action: "CREATION",
+            utilisateurId: session.userId,
+            details: { affaireId, ligneAffaireId: l.id, articleNom: l.articleNom },
+          });
         }
       }
       await tx

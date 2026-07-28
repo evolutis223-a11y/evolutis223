@@ -73,3 +73,14 @@ export async function togglePublieBoutique(articleId: number, next: boolean) {
   await db.update(articles).set({ publieBoutique: next }).where(eq(articles.id, articleId));
   revalidatePath("/catalogue");
 }
+
+// Famille E (Kit) uniquement — décide si la vente déclenche un Ordre de Fabrication (§8.1 point 4).
+export async function toggleNecessiteAssemblage(articleId: number, next: boolean) {
+  const session = await getSession();
+  if (!session || !hasModuleAccess(session.roleCode, "Catalogue")) {
+    throw new Error("Accès refusé.");
+  }
+  await db.update(articles).set({ necessiteAssemblage: next }).where(eq(articles.id, articleId));
+  revalidatePath("/catalogue");
+  revalidatePath("/stocks");
+}
