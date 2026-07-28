@@ -8,6 +8,7 @@ export type ModeReglement = "ESPECES" | "MOBILE_MONEY" | "VIREMENT" | "CARTE";
 export interface LigneRecu {
   designation: string;
   quantite: number;
+  prixUnitaire: number;
   /** Total de la ligne (qté × prix unitaire), déjà calculé par l'appelant. */
   total: number;
 }
@@ -31,6 +32,8 @@ export interface RecuCaisseData {
   montantRecu: number;
   /** Reliquat dû au client ; si omis, calculé = montantRecu - totalTtc (borné à 0 si négatif). */
   reliquat?: number;
+  /** Contenu encodé dans le QR (§11) ; si omis, dérivé de `numero` (voir qr.ts). */
+  qrPayload?: string;
 }
 
 /** Résultat commun à tous les générateurs : le PDF et son empreinte d'intégrité. */

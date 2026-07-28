@@ -9,6 +9,7 @@ import { ASSET_BUFFERS } from "./assets";
 import { formatDateHeure, formatFcfa } from "./format";
 import { sha256Hex } from "./hash";
 import { MENTIONS_LEGALES_TEXTE } from "./legal-mentions";
+import { generateQrPngDataUrl, suiviPayloadProvisoire } from "./qr";
 import type { DocumentGenere, ModeReglement, RecuCaisseData } from "./types";
 
 const LIBELLE_MODE_REGLEMENT: Record<ModeReglement, string> = {
@@ -75,8 +76,10 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     padding: 6,
   },
+  colNum: { flex: 0.4, textAlign: "center" },
   colArticle: { flex: 3 },
   colQte: { flex: 1, textAlign: "center" },
+  colPu: { flex: 1.3, textAlign: "right" },
   colTotal: { flex: 1.4, textAlign: "right" },
   center: { textAlign: "center" },
   right: { textAlign: "right" },
@@ -135,6 +138,15 @@ const styles = StyleSheet.create({
     height: 52,
     opacity: 0.88,
   },
+  footerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  qr: {
+    width: 42,
+    height: 42,
+    marginLeft: 10,
+  },
   legalMentions: {
     borderTopWidth: 1,
     borderTopColor: "#000",
@@ -145,8 +157,10 @@ const styles = StyleSheet.create({
   },
 });
 
-interface RecuCaisseNormalise extends Required<Omit<RecuCaisseData, "dateEmission">> {
+interface RecuCaisseNormalise
+  extends Required<Omit<RecuCaisseData, "dateEmission" | "qrPayload">> {
   dateEmission: Date;
+  qrPayload?: string;
 }
 
 function normaliser(data: RecuCaisseData): RecuCaisseNormalise {
@@ -164,7 +178,15 @@ function normaliser(data: RecuCaisseData): RecuCaisseNormalise {
   };
 }
 
-export function RecuCaisseDocument({ data }: { data: RecuCaisseData }) {
+export function RecuCaisseDocument({
+  data,
+  qrDataUrl,
+}: {
+  data: RecuCaisseData;
+  /** Data URL PNG du QR, déjà généré (voir generateRecuCaissePdf — QRCode.toDataURL est async,
+   * ne peut pas être appelé depuis ce composant synchrone). */
+  qrDataUrl: string;
+}) {
   const d = normaliser(data);
 
   return (
@@ -182,14 +204,18 @@ export function RecuCaisseDocument({ data }: { data: RecuCaisseData }) {
 
         <View style={styles.table}>
           <View style={styles.tableHeaderRow}>
+            <Text style={[styles.th, styles.colNum]}>N°</Text>
             <Text style={[styles.th, styles.colArticle]}>Article</Text>
             <Text style={[styles.th, styles.colQte]}>Qté</Text>
+            <Text style={[styles.th, styles.colPu]}>PU</Text>
             <Text style={[styles.th, styles.colTotal]}>Total</Text>
           </View>
           {d.lignes.map((ligne, i) => (
             <View key={i} style={styles.tableRow}>
+              <Text style={[styles.td, styles.colNum]}>{i + 1}</Text>
               <Text style={[styles.td, styles.colArticle]}>{ligne.designation}</Text>
               <Text style={[styles.td, styles.colQte]}>{ligne.quantite}</Text>
+              <Text style={[styles.td, styles.colPu]}>{formatFcfa(ligne.prixUnitaire)}</Text>
               <Text style={[styles.td, styles.colTotal]}>{formatFcfa(ligne.total)}</Text>
             </View>
           ))}
@@ -238,7 +264,10 @@ export function RecuCaisseDocument({ data }: { data: RecuCaisseData }) {
 
         <View style={styles.footer}>
           <Text style={styles.merci}>Merci pour votre confiance.</Text>
-          <Image src={ASSET_BUFFERS.cachet} style={styles.cachet} />
+          <View style={styles.footerRight}>
+            <Image src={ASSET_BUFFERS.cachet} style={styles.cachet} />
+            <Image src={qrDataUrl} style={styles.qr} />
+          </View>
         </View>
 
         <Text style={styles.legalMentions}>{MENTIONS_LEGALES_TEXTE}</Text>
@@ -253,6 +282,11 @@ export function RecuCaisseDocument({ data }: { data: RecuCaisseData }) {
  * c'est à l'appelant de fournir des valeurs déjà résolues (lignes, totaux, etc.).
  */
 export async function generateRecuCaissePdf(data: RecuCaisseData): Promise<DocumentGenere> {
-  const buffer = await renderToBuffer(<RecuCaisseDocument data={data} />);
+  const qrDataUrl = await generateQrPngDataUrl(
+    data.qrPayload ?? suiviPayloadProvisoire(data.numero)
+  );
+  const buffer = await renderToBuffer(
+    <RecuCaisseDocument data={data} qrDataUrl={qrDataUrl} />
+  );
   return { buffer, hashSha256: sha256Hex(buffer) };
 }
