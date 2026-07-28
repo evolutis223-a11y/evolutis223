@@ -43,6 +43,13 @@
       "when": 1785281154512,
       "tag": "0005_ancient_vision",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785282123324,
+      "tag": "0006_amazing_jazinda",
+      "breakpoints": true
     }
   ]
 }

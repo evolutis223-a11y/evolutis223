@@ -377,7 +377,7 @@ export const bonsDecaissement = pgTable(
     auteurId: integer("auteur_id")
       .notNull()
       .references(() => utilisateurs.id),
-    validateurId: integer("validateur_id").references(() => utilisateurs.id), // requis si montant > seuil (§16.7, seuil pas encore modélisé)
+    validateurId: integer("validateur_id").references(() => utilisateurs.id), // requis (par un autre que l'auteur) si montant > seuil, §16.7
     dateCreation: timestamp("date_creation").notNull().defaultNow(),
   },
   (table) => [
@@ -387,6 +387,18 @@ export const bonsDecaissement = pgTable(
     ),
   ]
 );
+
+// AJOUT 2026-07-28 (§16.7) : seuil de validation hiérarchique des bons de décaissement — table à
+// une seule ligne (singleton), modifiable par Admin/Super Admin. En dessous, l'auteur peut
+// s'auto-valider ; au-delà, un tiers doit valider avant que le bon impacte calculerSoldeTheorique.
+export const parametresTresorerie = pgTable("parametres_tresorerie", {
+  id: serial("id").primaryKey(),
+  seuilValidationDecaissement: numeric("seuil_validation_decaissement", { precision: 12, scale: 2 })
+    .notNull()
+    .default("50000"),
+  modifiePar: integer("modifie_par").references(() => utilisateurs.id),
+  dateModification: timestamp("date_modification").notNull().defaultNow(),
+});
 
 export const cloturesCaisse = pgTable("clotures_caisse", {
   id: serial("id").primaryKey(),

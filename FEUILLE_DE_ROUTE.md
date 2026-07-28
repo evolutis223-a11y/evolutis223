@@ -12,7 +12,7 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 
 | Phase | % | Détail |
 |---|---|---|
-| 0 — Fondations | **90%** | 0.1→0.5 fonctionnels, testés en direct dans le navigateur (connexion, déconnexion, modules par rôle). Reste : sécurité PIN — hachage renforcé, blocage après tentatives échouées (§16.2). |
+| 0 — Fondations | **100%** | 0.1→0.5 fonctionnels, testés en direct dans le navigateur (connexion, déconnexion, modules par rôle). Sécurité PIN (hachage + blocage après tentatives, §16.2) résolue 2026-07-28. |
 | 1 — Cœur métier | **100%** | 1.1→1.6 faits et vérifiés en base réelle. Cycle complet : Catalogue → Stock (appro + réserve détail) → Client → Affaire (commande en attente → contrôle stock → décrément FIFO → ticket) → Commande (Retrait/Livraison) → Règlement → Trésorerie (bon de décaissement, clôture de caisse avec écart + justification). Bug réel trouvé et corrigé en cours de route (Famille B ne résolvait jamais de variante — stock jamais décrémenté). Génération PDF (§8.4) avancée en parallèle (Reçu de caisse seul, 5 restants — pas bloquant). Périphériques restants de Phase 1 (RH, Fournisseurs, Achats, Dépenses, Charges, Rapports) déplacés en Phase 4, cohérent avec le découpage d'origine. |
 | 2 — Workflows spécifiques | **100%** | 2.1→2.5 tous faits et vérifiés en base réelle. Phase 2 terminée. |
 | 2bis — R&D Calculateurs | **~10%** | Maquette Artifact validée ("c'est bon", 6 itérations, 2026-07-28) — §10bis. Aucune implémentation réelle (schéma/écrans) commencée. |
@@ -118,4 +118,29 @@ RH, Fournisseurs, Achats, Dépenses, Charges, Rapports, Marketing/R&D — chacun
 
 ## Points à garder en tête pendant la construction (§16)
 
-Aucun ne bloque le démarrage, mais à trancher avant la phase concernée : rôles Marketing/Agent marketing (avant phase 0.5), seuil décaissement (avant phase 1.6), sauvegardes BDD (avant mise en production, pas avant développement). ✅ Sécurité PIN — hachage/blocage : résolu 2026-07-28 (§16.2), fait plus tard que prévu mais avant d'en avoir vraiment besoin (pas encore en production).
+Aucun ne bloque le démarrage, mais à trancher avant la phase concernée : rôles Marketing/Agent marketing (avant phase 0.5), sauvegardes BDD (avant mise en production, pas avant développement). ✅ Sécurité PIN — hachage/blocage : résolu 2026-07-28 (§16.2). ✅ Seuil décaissement : résolu 2026-07-28 (§16.7), seuil global 50 000 F par défaut, modifiable par Admin/Super Admin.
+
+---
+
+## Ce qui reste à faire — et pourquoi (2026-07-28)
+
+Le noyau métier (Phases 0, 1, 2) est terminé et vérifié en base réelle. Ce qui reste se répartit en quatre catégories bien différentes — le "pourquoi" change ce qu'il faut faire ensuite.
+
+**A. Bloqué — décision hors de portée de Claude, besoin de l'utilisateur**
+- **Paiement Mobile Money (3.4)** : choisir un agrégateur réel (PayDunya / CinetPay / Kkiapay) et créer un compte développeur pour obtenir des clés de test — nécessite un compte externe au nom de l'entreprise.
+- **Stockage des fichiers uploadés** (photos, logos clients pour le configurateur, §3.2) : jamais tranché — une des questions ouvertes du projet depuis le début.
+
+**B. Pas encore attaqué — gros chantier, pas bloqué, juste pas fait**
+- **R&D Calculateurs (Phase 2bis)** : conception validée (maquette, 6 itérations, "c'est bon" le 2026-07-28, §10bis), **zéro ligne de code réelle**. Le plus gros morceau restant — 5 techniques de marquage, bibliothèque encres/supports, etc. Mérite sa propre session dédiée.
+- **Configurateur réel (3.3)** : dépend directement de 2bis (chemin long) et du stockage (chemin court, point A) — ne peut pas avancer avant.
+- **Modules périphériques (Phase 4)** : le cahier des charges dit lui-même que ça "peut suivre le lancement", volontairement en dernier.
+- **5 des 6 gabarits PDF** (Bon de commande, Bon de livraison, Fiche de paie, Ordre de mission, Courrier) — seul le Reçu de caisse existe.
+
+**C. Mis de côté — à la demande explicite de l'utilisateur**
+- **Production industrielle de pagne** : retirée du module R&D sur instruction directe (expérience professionnelle de 10 ans en usine textile au Mali — "on n'a pas toutes les cartes en main") ; à configurer séparément plus tard, quand l'utilisateur rouvrira le sujet.
+
+**D. Petits points ouverts (§16), non bloquants**
+- Sauvegardes/plan de reprise de la base — à trancher avant la mise en prod, pas avant.
+- Incohérence des rôles "Marketing"/"Agent marketing" dans le prototype d'origine — décision utilisateur, pas d'invention de structure de rôle sans feu vert.
+- Migration de données existantes — inconnu s'il y a des données papier ou d'un système antérieur à reprendre.
+- Fournisseur SMS réel pour le flux téléphone+PIN — pas encore vérifié auprès d'un fournisseur au Mali.

@@ -5,7 +5,14 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { bonsDecaissement, cloturesCaisse, utilisateurs } from "@/db/schema";
-import { cloturerCaisse, creerBonDecaissement, validerBonDecaissement, type BonState, type ClotureState } from "./actions";
+import {
+  cloturerCaisse,
+  creerBonDecaissement,
+  definirSeuilDecaissement,
+  validerBonDecaissement,
+  type BonState,
+  type ClotureState,
+} from "./actions";
 
 type Bon = typeof bonsDecaissement.$inferSelect;
 type Cloture = typeof cloturesCaisse.$inferSelect;
@@ -24,18 +31,43 @@ const CATEGORIE_LABEL: Record<string, string> = {
 const initialBonState: BonState = { error: null };
 const initialClotureState: ClotureState = { error: null };
 
-function BonRow({ bon, auteurNom, onValidated }: { bon: Bon; auteurNom: string; onValidated: () => void }) {
+function BonRow({
+  bon,
+  auteurNom,
+  seuil,
+  currentUserId,
+  onValidated,
+}: {
+  bon: Bon;
+  auteurNom: string;
+  seuil: number;
+  currentUserId: number;
+  onValidated: () => void;
+}) {
   const [busy, setBusy] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const depasseSeuil = Number(bon.montant) > seuil;
+  const bloqueAutoValidation = depasseSeuil && bon.auteurId === currentUserId && !bon.validateurId;
+
   async function handleValider() {
     setBusy(true);
-    await validerBonDecaissement(bon.id);
+    setErreur(null);
+    const res = await validerBonDecaissement(bon.id);
     setBusy(false);
+    if (res.error) setErreur(res.error);
     onValidated();
   }
   return (
     <tr className="border-t border-border">
       <td className="py-1.5">{CATEGORIE_LABEL[bon.categorie]}</td>
-      <td className="py-1.5 tabular-nums">{formatFcfa(bon.montant)}</td>
+      <td className="py-1.5 tabular-nums">
+        {formatFcfa(bon.montant)}
+        {depasseSeuil && (
+          <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+            &gt; seuil
+          </span>
+        )}
+      </td>
       <td className="py-1.5">{bon.motif}</td>
       <td className="py-1.5 text-xs text-muted-foreground">{auteurNom}</td>
       <td className="py-1.5">
@@ -43,13 +75,78 @@ function BonRow({ bon, auteurNom, onValidated }: { bon: Bon; auteurNom: string; 
           <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
             Validé
           </span>
+        ) : bloqueAutoValidation ? (
+          <span className="text-xs text-muted-foreground" title="Un autre utilisateur doit valider ce bon">
+            Validation hiérarchique requise
+          </span>
         ) : (
           <Button size="sm" variant="outline" disabled={busy} onClick={handleValider}>
             Valider
           </Button>
         )}
+        {erreur && <p className="mt-1 text-xs text-destructive">{erreur}</p>}
       </td>
     </tr>
+  );
+}
+
+function SeuilEditor({ seuil, isAdmin, onDone }: { seuil: number; isAdmin: boolean; onDone: () => void }) {
+  const [valeur, setValeur] = useState(String(seuil));
+  const [editing, setEditing] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  if (!isAdmin) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        Seuil de validation hiérarchique : <b className="text-foreground">{formatFcfa(seuil)}</b>
+      </p>
+    );
+  }
+
+  if (!editing) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        Seuil de validation hiérarchique : <b className="text-foreground">{formatFcfa(seuil)}</b>{" "}
+        <button className="text-primary underline" onClick={() => setEditing(true)}>
+          Modifier
+        </button>
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        type="number"
+        min="0"
+        value={valeur}
+        onChange={(e) => setValeur(e.target.value)}
+        className="h-8 w-32"
+      />
+      <Button
+        size="sm"
+        disabled={pending}
+        onClick={async () => {
+          setPending(true);
+          setErreur(null);
+          const res = await definirSeuilDecaissement(Number(valeur));
+          setPending(false);
+          if (res.error) {
+            setErreur(res.error);
+            return;
+          }
+          setEditing(false);
+          onDone();
+        }}
+      >
+        Enregistrer
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+        Annuler
+      </Button>
+      {erreur && <span className="text-xs text-destructive">{erreur}</span>}
+    </div>
   );
 }
 
@@ -148,12 +245,18 @@ export function TresorerieClient({
   utilisateurs,
   soldeTheoriqueAujourdhui,
   clotureAujourdhuiExiste,
+  seuilValidation,
+  currentUserId,
+  isAdmin,
 }: {
   bons: Bon[];
   clotures: Cloture[];
   utilisateurs: Utilisateur[];
   soldeTheoriqueAujourdhui: number;
   clotureAujourdhuiExiste: boolean;
+  seuilValidation: number;
+  currentUserId: number;
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const nomAuteur = (id: number) => utilisateurs.find((u) => u.id === id)?.nom ?? "—";
@@ -171,10 +274,9 @@ export function TresorerieClient({
       <section>
         <h2 className="mb-3 text-sm font-semibold text-foreground">Bons de décaissement</h2>
         <BonForm onCreated={() => router.refresh()} />
-        <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
-          Seuil de validation obligatoire pas encore paramétrable (§16.7) — validation manuelle
-          disponible pour tout bon en attendant.
-        </p>
+        <div className="mt-2">
+          <SeuilEditor seuil={seuilValidation} isAdmin={isAdmin} onDone={() => router.refresh()} />
+        </div>
         <div className="mt-3 overflow-hidden rounded-md border border-border">
           <table className="w-full text-sm">
             <thead>
@@ -195,7 +297,14 @@ export function TresorerieClient({
                 </tr>
               )}
               {bons.map((b) => (
-                <BonRow key={b.id} bon={b} auteurNom={nomAuteur(b.auteurId)} onValidated={() => router.refresh()} />
+                <BonRow
+                  key={b.id}
+                  bon={b}
+                  auteurNom={nomAuteur(b.auteurId)}
+                  seuil={seuilValidation}
+                  currentUserId={currentUserId}
+                  onValidated={() => router.refresh()}
+                />
               ))}
             </tbody>
           </table>

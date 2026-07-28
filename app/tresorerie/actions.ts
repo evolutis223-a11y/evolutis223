@@ -1,9 +1,9 @@
 "use server";
 
-import { and, eq, gte, lt, sql } from "drizzle-orm";
+import { and, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { bonsDecaissement, cloturesCaisse, reglements } from "@/db/schema";
+import { bonsDecaissement, cloturesCaisse, parametresTresorerie, reglements } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 
@@ -13,6 +13,11 @@ async function requireTresorerieAccess() {
     throw new Error("Accès refusé.");
   }
   return session;
+}
+
+async function seuilValidation(): Promise<number> {
+  const [row] = await db.select().from(parametresTresorerie).limit(1);
+  return row ? Number(row.seuilValidationDecaissement) : 50000;
 }
 
 export interface BonState {
@@ -36,11 +41,17 @@ export async function creerBonDecaissement(
   if (!Number.isFinite(montant) || montant <= 0) return { error: "Montant invalide." };
   if (!motif) return { error: "Motif requis." };
 
+  // §8.2 point 2 / §16.7 : en dessous du seuil, auto-validé par l'auteur — au-delà, validation
+  // hiérarchique obligatoire (quelqu'un d'autre) avant d'impacter la caisse (calculerSoldeTheorique).
+  const seuil = await seuilValidation();
+  const autoValide = montant <= seuil;
+
   await db.insert(bonsDecaissement).values({
     categorie,
     montant: montant.toFixed(2),
     motif,
     auteurId: session.userId,
+    validateurId: autoValide ? session.userId : null,
   });
 
   revalidatePath("/tresorerie");
@@ -49,7 +60,40 @@ export async function creerBonDecaissement(
 
 export async function validerBonDecaissement(bonId: number): Promise<{ error?: string }> {
   const session = await requireTresorerieAccess();
+  const [bon] = await db.select().from(bonsDecaissement).where(eq(bonsDecaissement.id, bonId)).limit(1);
+  if (!bon) return { error: "Bon introuvable." };
+  if (bon.validateurId) return { error: "Ce bon est déjà validé." };
+
+  const seuil = await seuilValidation();
+  if (Number(bon.montant) > seuil && bon.auteurId === session.userId) {
+    return { error: "Validation hiérarchique requise — un autre utilisateur doit valider ce bon." };
+  }
+
   await db.update(bonsDecaissement).set({ validateurId: session.userId }).where(eq(bonsDecaissement.id, bonId));
+  revalidatePath("/tresorerie");
+  return {};
+}
+
+export async function definirSeuilDecaissement(nouveauSeuil: number): Promise<{ error?: string }> {
+  const session = await getSession();
+  if (!session || !["ADMIN", "SUPER_ADMIN"].includes(session.roleCode)) {
+    return { error: "Accès réservé à Admin/Super Admin." };
+  }
+  if (!Number.isFinite(nouveauSeuil) || nouveauSeuil < 0) return { error: "Seuil invalide." };
+
+  const [existing] = await db.select().from(parametresTresorerie).limit(1);
+  if (existing) {
+    await db
+      .update(parametresTresorerie)
+      .set({ seuilValidationDecaissement: nouveauSeuil.toFixed(2), modifiePar: session.userId, dateModification: new Date() })
+      .where(eq(parametresTresorerie.id, existing.id));
+  } else {
+    await db.insert(parametresTresorerie).values({
+      seuilValidationDecaissement: nouveauSeuil.toFixed(2),
+      modifiePar: session.userId,
+    });
+  }
+
   revalidatePath("/tresorerie");
   return {};
 }
@@ -70,10 +114,18 @@ export async function calculerSoldeTheorique(date: Date): Promise<number> {
     .from(reglements)
     .where(and(eq(reglements.mode, "ESPECES"), gte(reglements.dateReglement, debut), lt(reglements.dateReglement, fin)));
 
+  // §8.2 point 2 : un bon n'impacte la caisse qu'une fois validé (auto ou hiérarchique, §16.7) —
+  // "validation hiérarchique obligatoire avant exécution", pas juste avant clôture.
   const [decaisse] = await db
     .select({ total: sql<string>`coalesce(sum(${bonsDecaissement.montant}), 0)` })
     .from(bonsDecaissement)
-    .where(and(gte(bonsDecaissement.dateCreation, debut), lt(bonsDecaissement.dateCreation, fin)));
+    .where(
+      and(
+        isNotNull(bonsDecaissement.validateurId),
+        gte(bonsDecaissement.dateCreation, debut),
+        lt(bonsDecaissement.dateCreation, fin)
+      )
+    );
 
   return Number(encaisse.total) - Number(decaisse.total);
 }
