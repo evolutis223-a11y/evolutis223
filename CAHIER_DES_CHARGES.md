@@ -722,6 +722,8 @@ Demandé et confirmé (2026-07-27) : une page publique **sans connexion**, liée
 
 Affiche un simple statut d'avancement scopé à cette commande uniquement (ex. reçue → en préparation → en livraison/prête au retrait → livrée/retirée), aucun prix au-delà de ce que le client a déjà accepté, aucune autre donnée interne.
 
+**Implémenté et vérifié en base réelle (2026-07-28)** : route publique `/suivi/[numero]` (sans authentification, `proxy.ts`), stepper à 4 étapes dérivé de `affaires.statut` + `livraisons.statut`. Recherche par numéro exact (le futur payload QR encodera une URL vers cette page). Uniquement les commandes réelles (`COMMANDE_ATTENTE`/`TICKET`/`FACTURE`) sont suivies — un Devis/Proforma/Avoir affiche "suivi non disponible", une commande annulée un message dédié, un numéro inconnu une erreur générique. Montant total affiché (déjà accepté par le client), aucune autre donnée interne.
+
 ---
 
 ## 12. Paiement en ligne — Mobile Money, en V1

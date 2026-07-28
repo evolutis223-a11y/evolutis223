@@ -16,7 +16,7 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 | 1 — Cœur métier | **100%** | 1.1→1.6 faits et vérifiés en base réelle. Cycle complet : Catalogue → Stock (appro + réserve détail) → Client → Affaire (commande en attente → contrôle stock → décrément FIFO → ticket) → Commande (Retrait/Livraison) → Règlement → Trésorerie (bon de décaissement, clôture de caisse avec écart + justification). Bug réel trouvé et corrigé en cours de route (Famille B ne résolvait jamais de variante — stock jamais décrémenté). Génération PDF (§8.4) avancée en parallèle (Reçu de caisse seul, 5 restants — pas bloquant). Périphériques restants de Phase 1 (RH, Fournisseurs, Achats, Dépenses, Charges, Rapports) déplacés en Phase 4, cohérent avec le découpage d'origine. |
 | 2 — Workflows spécifiques | **100%** | 2.1→2.5 tous faits et vérifiés en base réelle. Phase 2 terminée. |
 | 2bis — R&D Calculateurs | **~10%** | Maquette Artifact validée ("c'est bon", 6 itérations, 2026-07-28) — §10bis. Aucune implémentation réelle (schéma/écrans) commencée. |
-| 3 — Configurateur & vitrine | **~30%** | 3.1 (maquette) et 3.2 (vitrine publique `/boutique`, aucune authentification, respecte `publie_boutique`, stock = réserve détail uniquement) faits et vérifiés en base réelle. Reste : configurateur réel (3.3), paiement (3.4), suivi de commande (3.5). |
+| 3 — Configurateur & vitrine | **~45%** | 3.1 (maquette), 3.2 (vitrine `/boutique`) et 3.5 (suivi `/suivi/[numero]`) faits et vérifiés en base réelle. Reste : configurateur réel (3.3 — bloqué sur les calculateurs R&D §10bis, pas encore codés), paiement Mobile Money (3.4 — bloqué sur choix d'agrégateur, décision utilisateur). |
 | 4 — Modules périphériques | **0%** | Pas commencé (n'est pas bloquant, peut suivre le lancement). |
 
 ---
@@ -104,7 +104,7 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 | 3.2 | ✅ Vitrine publique `/boutique` — aucune authentification (route publique dans `proxy.ts`), respecte `publie_boutique`, stock affiché = réserve détail uniquement (jamais le stock gros). Vérifié en base réelle. |
 | 3.3 | Configurateur chemin long + chemin court (écran Taille/Quantité partagé, tire sur la réserve détail) |
 | 3.4 | Paiement Mobile Money — intégration agrégateur, clés de test |
-| 3.5 | Suivi de commande public (QR, §11) |
+| 3.5 | ✅ Suivi de commande public — `/suivi/[numero]`, aucune authentification, stepper 4 étapes. Vérifié en base réelle. Reste : générer le QR lui-même sur les documents PDF (lié aux 5 gabarits restants, §13). |
 
 **Checkpoint phase 3** : commande en ligne complète, du configurateur au paiement test, suivie via le QR — première brique visible côté client.
 
