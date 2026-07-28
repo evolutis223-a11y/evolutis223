@@ -13,6 +13,7 @@ import { logout } from "./actions";
 const MODULE_ROUTES: Partial<Record<ModuleName, string>> = {
   Catalogue: "/catalogue",
   Stocks: "/stocks",
+  Clients: "/clients",
 };
 
 export default async function DashboardPage() {
