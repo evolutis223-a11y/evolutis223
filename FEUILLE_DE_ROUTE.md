@@ -13,7 +13,7 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 | Phase | % | Détail |
 |---|---|---|
 | 0 — Fondations | **90%** | 0.1→0.5 fonctionnels, testés en direct dans le navigateur (connexion, déconnexion, modules par rôle). Reste : sécurité PIN — hachage renforcé, blocage après tentatives échouées (§16.2). |
-| 1 — Cœur métier | **5%** | Génération PDF (§8.4) construite en avance via agent parallèle — un seul modèle fait (Reçu de caisse), 5 restants. Catalogue/Stock/Clients/Affaires : pas commencé. |
+| 1 — Cœur métier | **15%** | 1.1 Catalogue & Articles fait et testé en direct (liste filtrable/recherche, création famille-obligatoire, code préfixé par famille, photo, branches, publication). Génération PDF (§8.4) avancée en parallèle (Reçu de caisse seul, 5 restants). Reste : 1.2 Stock, 1.3 Clients, 1.4 Affaires, 1.5 Commandes, 1.6 Trésorerie. |
 | 2 — Workflows spécifiques | **0%** | Pas commencé. |
 | 3 — Configurateur & vitrine | **~15%** | 3.1 : maquette Artifact du chemin long construite et testée en direct. Reste : vitrine publique, intégration réelle, paiement, suivi de commande. |
 | 4 — Modules périphériques | **0%** | Pas commencé (n'est pas bloquant, peut suivre le lancement). |
