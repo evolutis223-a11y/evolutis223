@@ -695,12 +695,19 @@ Six modèles existants dans `design/` (A4 sauf Reçu en A5 paysage), tous avec l
 | Bon de livraison | A4 | Objet, affaire liée, canal, qté commandée/livrée |
 | Fiche de paie | A4 | Employé, base/montant par rubrique (salaire, prime transport, commission, retenue INPS, avance) |
 | Ordre de mission | A4 | Rôles/noms/matricules, destination, dates, moyen de transport, frais avancés |
-| Reçu de caisse | A5 paysage | Lignes article/qté/total, mode de règlement, sous-total/remise/TVA/TTC, reliquat |
+| Reçu de caisse | A5 paysage | Lignes numérotées article/qté/**PU**/total, mode de règlement, sous-total/remise/TVA/TTC, reliquat, **QR code** |
 | Courrier | A4 | En-tête/pied de page, corps libre |
 
 Mentions légales communes : Badalabougou, Rue 90, Porte 307 — RCCM MA.BKO.2022.A03394 — NINA 32209195100049N — NIF 085149443X — Banque Atlantique ML135 01016 072750680001 16 — Tél 0023 74 74 40 82 — evolutis223@gmail.com — Bamako/Mali.
 
 **Cachet numérique** : voir §8.4 point 6 — généré et appliqué automatiquement au PDF à la validation, pas de tampon physique requis pour la validité du document.
+
+**Reçu de caisse — premier modèle construit et validé (2026-07-28)** : `lib/documents/recu-caisse.tsx`, généré via `@react-pdf/renderer` (pur JS, voir §16 nouvelles notes techniques). QR code ajouté (`lib/documents/qr.ts`, lib `qrcode` pure JS) — payload provisoire `EVOLUTIS223-SUIVI:{numero}` en attendant la vraie page de suivi (§11) et un nom de domaine. Les 5 autres modèles suivront le même patron une fois le point ci-dessous tranché.
+
+**Paramétrage des documents — exigence nouvelle, 2026-07-28, pas encore conçue.** L'utilisateur veut pouvoir **personnaliser, voire modifier en profondeur**, les documents générés — pas seulement remplir des valeurs dans un gabarit figé codé en dur. Deux niveaux possibles, à trancher avant de construire les 5 modèles restants (retravailler `recu-caisse.tsx` après coup pour l'un ou l'autre coûterait plus cher que de trancher maintenant) :
+1. **Paramétrage par champs/sections (recommandé pour V1)** : un écran Paramètres par type de document permettant de basculer l'affichage de sections optionnelles, surcharger des blocs de texte (mentions légales, message de remerciement), changer logo/cachet, couleur d'accent, colonnes du tableau — mais la structure de mise en page reste celle codée. Techniquement : une table `parametres_documents` (type_document, config JSONB, modifie_par, date_modification — même esprit que `parametres_vente_gros` §4.7), lue par `lib/documents/` à la génération.
+2. **Éditeur de gabarit profond** : l'admin peut réellement réorganiser les sections, ajouter/retirer des colonnes, redéfinir la mise en page elle-même — un mini constructeur de template. Bien plus lourd (schéma de mise en page structuré + UI de construction), risque réel de dépasser le budget de sessions du §14 si fait pour les 6 documents.
+**Pas encore choisi entre les deux — à confirmer avec l'utilisateur avant de généraliser au-delà du Reçu de caisse.**
 
 ---
 
