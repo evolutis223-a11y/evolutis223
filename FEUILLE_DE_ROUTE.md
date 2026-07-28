@@ -6,6 +6,20 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 
 ---
 
+## État d'avancement
+
+**À remettre à jour à chaque étape/checkpoint franchi — reflète l'état réel, pas le plan.** Dernière mise à jour : 2026-07-28.
+
+| Phase | % | Détail |
+|---|---|---|
+| 0 — Fondations | **90%** | 0.1→0.5 fonctionnels, testés en direct dans le navigateur (connexion, déconnexion, modules par rôle). Reste : sécurité PIN — hachage renforcé, blocage après tentatives échouées (§16.2). |
+| 1 — Cœur métier | **5%** | Génération PDF (§8.4) construite en avance via agent parallèle — un seul modèle fait (Reçu de caisse), 5 restants. Catalogue/Stock/Clients/Affaires : pas commencé. |
+| 2 — Workflows spécifiques | **0%** | Pas commencé. |
+| 3 — Configurateur & vitrine | **~15%** | 3.1 : maquette Artifact du chemin long construite et testée en direct. Reste : vitrine publique, intégration réelle, paiement, suivi de commande. |
+| 4 — Modules périphériques | **0%** | Pas commencé (n'est pas bloquant, peut suivre le lancement). |
+
+---
+
 ## Pourquoi cet ordre (logique de dépendances)
 
 - **Rien ne peut se construire avant les rôles/permissions** (§6) : chaque module filtre par droit d'accès dès l'écriture, pas ajouté après coup.
