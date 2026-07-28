@@ -41,8 +41,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Drizzle
-drizzle/meta/
-
 # Archive source d'origine (13 Mo, déjà extraite dans design/)
 Gestion d'Evolutis 223 (2).zip
