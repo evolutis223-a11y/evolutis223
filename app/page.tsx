@@ -1,11 +1,18 @@
 import { eq } from "drizzle-orm";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { utilisateurs, roles } from "@/db/schema";
 import { getSession } from "@/lib/auth";
-import { modulesForRole } from "@/lib/permissions";
+import { modulesForRole, type ModuleName } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { logout } from "./actions";
+
+// Routes réellement construites — les autres modules restent des tuiles non cliquables
+// tant que leur page n'existe pas.
+const MODULE_ROUTES: Partial<Record<ModuleName, string>> = {
+  Catalogue: "/catalogue",
+};
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -53,14 +60,21 @@ export default async function DashboardPage() {
             </p>
           ) : (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {modules.map((m) => (
-                <div
-                  key={m}
-                  className="rounded-md border border-border bg-card px-3 py-2 text-sm text-card-foreground"
-                >
-                  {m}
-                </div>
-              ))}
+              {modules.map((m) => {
+                const href = MODULE_ROUTES[m];
+                const className =
+                  "rounded-md border border-border bg-card px-3 py-2 text-sm text-card-foreground" +
+                  (href ? " hover:bg-muted/60" : " opacity-60");
+                return href ? (
+                  <Link key={m} href={href} className={className}>
+                    {m}
+                  </Link>
+                ) : (
+                  <div key={m} className={className}>
+                    {m}
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>

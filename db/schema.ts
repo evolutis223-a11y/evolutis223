@@ -58,6 +58,14 @@ export const clients = pgTable(
   ]
 );
 
+// AJOUT 2026-07-28 : catégorisation légère par branche (§1 Vision) — pas du multi-tenant,
+// juste un tag de reporting orthogonal aux 5 familles (§5). Assignation manuelle par article.
+export const branches = pgTable("branches", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 20 }).notNull().unique(), // EVOLUTECH, EVOLUTEX, EVOLUCOM
+  nom: varchar("nom", { length: 60 }).notNull(),
+});
+
 // §4.3 — Articles, Variantes, Lots, Mouvements de stock
 export const articles = pgTable(
   "articles",
@@ -66,12 +74,17 @@ export const articles = pgTable(
     code: varchar("code", { length: 30 }).notNull().unique(),
     nom: varchar("nom", { length: 150 }).notNull(),
     famille: char("famille", { length: 1 }).notNull(),
+    brancheId: integer("branche_id").references(() => branches.id), // NULL = non catégorisé encore
     // A: Textile/douzaine · B: Unité simple · C: Service · D: Fabrication sur commande · E: Kit
     prixVente: numeric("prix_vente", { precision: 12, scale: 2 }).notNull(),
     pmp: numeric("pmp", { precision: 12, scale: 2 }).notNull().default("0"),
     aVariantes: boolean("a_variantes").notNull().default(false),
     // publie_boutique : article visible sur "Nos produits" — jamais vrai pour une variante réserve détail (règle app-level)
     publieBoutique: boolean("publie_boutique").notNull().default(false),
+    // AJOUT 2026-07-28 : photo par défaut/de repli de l'article (§10 — l'expérience visuelle est
+    // jugée centrale, confirmé par le client). URL vers le stockage objet (§3.2) ; peut rester NULL
+    // pour les familles sans photo pertinente (C/D), l'UI retombe alors sur une icône de famille.
+    photoUrl: text("photo_url"),
   },
   (table) => [
     check("articles_famille_check", sql`${table.famille} in ('A','B','C','D','E')`),
@@ -88,6 +101,9 @@ export const variantes = pgTable(
     taille: varchar("taille", { length: 20 }), // NULL = "variante par défaut" (Famille B sans déclinaison)
     couleur: varchar("couleur", { length: 30 }),
     seuilAlerte: integer("seuil_alerte").notNull().default(0),
+    // AJOUT 2026-07-28 : photo propre à cette couleur (§10 — "vraie photo produit par couleur").
+    // NULL = retombe sur articles.photoUrl côté UI, pas de duplication de logique en base.
+    photoUrl: text("photo_url"),
   },
   (table) => [
     // Deux index partiels au lieu d'un UNIQUE simple : en PostgreSQL, deux NULL ne sont jamais égaux

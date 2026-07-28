@@ -64,3 +64,7 @@ export const ROLE_MODULES: Record<string, readonly ModuleName[]> = {
 export function modulesForRole(roleCode: string): readonly ModuleName[] {
   return ROLE_MODULES[roleCode] ?? [];
 }
+
+export function hasModuleAccess(roleCode: string, module: ModuleName): boolean {
+  return modulesForRole(roleCode).includes(module);
+}

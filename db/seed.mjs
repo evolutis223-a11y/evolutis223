@@ -19,6 +19,13 @@ const ROLES = [
   ["LIVREUR_PARTENAIRE", "Livreur partenaire (externe)"],
 ];
 
+// Branches — catégorisation légère, §1 Vision
+const BRANCHES = [
+  ["EVOLUTECH", "EvoluTech"],
+  ["EVOLUTEX", "EvoluTex"],
+  ["EVOLUCOM", "EvoluCom"],
+];
+
 // Comptes de développement uniquement — PIN à changer avant toute mise en production.
 const DEV_USERS = [
   { nom: "Compte de test — Super Admin", telephone: "+22300000000", pin: "1234", roleCode: "SUPER_ADMIN" },
@@ -37,6 +44,15 @@ async function main() {
     );
   }
   console.log(`${ROLES.length} rôles seedés.`);
+
+  for (const [code, nom] of BRANCHES) {
+    await pool.query(
+      `insert into branches (code, nom) values ($1, $2)
+       on conflict (code) do update set nom = excluded.nom`,
+      [code, nom]
+    );
+  }
+  console.log(`${BRANCHES.length} branches seedées.`);
 
   for (const u of DEV_USERS) {
     const pinHash = await bcrypt.hash(u.pin, 10);

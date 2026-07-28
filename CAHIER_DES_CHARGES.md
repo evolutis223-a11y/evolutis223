@@ -12,7 +12,9 @@ EVOLUTIS223 est une entreprise de Bamako (Mali), quartier Badalabougou, opérant
 
 Ce cahier des charges décrit une application de gestion interne complète (vente, stock, trésorerie, RH, documents) plus une vitrine publique avec un configurateur d'articles personnalisés à la carte — la pièce maîtresse du projet, pensée pour permettre à un client de composer et commander à distance, à toute heure.
 
-Vision à plus long terme (pas un objectif d'architecture immédiat) : une structure en branches — **EvoluTech** (produits/services techniques) et **EvoluCom** (communication, publicité — ce que couvre déjà le catalogue actuel) — esquissant un possible futur "groupe EVOLUTIS223". Cette entreprise (EVOLUTIS223) reste mono-boutique ; le multi-tenant n'est pas nécessaire ici (voir §3.5).
+Vision à plus long terme (pas un objectif d'architecture immédiat) : une structure en branches — **EvoluTech** (développement/prestations informatiques), **EvoluTex** (textile personnalisé), **EvoluCom** (communication, publicité, signalétique — ce que couvre déjà l'essentiel du catalogue actuel) — esquissant un possible futur "groupe EVOLUTIS223". Cette entreprise (EVOLUTIS223) reste mono-boutique ; le multi-tenant n'est pas nécessaire ici (voir §3.5).
+
+**Branche — catégorisation légère, confirmée 2026-07-28.** Chaque article se voit assigner une branche (table `branches`, FK nullable `articles.branche_id`) — un simple tag de catégorisation pour deux usages : préparer une future scission en secteurs autonomes sans devoir la reconstruire à ce moment-là, et permettre aux Rapports (§7) de ventiler chiffre d'affaires/marge/stock par branche pour la vision globale. **Ce n'est pas du multi-tenant** (pas d'isolation de données, pas de `boutique_id`, §3.5 inchangé) — juste une dimension de reporting orthogonale aux 5 familles d'articles (§5) : la famille dit comment le stock fonctionne, la branche dit à quelle activité l'article appartient. Un article Famille A (textile) est presque toujours EvoluTex, mais un Famille C (service) peut être EvoluTech ou EvoluCom selon le cas — assignation manuelle, jamais déduite automatiquement de la famille.
 
 ---
 

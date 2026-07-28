@@ -15,6 +15,20 @@
       "when": 1785200547718,
       "tag": "0001_v_stock_variante",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785231041881,
+      "tag": "0002_nappy_slyde",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785233467592,
+      "tag": "0003_flimsy_moira_mactaggert",
+      "breakpoints": true
     }
   ]
 }
