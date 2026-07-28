@@ -216,6 +216,68 @@ export async function listerDemandesEnAttente() {
     .orderBy(desc(demandesValidationStock.dateCreation));
 }
 
+// §12 : validation Admin/Super Admin d'une proforma avant qu'elle ne puisse être envoyée au
+// client — même logique de file d'attente que §9, mais sur affaires.statut directement.
+export async function validerProforma(affaireId: number): Promise<{ error?: string }> {
+  try {
+    const session = await requireAdmin();
+    const [affaire] = await db
+      .select()
+      .from(affaires)
+      .where(and(eq(affaires.id, affaireId), eq(affaires.type, "PROFORMA")))
+      .limit(1);
+    if (!affaire) return { error: "Proforma introuvable." };
+    if (affaire.statut !== "EN_ATTENTE") return { error: "Cette proforma est déjà traitée." };
+
+    await db.transaction(async (tx) => {
+      await tx.update(affaires).set({ statut: "VALIDEE" }).where(eq(affaires.id, affaireId));
+      await enregistrerAudit(tx, {
+        tableCible: "affaires",
+        enregistrementId: affaireId,
+        action: "VALIDATION",
+        utilisateurId: session.userId,
+        details: { type: "PROFORMA", decision: "VALIDEE" },
+      });
+    });
+
+    revalidatePath("/validations");
+    revalidatePath("/commercial");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur inconnue." };
+  }
+}
+
+export async function refuserProforma(affaireId: number): Promise<{ error?: string }> {
+  try {
+    const session = await requireAdmin();
+    const [affaire] = await db
+      .select()
+      .from(affaires)
+      .where(and(eq(affaires.id, affaireId), eq(affaires.type, "PROFORMA")))
+      .limit(1);
+    if (!affaire) return { error: "Proforma introuvable." };
+    if (affaire.statut !== "EN_ATTENTE") return { error: "Cette proforma est déjà traitée." };
+
+    await db.transaction(async (tx) => {
+      await tx.update(affaires).set({ statut: "ANNULEE" }).where(eq(affaires.id, affaireId));
+      await enregistrerAudit(tx, {
+        tableCible: "affaires",
+        enregistrementId: affaireId,
+        action: "VALIDATION",
+        utilisateurId: session.userId,
+        details: { type: "PROFORMA", decision: "REFUSEE" },
+      });
+    });
+
+    revalidatePath("/validations");
+    revalidatePath("/commercial");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur inconnue." };
+  }
+}
+
 export async function refuserDemande(demandeId: number): Promise<{ error?: string }> {
   try {
     const session = await requireAdmin();

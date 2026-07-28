@@ -727,6 +727,8 @@ Prérequis réels avant la mise en production (pas avant le développement) : in
 
 Table `PROFORMA` (§4.5) : les partenaires (Freelance, Commercial à distance, où qu'ils soient) remplissent un formulaire de proforma — fonctionnellement un Devis — qui part en validation Admin/Super Admin avant de pouvoir être envoyé au client. Même logique de file d'attente que §9.
 
+**Implémenté et vérifié en base réelle (2026-07-28)** : module `/commercial` (rôles Freelance/Commercial/Resp. Commercial, module "Commercial") — formulaire simple (client par nom+contact, créé ou retrouvé automatiquement ; lignes réutilisant le composant d'Affaires) qui crée une `affaire` de type `PROFORMA`, statut `EN_ATTENTE`, numérotée `PRO-AA-NNNN`. File d'attente Admin/Super Admin intégrée à l'écran `/validations` existant (§9) plutôt qu'un troisième écran séparé — Valider passe le statut à `VALIDEE` ("prête à envoyer"), Refuser à `ANNULEE`, chaque décision tracée au journal d'audit. L'envoi effectif au client (document/partage) n'est pas encore construit — reste avec les 5 gabarits PDF restants (§13).
+
 ---
 
 ## 13. Documents imprimables et branding

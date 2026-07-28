@@ -41,7 +41,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 const initialReglementState: ReglementState = { error: null };
 
-function LigneEditorRow({
+export function LigneEditorRow({
   articlesList,
   variantesList,
   ligne,

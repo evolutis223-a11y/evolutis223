@@ -8,9 +8,24 @@ import {
   listerDemandesEnAttente,
   rechargerDemande,
   refuserDemande,
+  refuserProforma,
+  validerProforma,
 } from "./actions";
 
 type Demande = Awaited<ReturnType<typeof listerDemandesEnAttente>>[number];
+interface Proforma {
+  id: number;
+  numero: string;
+  statut: string;
+  montantTtc: string;
+  clientNom: string;
+  auteurNom: string;
+  dateCreation: Date;
+}
+
+function formatFcfa(v: string | number) {
+  return `${Math.round(Number(v)).toLocaleString("fr-FR")} F`;
+}
 
 const POLL_MS = 10_000;
 const BIP_MS = 30_000;
@@ -35,12 +50,20 @@ function beep() {
   }
 }
 
-export function ValidationsClient({ demandes: initial }: { demandes: Demande[] }) {
+export function ValidationsClient({
+  demandes: initial,
+  proformas,
+}: {
+  demandes: Demande[];
+  proformas: Proforma[];
+}) {
   const router = useRouter();
   const [enAttente, setEnAttente] = useState<Demande[]>(
     initial.filter((d) => d.statut === "EN_ATTENTE")
   );
   const historique = initial.filter((d) => d.statut !== "EN_ATTENTE").slice(0, 30);
+  const proformasEnAttente = proformas.filter((p) => p.statut === "EN_ATTENTE");
+  const proformasHistorique = proformas.filter((p) => p.statut !== "EN_ATTENTE").slice(0, 30);
 
   const [alerteActive, setAlerteActive] = useState(false);
   const [pauseJusqua, setPauseJusqua] = useState<number | null>(null);
@@ -222,6 +245,59 @@ export function ValidationsClient({ demandes: initial }: { demandes: Demande[] }
             ))
           )}
         </section>
+
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Proformas en attente (§12) — {proformasEnAttente.length}
+          </h2>
+          {proformasEnAttente.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aucune proforma en attente.</p>
+          ) : (
+            proformasEnAttente.map((p) => (
+              <div key={p.id} className="rounded-md border border-border bg-card p-3 text-sm">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="font-medium text-card-foreground">{p.numero}</span>
+                  <span className="text-xs text-muted-foreground">par {p.auteurNom}</span>
+                </div>
+                <p className="mt-1 text-muted-foreground">
+                  {p.clientNom} — <strong>{formatFcfa(p.montantTtc)}</strong>
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <Button size="sm" disabled={isPending} onClick={() => traiter(() => validerProforma(p.id))}>
+                    Valider
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isPending}
+                    onClick={() => traiter(() => refuserProforma(p.id))}
+                  >
+                    Refuser
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </section>
+
+        {proformasHistorique.length > 0 && (
+          <section className="space-y-2">
+            <h2 className="text-sm font-medium text-muted-foreground">Proformas traitées récemment</h2>
+            <div className="space-y-1">
+              {proformasHistorique.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between rounded-md border border-border/60 px-3 py-1.5 text-xs text-muted-foreground"
+                >
+                  <span>
+                    {p.numero} — {p.clientNom} — {formatFcfa(p.montantTtc)}
+                  </span>
+                  <span>{p.statut}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {historique.length > 0 && (
           <section className="space-y-2">
