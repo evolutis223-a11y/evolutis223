@@ -653,7 +653,7 @@ Deux chemins d'entrée, un même flux final en 5 points pour un article textile 
 
 **Chemin long** (à la carte — **la pièce maîtresse du projet**) :
 1. **Support** — couleur en points cliquables limités au stock/catalogue réel de l'article (photo produit swap en direct par couleur, points grisés "rupture" si indisponible) ; coupe H/F/Enfant ; encolure/manches affichées seulement pour t-shirt.
-2. **Zones de marquage** — clic sur le vêtement pour ajouter/retirer une zone, technique par zone, upload logo par zone.
+2. **Zones de marquage** — clic sur le vêtement pour ajouter/retirer une zone, technique par zone, upload logo par zone. **Détaillé et élargi au §10bis** (le moteur de coût par technique est partagé avec la vente interne, pas réinventé pour le configurateur seul).
 3. **Finitions** — options cumulables, textile uniquement, surcharges fixes : broderie relief 3D +800F, patch tissé cousu +500F, étiquette perso +300F, emballage individuel +150F.
 4. **Taille & quantité** — voir résolutions ci-dessous.
 5. **Récapitulatif** — prix détaillé complet, "Valider" fige la config comme ligne d'affaire.
@@ -666,6 +666,38 @@ Chaque champ du point 1 (Support) a une bascule admin par article : demander au 
 3. **Nouveau, pas encore designé** : le **seuil minimum** (§4.7) décidant qu'une commande compte comme "vente en gros" plutôt que "vente au détail" doit être **ajustable par l'admin**, pas codé en dur — l'utilisateur compte l'affiner "au fil des activités". Valeur exacte et granularité (par ligne de taille ou par commande entière) non encore précisées, à régler dans Paramètres au moment venu.
 
 *(Note : `design/Canvas.dc.html` contient trois pistes UI antérieures pour ce configurateur — accordéon une page, onglets+cartes, tableau technique compact. Probablement supplantées par le flux en 5 points ci-dessus ; à vérifier si une de ces pistes doit influencer l'habillage visuel du point 1/2.)*
+
+---
+
+## 10bis. Marquage personnalisé et calculateurs de coût (R&D)
+
+**Ajouté le 2026-07-28, conçu par 6 itérations de maquette Artifact avec l'utilisateur (validé "c'est bon"), pas encore codé.** Ce module naît d'un constat : les articles à prix variable (polo à la carte, sérigraphie/DTF/sublimation/broderie/flocage, tissu au mètre) ne doivent pas devenir chacun un cas spécial codé en dur dans Catalogue/Stock/Affaires. À la place, un module **R&D** définit des **calculateurs** — formules réutilisables qui calculent un prix de ligne à partir de paramètres — qu'un article du Catalogue *attache*. **Une vente configurée reste toujours une `ligne_affaire` calculée à la volée ; ce n'est jamais un nouvel article Catalogue.**
+
+**Trois niveaux de complexité pour une ligne de vente (pas un seul) :**
+1. **Cas A — ligne simple** : commande spéciale ponctuelle ne nécessitant pas de devis/proforma, juste un prix d'achat/fabrication → prix de vente. Pas de calculateur.
+2. **Calculateur à formule** (ce module) — logique de prix réutilisable par catégorie de produit.
+3. **Cas B — configurateur guidé complet** (polo à la carte, §10) — le plus complexe, déjà maqueté et flux ci-dessus.
+
+**Écran principal : produit d'abord, pas la config technique.** Barre de sélection de vêtement (Polo, T-shirt, Maillot, Survêtement, Tissu, Casquette) → clic direct sur les zones du vêtement pour les marquer (réutilise le clic-zone du §10) → prix calculé en direct, le prix de base venant du Stock réel. La configuration des formules (bibliothèque d'encres/supports, main d'œuvre, marge, charges) est déportée derrière un **bouton discret, réservé Admin/Super Admin**, jamais l'écran principal — un premier jet qui mettait la config admin au centre a été rejeté par l'utilisateur comme incompréhensible.
+
+**Options transverses :**
+- **Ensemble complet** (haut+bas, tailles/couleurs indépendantes) : bascule disponible sur Polo/T-shirt/Maillot/Survêtement — **pas** sur Tissu.
+- **Tissu** a son propre mode à la place : **"Zones spécifiques"** vs **"Toute la surface"** (pas de notion d'ensemble).
+- **Zones prédéfinies** en boutons rapides (poitrine centre/gauche/droite, dos, manche courte/longue pour les vêtements ; avant/côté pour Casquette), en plus du clic libre n'importe où.
+
+**Par zone, une technique — chacune avec son propre moteur de coût (ne pas fusionner, corrigé plusieurs fois en session) :**
+- **Sérigraphie** — prix au nombre de couleurs/cadres (chaque couleur = un cadre physique = coût de mise en place).
+- **DTF / Sublimation** (« sérigraphie numérique ») — prix à la zone (cm²) : coût d'encre **continu** (prix/cm² × surface réelle, aucun arrondi — l'encre est un liquide) + coût du support d'impression (papier ordinaire, papier spécial sublimation, film DTF…) qui lui **arrondit au support entier** selon **le format propre de ce support** (A4/A3/personnalisé en cm) — ce format est indépendant du format de référence de l'encre, car certains supports (ex. vinyle flocage) se vendent différemment (rouleau découpé sur mesure, pas en feuilles A4).
+- **Flocage** — même famille de calcul cm² que DTF/sublimation, mais sans composant encre : uniquement coût du support/vinyle.
+- **Broderie** — prix par **paliers de taille discrets** (Petit/Moyen/Grand), pas par surface continue — modèle volontairement différent, confirmé par l'expérience professionnelle de l'utilisateur (10+ ans, designer textile en usine au Mali).
+
+**Toujours séparés, jamais fusionnés dans une même ligne :** main d'œuvre, charges additionnelles (liste ouverte, positionnée sous main d'œuvre, on peut ajouter des lignes), marge. Le prix dégressif par quantité reste un placeholder simple, volontairement non prioritaire (l'utilisateur : "c'est le côté des prix dégressifs qui me fatigue un peu").
+
+**Bibliothèque de références** (encres, supports d'impression, matières, emballages) : section admin repliée par défaut, modifiée rarement (changement de prix fournisseur, nouvelle marque d'encre), avec plusieurs variantes nommées par catégorie (ex. « Encre sublimation Claude : 100ml/1000F = 1 A4 »). Les calculateurs **sélectionnent** une entrée plutôt que d'embarquer un prix en dur.
+
+**Explicitement hors périmètre pour l'instant :** la **production industrielle de pagne** (sous-traitance usine, maquette/cadres, prix par balle/pièce de 12 yards, transport/douane) est **retirée** de ce module — l'utilisateur, fort de son expérience professionnelle directe dans une usine textile au Mali, a jugé que l'entreprise n'a pas encore toute la visibilité sur l'économie de ce segment et que le risque financier est trop élevé pour l'inclure maintenant ; elle sera configurée à part, plus tard, à sa demande explicite. Ne pas la refondre dans la bibliothèque de références sans qu'il ne rouvre le sujet.
+
+**Statut : maquette Artifact validée, aucune implémentation réelle (schéma/écrans) encore commencée.** À planifier en Phase 2 ou 3 de `FEUILLE_DE_ROUTE.md` (nouveau module, absent de la feuille de route d'origine — ajouté après coup).
 
 ---
 

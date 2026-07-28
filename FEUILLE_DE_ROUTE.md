@@ -15,6 +15,7 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 | 0 — Fondations | **90%** | 0.1→0.5 fonctionnels, testés en direct dans le navigateur (connexion, déconnexion, modules par rôle). Reste : sécurité PIN — hachage renforcé, blocage après tentatives échouées (§16.2). |
 | 1 — Cœur métier | **100%** | 1.1→1.6 faits et vérifiés en base réelle. Cycle complet : Catalogue → Stock (appro + réserve détail) → Client → Affaire (commande en attente → contrôle stock → décrément FIFO → ticket) → Commande (Retrait/Livraison) → Règlement → Trésorerie (bon de décaissement, clôture de caisse avec écart + justification). Bug réel trouvé et corrigé en cours de route (Famille B ne résolvait jamais de variante — stock jamais décrémenté). Génération PDF (§8.4) avancée en parallèle (Reçu de caisse seul, 5 restants — pas bloquant). Périphériques restants de Phase 1 (RH, Fournisseurs, Achats, Dépenses, Charges, Rapports) déplacés en Phase 4, cohérent avec le découpage d'origine. |
 | 2 — Workflows spécifiques | **0%** | Pas commencé. |
+| 2bis — R&D Calculateurs | **~10%** | Maquette Artifact validée ("c'est bon", 6 itérations, 2026-07-28) — §10bis. Aucune implémentation réelle (schéma/écrans) commencée. |
 | 3 — Configurateur & vitrine | **~15%** | 3.1 : maquette Artifact du chemin long construite et testée en direct. Reste : vitrine publique, intégration réelle, paiement, suivi de commande. |
 | 4 — Modules périphériques | **0%** | Pas commencé (n'est pas bloquant, peut suivre le lancement). |
 
@@ -71,6 +72,25 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 | 2.5 | Proformas partenaires (§12) |
 
 **Checkpoint phase 2** : simuler une rupture de réserve détail → alerte admin → décision (Autoriser / Recharger / Refuser) → effet réel sur le stock, tracé au journal d'audit.
+
+---
+
+## Phase 2bis — R&D Calculateurs (§10bis)
+
+**Module ajouté après coup (2026-07-28)**, absent du plan d'origine — surfacé en cours de session à partir du besoin réel du polo à la carte et de la sérigraphie/DTF/sublimation. Dépend du Catalogue (1.1) et du Stock (1.2, déjà faits) pour le prix de base ; independent des workflows 2.1-2.5.
+
+| Étape | Contenu |
+|---|---|
+| 2bis.1 | Schéma — tables `calculateurs`, `bibliotheque_references` (encres, supports d'impression, matières, emballages, chacune avec variantes nommées), zones de marquage, liaison à un article Catalogue existant |
+| 2bis.2 | Écran principal produit-first — sélecteur de vêtement (Polo/T-shirt/Maillot/Survêtement/Tissu/Casquette), clic-zone (réutilise le composant zone-click du §10), calcul de prix en direct |
+| 2bis.3 | Moteurs de coût par technique — Sérigraphie (couleurs/cadres), DTF/Sublimation (cm² continu encre + support arrondi par feuille), Flocage (cm² support seul), Broderie (paliers Petit/Moyen/Grand) |
+| 2bis.4 | Options transverses — bascule Ensemble complet (haut+bas), mode Tissu (Zones spécifiques / Toute la surface), zones prédéfinies en boutons rapides |
+| 2bis.5 | Écran admin (bouton discret, Admin/Super Admin uniquement) — bibliothèque de références, main d'œuvre + charges additionnelles (liste ouverte), marge, séparés |
+| 2bis.6 | Intégration Affaires — une config validée devient une `ligne_affaire` calculée, jamais un nouvel article Catalogue |
+
+**Checkpoint phase 2bis** : configurer un polo avec 2 zones (poitrine + dos), technique DTF sur une zone et sérigraphie 2 couleurs sur l'autre, vérifier que le prix calculé correspond à la maquette Artifact validée, et que la ligne d'affaire résultante ne crée aucun article Catalogue.
+
+**Hors périmètre pour l'instant** (§10bis) : production industrielle de pagne (usine, maquette/cadres, balles/pièces de 12 yards) — configurée à part plus tard, sur demande explicite de l'utilisateur.
 
 ---
 
