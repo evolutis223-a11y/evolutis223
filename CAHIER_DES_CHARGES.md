@@ -555,6 +555,8 @@ Rôles cibles (fusion du schéma SQL d'origine, du prototype et des décisions d
 6. La remise exige une **validation manuelle Admin/Comptable** (rapprochement montant remis / attendu) ; c'est seulement là que le montant impacte la Trésorerie centrale.
 7. Tant que non validé, le solde du livreur reste visible séparément, jamais fondu dans la Trésorerie ; tout écart est tracé.
 
+**Implémenté et vérifié en base réelle (2026-07-28)** : livreur assignable à une livraison directement dans Commandes (`assignerLivreur`) ; marquer une livraison "Livrée" avec un solde restant propose un champ "espèces reçues" — si renseigné, crée une ligne `fonds_circulation` (statut `EN_CIRCULATION`) au lieu d'un règlement direct (`app/commandes/actions.ts` — `avancerLivraison`). Écran Admin/Comptable à `/fonds-circulation` : rapprochement montant remis/attendu, "Valider la remise" insère alors le règlement réel (mode ESPECES, impacte immédiatement `calculerSoldeTheorique`) et trace l'écart dans `journal_audit`. Le livreur voit son propre solde en circulation dans Commandes (bandeau, pas de nouveau module). Testé de bout en bout sur Neon : encaissement partiel (5 000 F sur 7 000 F de solde) → fonds en circulation → remise de 4 800 F → écart -200 F correctement tracé, règlement créé à la date de validation (pas de la collecte).
+
 ### 8.3 Calcul du stock des Kits (Famille E)
 
 1. Un Kit n'a jamais de quantité saisie directement — toujours recalculée depuis sa recette.

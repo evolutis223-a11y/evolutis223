@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { utilisateurs, roles } from "@/db/schema";
 import { getSession } from "@/lib/auth";
-import { modulesForRole, type ModuleName } from "@/lib/permissions";
+import { hasModuleAccess, modulesForRole, type ModuleName } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { logout } from "./actions";
 
@@ -94,6 +94,20 @@ export default async function DashboardPage() {
               className="block rounded-md border border-border bg-card px-3 py-2 text-sm text-card-foreground hover:bg-muted/60"
             >
               Validations stock (§9)
+            </Link>
+          </section>
+        )}
+
+        {hasModuleAccess(user.roleCode, "Trésorerie") && (
+          <section>
+            <h2 className="mb-3 text-sm font-medium text-muted-foreground">
+              Réservé Admin/Comptable
+            </h2>
+            <Link
+              href="/fonds-circulation"
+              className="block rounded-md border border-border bg-card px-3 py-2 text-sm text-card-foreground hover:bg-muted/60"
+            >
+              Fonds en circulation (§8.2)
             </Link>
           </section>
         )}
