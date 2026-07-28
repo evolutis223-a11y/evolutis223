@@ -437,8 +437,11 @@ export function AffairesClient({
                   {bloquee && (
                     <p className="rounded-md border-l-2 border-amber-500 bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-300">
                       Réserve détail insuffisante pour au moins une ligne. Demande envoyée pour
-                      validation Admin/Super Admin — l&apos;écran de décision (Autoriser/Recharger/Refuser)
-                      arrive en Phase 2 (§9). Pas de décrément tant que non résolu.
+                      validation Admin/Super Admin — décision (Autoriser/Recharger/Refuser) sur{" "}
+                      <a href="/validations" className="underline">
+                        /validations
+                      </a>{" "}
+                      (§9). Pas de décrément tant que non résolu.
                     </p>
                   )}
 

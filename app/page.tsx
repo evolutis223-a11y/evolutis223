@@ -83,6 +83,20 @@ export default async function DashboardPage() {
             </div>
           )}
         </section>
+
+        {(user.roleCode === "ADMIN" || user.roleCode === "SUPER_ADMIN") && (
+          <section>
+            <h2 className="mb-3 text-sm font-medium text-muted-foreground">
+              Réservé Admin/Super Admin
+            </h2>
+            <Link
+              href="/validations"
+              className="block rounded-md border border-border bg-card px-3 py-2 text-sm text-card-foreground hover:bg-muted/60"
+            >
+              Validations stock (§9)
+            </Link>
+          </section>
+        )}
       </div>
     </main>
   );

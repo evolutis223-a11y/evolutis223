@@ -643,6 +643,8 @@ function vendreKit({ recette, quantiteDemandee, affaireId, auteurId, getStockDis
 
 Maquette de référence (Artifact, pour reprise lors du développement) : logique complète interactive testée avec l'utilisateur, structure ci-dessus = version finale approuvée.
 
+**Implémenté et vérifié en base réelle (2026-07-28)** : le blocage (point 1) existait déjà depuis la Phase 1 (`validerAffaire`, `app/affaires/actions.ts`) ; l'écran de décision Admin/Super Admin (points 2-4) est construit à `/validations` (`app/validations/`) — Autoriser transfère exactement le manque du stock gros vers la réserve détail (FIFO par lot, comme le décrément), Recharger permet une quantité supérieure au manque, Refuser laisse l'affaire bloquée. Chaque décision est tracée dans `journal_audit`. Une fois toutes les demandes d'une affaire résolues (aucune ne reste `EN_ATTENTE`), l'affaire se finalise automatiquement (revalidation). Testé de bout en bout sur la base Neon réelle : Autoriser (transfert de 3 pièces) et Recharger (transfert de 1 pièce) produisent chacun un Ticket (`TIC-...`) correct. L'alerte sonore (bip 30s, pause 1/5/15 min) est un réglage local par appareil (opt-in, non persisté en base) — pas encore l'alerte serveur/push envisagée à terme.
+
 ---
 
 ## 10. Configurateur d'articles personnalisés

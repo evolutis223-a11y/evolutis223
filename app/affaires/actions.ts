@@ -16,6 +16,7 @@ import {
 } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { enregistrerAudit } from "@/lib/audit";
 
 async function requireAffairesAccess() {
   const session = await getSession();
@@ -177,6 +178,18 @@ export async function validerAffaire(
     if (!affaire) return { error: "Affaire introuvable." };
     if (affaire.immuable) return { error: "Cette affaire est déjà validée." };
 
+    // Demandes déjà en attente (ex. admin qui re-clique "Valider" avant résolution) — ne pas
+    // en recréer, l'écran /validations affiche déjà celles-ci.
+    const demandesEnAttente = await db
+      .select({ id: demandesValidationStock.id })
+      .from(demandesValidationStock)
+      .where(
+        and(eq(demandesValidationStock.affaireId, affaireId), eq(demandesValidationStock.statut, "EN_ATTENTE"))
+      );
+    if (demandesEnAttente.length > 0) {
+      return { blocked: true };
+    }
+
     const lignes = await db.select().from(lignesAffaire).where(eq(lignesAffaire.affaireId, affaireId));
 
     // Contrôle de disponibilité en réserve détail (§9) avant tout décrément.
@@ -197,13 +210,23 @@ export async function validerAffaire(
     if (manques.length > 0) {
       await db.transaction(async (tx) => {
         for (const m of manques) {
-          await tx.insert(demandesValidationStock).values({
-            affaireId,
-            varianteId: m.varianteId,
-            quantiteDemandee: m.quantiteDemandee,
-            manque: m.manque,
-            canal: "BOUTIQUE",
-            demandeurId: session.userId,
+          const [demande] = await tx
+            .insert(demandesValidationStock)
+            .values({
+              affaireId,
+              varianteId: m.varianteId,
+              quantiteDemandee: m.quantiteDemandee,
+              manque: m.manque,
+              canal: "BOUTIQUE",
+              demandeurId: session.userId,
+            })
+            .returning();
+          await enregistrerAudit(tx, {
+            tableCible: "demandes_validation_stock",
+            enregistrementId: demande.id,
+            action: "CREATION",
+            utilisateurId: session.userId,
+            details: { affaireId, varianteId: m.varianteId, manque: m.manque },
           });
         }
       });
