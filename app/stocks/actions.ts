@@ -1,10 +1,10 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { articles, lots, lotVariantes, stockMouvements, variantes } from "@/db/schema";
+import { articles, kitComposants, lots, lotVariantes, stockMouvements, variantes, vStockVariante } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 import { repartirReserveAuProrata } from "@/lib/stock/allocation";
@@ -162,6 +162,215 @@ export async function approvisionnerFamilleA(
 
     revalidatePath("/stocks");
     return { error: null };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur inconnue." };
+  }
+}
+
+// §8.3 — Kits (Famille E) : recette + calcul de stock "goulot d'étranglement".
+
+export async function listerRecetteKit(kitArticleId: number) {
+  return db
+    .select({
+      id: kitComposants.id,
+      composantArticleId: kitComposants.composantArticleId,
+      composantNom: articles.nom,
+      varianteId: kitComposants.varianteId,
+      taille: variantes.taille,
+      couleur: variantes.couleur,
+      quantiteRequise: kitComposants.quantiteRequise,
+    })
+    .from(kitComposants)
+    .innerJoin(articles, eq(articles.id, kitComposants.composantArticleId))
+    .leftJoin(variantes, eq(variantes.id, kitComposants.varianteId))
+    .where(eq(kitComposants.kitArticleId, kitArticleId));
+}
+
+export interface ComposantLimitant {
+  composantArticleId: number;
+  varianteId: number;
+  quantiteRequise: number;
+  stockVariante: number;
+  stockPossible: number;
+}
+
+// Algorithme validé (§8.3) : stock du kit = plus petit stock possible parmi les composants,
+// chacun contrôlé sur sa variante exacte. Famille A (détail/gros) : réserve détail exclue,
+// point 4 — donc stock gros. Famille B (pas de split détail/gros) : son seul pool réel
+// (stockDetail, jamais alimenté en gros par approvisionnerFamilleB). Jamais agrégé sur une
+// famille de tailles.
+export async function calculerStockKit(
+  kitArticleId: number,
+  tx: DbOrTx = db
+): Promise<{ stockKitCalcule: number; composantLimitant: ComposantLimitant | null }> {
+  const recette = await tx
+    .select({
+      composantArticleId: kitComposants.composantArticleId,
+      composantFamille: articles.famille,
+      varianteId: kitComposants.varianteId,
+      quantiteRequise: kitComposants.quantiteRequise,
+    })
+    .from(kitComposants)
+    .innerJoin(articles, eq(articles.id, kitComposants.composantArticleId))
+    .where(eq(kitComposants.kitArticleId, kitArticleId));
+
+  if (recette.length === 0) {
+    return { stockKitCalcule: 0, composantLimitant: null };
+  }
+
+  let stockKit = Infinity;
+  let composantLimitant: ComposantLimitant | null = null;
+
+  for (const ligne of recette) {
+    if (ligne.varianteId == null) {
+      throw new Error(
+        `Composant ${ligne.composantArticleId} du kit sans variante exacte définie (§8.3) — recette invalide.`
+      );
+    }
+    const [stock] = await tx
+      .select({ stockGros: vStockVariante.stockGros, stockDetail: vStockVariante.stockDetail })
+      .from(vStockVariante)
+      .where(eq(vStockVariante.varianteId, ligne.varianteId))
+      .limit(1);
+    const stockVariante = ligne.composantFamille === "A" ? stock?.stockGros ?? 0 : stock?.stockDetail ?? 0;
+    const stockPossible = Math.floor(stockVariante / ligne.quantiteRequise);
+    if (stockPossible < stockKit) {
+      stockKit = stockPossible;
+      composantLimitant = { ...ligne, varianteId: ligne.varianteId, stockVariante, stockPossible };
+    }
+  }
+
+  return { stockKitCalcule: stockKit, composantLimitant };
+}
+
+// FIFO par lot (comme decrementerFifo, app/affaires/actions.ts) mais paramétré par pool — les
+// composants d'un Kit se décrémentent sur GROS (Famille A) ou DETAIL (Famille B, son seul pool).
+async function decrementerFifoParPool(
+  tx: DbOrTx,
+  varianteId: number,
+  pool: "GROS" | "DETAIL",
+  quantite: number,
+  affaireId: number,
+  auteurId: number
+) {
+  const lotsDisponibles = await tx
+    .select({
+      lotId: lotVariantes.lotId,
+      dateReception: lots.dateReception,
+      disponible: sql<number>`coalesce(sum(${stockMouvements.quantite}), 0)`,
+    })
+    .from(lotVariantes)
+    .innerJoin(lots, eq(lots.id, lotVariantes.lotId))
+    .leftJoin(
+      stockMouvements,
+      and(eq(stockMouvements.lotId, lotVariantes.lotId), eq(stockMouvements.varianteId, varianteId), eq(stockMouvements.pool, pool))
+    )
+    .where(eq(lotVariantes.varianteId, varianteId))
+    .groupBy(lotVariantes.lotId, lots.dateReception)
+    .orderBy(asc(lots.dateReception));
+
+  let restant = quantite;
+  for (const lot of lotsDisponibles) {
+    if (restant <= 0) break;
+    const dispo = Number(lot.disponible);
+    if (dispo <= 0) continue;
+    const pris = Math.min(dispo, restant);
+    await tx.insert(stockMouvements).values({
+      varianteId,
+      lotId: lot.lotId,
+      pool,
+      type: "VENTE",
+      quantite: -pris,
+      affaireId,
+      auteurId,
+    });
+    restant -= pris;
+  }
+  if (restant > 0) {
+    // Filet de sécurité : ne devrait jamais arriver, la disponibilité est vérifiée avant (calculerStockKit).
+    await tx.insert(stockMouvements).values({
+      varianteId,
+      pool,
+      type: "VENTE",
+      quantite: -restant,
+      affaireId,
+      auteurId,
+    });
+  }
+}
+
+// Vente d'un Kit : décrémente chaque composant sur sa variante exacte (§8.3 point 8).
+export async function decrementerKit(
+  tx: DbOrTx,
+  kitArticleId: number,
+  quantiteVendue: number,
+  affaireId: number,
+  auteurId: number
+) {
+  const recette = await tx
+    .select({
+      varianteId: kitComposants.varianteId,
+      quantiteRequise: kitComposants.quantiteRequise,
+      composantFamille: articles.famille,
+    })
+    .from(kitComposants)
+    .innerJoin(articles, eq(articles.id, kitComposants.composantArticleId))
+    .where(eq(kitComposants.kitArticleId, kitArticleId));
+
+  for (const ligne of recette) {
+    if (ligne.varianteId == null) continue;
+    const pool = ligne.composantFamille === "A" ? "GROS" : "DETAIL";
+    await decrementerFifoParPool(
+      tx,
+      ligne.varianteId,
+      pool,
+      ligne.quantiteRequise * quantiteVendue,
+      affaireId,
+      auteurId
+    );
+  }
+}
+
+export interface ComposantKitState {
+  error: string | null;
+}
+
+export async function ajouterComposantKit(
+  _prevState: ComposantKitState,
+  formData: FormData
+): Promise<ComposantKitState> {
+  try {
+    await requireStockAccess();
+    const kitArticleId = Number(formData.get("kitArticleId"));
+    const composantArticleId = Number(formData.get("composantArticleId"));
+    const varianteId = Number(formData.get("varianteId"));
+    const quantiteRequise = Number(formData.get("quantiteRequise"));
+
+    if (!Number.isFinite(kitArticleId)) return { error: "Kit invalide." };
+    if (!Number.isFinite(composantArticleId)) return { error: "Composant invalide." };
+    if (kitArticleId === composantArticleId) return { error: "Un kit ne peut pas se contenir lui-même." };
+    if (!Number.isFinite(varianteId)) {
+      return { error: "Variante exacte requise (§8.3) — jamais une famille entière de tailles." };
+    }
+    if (!Number.isFinite(quantiteRequise) || quantiteRequise <= 0) {
+      return { error: "Quantité requise invalide." };
+    }
+
+    await db.insert(kitComposants).values({ kitArticleId, composantArticleId, varianteId, quantiteRequise });
+
+    revalidatePath("/stocks");
+    return { error: null };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur inconnue." };
+  }
+}
+
+export async function retirerComposantKit(composantId: number): Promise<{ error?: string }> {
+  try {
+    await requireStockAccess();
+    await db.delete(kitComposants).where(eq(kitComposants.id, composantId));
+    revalidatePath("/stocks");
+    return {};
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Erreur inconnue." };
   }

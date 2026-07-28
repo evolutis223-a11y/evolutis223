@@ -267,7 +267,7 @@ export function CatalogueClient({
                 </div>
                 <div className="mt-4 rounded-md border-l-2 border-primary bg-muted/50 p-3 text-sm text-muted-foreground">
                   {detailArticle.famille === "E"
-                    ? "Recette du kit à définir dans Stocks (Phase 1.2) — le stock sera calculé automatiquement depuis les composants."
+                    ? "Recette du kit à définir dans Stocks (§8.3) — le stock est calculé automatiquement depuis les composants."
                     : detailArticle.famille === "C" || detailArticle.famille === "D"
                       ? familleMeta(detailArticle.famille).guidance
                       : "Stock pas encore configuré — variantes, approvisionnement et lots se renseignent dans Stocks (Phase 1.2)."}

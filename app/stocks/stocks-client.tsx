@@ -4,9 +4,41 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { articles } from "@/db/schema";
-import { approvisionnerFamilleA, approvisionnerFamilleB, type StockActionState } from "./actions";
+import {
+  ajouterComposantKit,
+  approvisionnerFamilleA,
+  approvisionnerFamilleB,
+  retirerComposantKit,
+  type ComposantKitState,
+  type StockActionState,
+} from "./actions";
 
 type Article = typeof articles.$inferSelect;
+
+interface RecetteRow {
+  id: number;
+  composantArticleId: number;
+  composantNom: string;
+  varianteId: number | null;
+  taille: string | null;
+  couleur: string | null;
+  quantiteRequise: number;
+}
+
+interface KitData {
+  article: Article;
+  recette: RecetteRow[];
+  stock: {
+    stockKitCalcule: number;
+    composantLimitant: {
+      composantArticleId: number;
+      varianteId: number;
+      quantiteRequise: number;
+      stockVariante: number;
+      stockPossible: number;
+    } | null;
+  };
+}
 
 interface VarianteRow {
   id: number;
@@ -230,12 +262,228 @@ function ApproFamilleBForm({ article, onDone }: { article: Article; onDone: () =
   );
 }
 
+const initialComposantState: ComposantKitState = { error: null };
+
+function AjouterComposantForm({
+  kitArticleId,
+  stockableArticles,
+  variantes,
+  onDone,
+}: {
+  kitArticleId: number;
+  stockableArticles: Article[];
+  variantes: VarianteRow[];
+  onDone: () => void;
+}) {
+  const [state, action, pending] = useActionState(ajouterComposantKit, initialComposantState);
+  const [composantArticleId, setComposantArticleId] = useState("");
+  const wasPending = useRef(false);
+
+  useEffect(() => {
+    if (wasPending.current && !pending && !state.error) onDone();
+    wasPending.current = pending;
+  }, [pending, state.error, onDone]);
+
+  const variantesDuComposant = variantes.filter((v) => v.articleId === Number(composantArticleId));
+  const composantFamille = stockableArticles.find((a) => a.id === Number(composantArticleId))?.famille;
+
+  return (
+    <form
+      action={(fd) => {
+        fd.set("kitArticleId", String(kitArticleId));
+        action(fd);
+      }}
+      className="mt-3 space-y-3 rounded-md border border-border bg-muted/30 p-3"
+    >
+      <div>
+        <label className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">
+          Composant
+        </label>
+        <select
+          name="composantArticleId"
+          value={composantArticleId}
+          onChange={(e) => setComposantArticleId(e.target.value)}
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+          required
+        >
+          <option value="">Choisir un article...</option>
+          {stockableArticles
+            .filter((a) => a.id !== kitArticleId)
+            .map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.nom} ({a.code})
+              </option>
+            ))}
+        </select>
+      </div>
+
+      {composantArticleId && (
+        <div>
+          <label className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">
+            Variante exacte (§8.3 — jamais une famille entière de tailles)
+          </label>
+          <select
+            name="varianteId"
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+            required
+          >
+            <option value="">Choisir une variante...</option>
+            {variantesDuComposant.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.taille || v.couleur ? `${v.taille ?? ""} ${v.couleur ?? ""}`.trim() : "Défaut"} —{" "}
+                {composantFamille === "A" ? "gros" : "stock"}: {composantFamille === "A" ? v.stockGros ?? 0 : v.stockDetail ?? 0}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div>
+        <label className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">
+          Quantité requise par kit
+        </label>
+        <Input name="quantiteRequise" type="number" min="1" placeholder="Ex. 1" required />
+      </div>
+
+      {state.error && (
+        <p className="text-sm text-destructive" role="alert">
+          {state.error}
+        </p>
+      )}
+
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onDone}>
+          Annuler
+        </Button>
+        <Button type="submit" size="sm" disabled={pending}>
+          {pending ? "Ajout..." : "Ajouter"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function KitsSection({
+  kits,
+  stockableArticles,
+  variantes,
+}: {
+  kits: KitData[];
+  stockableArticles: Article[];
+  variantes: VarianteRow[];
+}) {
+  const [expanded, setExpanded] = useState<number | null>(null);
+  const [addingTo, setAddingTo] = useState<number | null>(null);
+
+  if (kits.length === 0) return null;
+
+  return (
+    <div className="mt-8">
+      <h2 className="text-sm font-semibold text-foreground">Kits (Famille E, §8.3)</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Jamais de quantité saisie directement — recalculé depuis la recette, goulot
+        d&apos;étranglement sur le composant/variante le plus limitant (stock gros pour un
+        composant Famille A, réserve détail toujours exclue, §8.3 point 4).
+      </p>
+      <div className="mt-3 space-y-3">
+        {kits.map(({ article: k, recette, stock }) => {
+          const isOpen = expanded === k.id;
+          return (
+            <div key={k.id} className="rounded-md border border-border">
+              <div
+                className="flex cursor-pointer items-center justify-between gap-4 p-4"
+                onClick={() => setExpanded(isOpen ? null : k.id)}
+              >
+                <div>
+                  <div className="font-medium text-foreground">{k.nom}</div>
+                  <div className="font-mono text-xs text-muted-foreground">{k.code}</div>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="text-muted-foreground">
+                    Stock calculé :{" "}
+                    <b className="text-foreground tabular-nums">{stock.stockKitCalcule}</b>
+                  </span>
+                  <StockBadge qty={stock.stockKitCalcule} seuil={0} />
+                </div>
+              </div>
+
+              {isOpen && (
+                <div className="border-t border-border px-4 py-3">
+                  {stock.composantLimitant && (
+                    <p className="mb-3 rounded-md border-l-2 border-amber-500 bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                      Composant limitant : variante {stock.composantLimitant.varianteId} —{" "}
+                      {stock.composantLimitant.stockVariante} disponible ÷{" "}
+                      {stock.composantLimitant.quantiteRequise} requis ={" "}
+                      {stock.composantLimitant.stockPossible} kit(s) possible(s).
+                    </p>
+                  )}
+
+                  {recette.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Aucun composant — recette vide, aucune vente possible.
+                    </p>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-xs uppercase text-muted-foreground">
+                          <th className="py-1.5">Composant</th>
+                          <th className="py-1.5">Variante</th>
+                          <th className="py-1.5">Qté requise</th>
+                          <th className="py-1.5"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recette.map((r) => (
+                          <tr key={r.id} className="border-t border-border">
+                            <td className="py-1.5">{r.composantNom}</td>
+                            <td className="py-1.5">
+                              {r.taille || r.couleur ? `${r.taille ?? ""} ${r.couleur ?? ""}`.trim() : "Défaut"}
+                            </td>
+                            <td className="py-1.5 tabular-nums">{r.quantiteRequise}</td>
+                            <td className="py-1.5 text-right">
+                              <button
+                                onClick={() => retirerComposantKit(r.id)}
+                                className="text-xs text-destructive hover:underline"
+                              >
+                                Retirer
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                  {addingTo === k.id ? (
+                    <AjouterComposantForm
+                      kitArticleId={k.id}
+                      stockableArticles={stockableArticles}
+                      variantes={variantes}
+                      onDone={() => setAddingTo(null)}
+                    />
+                  ) : (
+                    <Button size="sm" variant="outline" className="mt-3" onClick={() => setAddingTo(k.id)}>
+                      + Ajouter un composant
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function StocksClient({
   articles: initialArticles,
   variantes,
+  kits,
 }: {
   articles: Article[];
   variantes: VarianteRow[];
+  kits: KitData[];
 }) {
   const [approArticle, setApproArticle] = useState<Article | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -271,8 +519,9 @@ export function StocksClient({
     <main className="mx-auto max-w-5xl p-6">
       <h1 className="text-xl font-semibold text-foreground">Stocks</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Seules les familles A (textile/douzaine) et B (unité simple) ont un stock direct — C
-        (service), D (fabrication sur commande) et E (kit) n&apos;apparaissent pas ici (§5).
+        Seules les familles A (textile/douzaine) et B (unité simple) ont un stock direct
+        approvisionné ici — C (service) et D (fabrication sur commande) n&apos;ont pas de stock
+        (§5) ; E (kit) a son stock recalculé depuis sa recette, plus bas.
       </p>
 
       <div className="mt-5 space-y-3">
@@ -372,6 +621,8 @@ export function StocksClient({
           );
         })}
       </div>
+
+      <KitsSection kits={kits} stockableArticles={stockables} variantes={variantes} />
 
       {approArticle && (
         <div

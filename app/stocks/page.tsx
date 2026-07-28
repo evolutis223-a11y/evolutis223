@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { articles, variantes, vStockVariante } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { calculerStockKit, listerRecetteKit } from "./actions";
 import { StocksClient } from "./stocks-client";
 
 export default async function StocksPage() {
@@ -34,5 +35,14 @@ export default async function StocksPage() {
       .leftJoin(vStockVariante, eq(vStockVariante.varianteId, variantes.id)),
   ]);
 
-  return <StocksClient articles={articleRows} variantes={variantRows} />;
+  const kitArticles = articleRows.filter((a) => a.famille === "E");
+  const kits = await Promise.all(
+    kitArticles.map(async (k) => ({
+      article: k,
+      recette: await listerRecetteKit(k.id),
+      stock: await calculerStockKit(k.id),
+    }))
+  );
+
+  return <StocksClient articles={articleRows} variantes={variantRows} kits={kits} />;
 }

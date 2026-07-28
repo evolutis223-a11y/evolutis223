@@ -14,7 +14,7 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 |---|---|---|
 | 0 — Fondations | **90%** | 0.1→0.5 fonctionnels, testés en direct dans le navigateur (connexion, déconnexion, modules par rôle). Reste : sécurité PIN — hachage renforcé, blocage après tentatives échouées (§16.2). |
 | 1 — Cœur métier | **100%** | 1.1→1.6 faits et vérifiés en base réelle. Cycle complet : Catalogue → Stock (appro + réserve détail) → Client → Affaire (commande en attente → contrôle stock → décrément FIFO → ticket) → Commande (Retrait/Livraison) → Règlement → Trésorerie (bon de décaissement, clôture de caisse avec écart + justification). Bug réel trouvé et corrigé en cours de route (Famille B ne résolvait jamais de variante — stock jamais décrémenté). Génération PDF (§8.4) avancée en parallèle (Reçu de caisse seul, 5 restants — pas bloquant). Périphériques restants de Phase 1 (RH, Fournisseurs, Achats, Dépenses, Charges, Rapports) déplacés en Phase 4, cohérent avec le découpage d'origine. |
-| 2 — Workflows spécifiques | **~20%** | 2.1 (réserve détail : blocage + écran de décision `/validations`) fait et vérifié en base réelle (Autoriser + Recharger testés, FIFO par lot, audit tracé). Reste : 2.2→2.5 (Kits, OF, Fonds en circulation, Proformas). |
+| 2 — Workflows spécifiques | **~40%** | 2.1 (réserve détail, `/validations`) et 2.2 (Kits) faits et vérifiés en base réelle. Reste : 2.3→2.5 (OF, Fonds en circulation, Proformas). |
 | 2bis — R&D Calculateurs | **~10%** | Maquette Artifact validée ("c'est bon", 6 itérations, 2026-07-28) — §10bis. Aucune implémentation réelle (schéma/écrans) commencée. |
 | 3 — Configurateur & vitrine | **~15%** | 3.1 : maquette Artifact du chemin long construite et testée en direct. Reste : vitrine publique, intégration réelle, paiement, suivi de commande. |
 | 4 — Modules périphériques | **0%** | Pas commencé (n'est pas bloquant, peut suivre le lancement). |
@@ -66,7 +66,7 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 | Étape | Contenu |
 |---|---|
 | 2.1 | ✅ Réserve détail / stock gros + workflow de validation (§9) — `/validations`, Autoriser/Recharger/Refuser, alerte sonore opt-in (bip 30s, pause 1/5/15 min), audit tracé. Vérifié en base réelle. |
-| 2.2 | Kits (§8.3) — algorithme déjà validé, à porter tel quel |
+| 2.2 | ✅ Kits (§8.3) — recette dans Stocks, stock "goulot d'étranglement" recalculé en direct, vente intégrée à `validerAffaire` (blocage direct si insuffisant, décrément par composant sur son pool réel). Vérifié en base réelle. |
 | 2.3 | Ordres de Fabrication (Famille D) + vue Kanban |
 | 2.4 | Fonds en circulation — Livreur interne + Livreur partenaire (§6) |
 | 2.5 | Proformas partenaires (§12) |

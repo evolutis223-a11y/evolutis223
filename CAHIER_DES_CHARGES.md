@@ -616,6 +616,8 @@ function vendreKit({ recette, quantiteDemandee, affaireId, auteurId, getStockDis
 }
 ```
 
+**Implémenté et vérifié en base réelle (2026-07-28)** : recette gérée dans Stocks (`app/stocks/actions.ts` — `listerRecetteKit`, `ajouterComposantKit`, `retirerComposantKit`), stock calculé en direct (`calculerStockKit`) et affiché avec le composant limitant. Vente intégrée dans `validerAffaire` (`app/affaires/actions.ts`) : blocage direct (pas de workflow Admin comme §9, la spec ne le prévoit pas pour les kits) si insuffisant, décrément par composant sinon. **Précision par rapport à l'algorithme de référence** : celui-ci suppose un seul pool générique ; en pratique un composant Famille A (détail/gros) se contrôle et se décrémente sur le stock **gros** (réserve détail exclue, point 4), tandis qu'un composant Famille B (pas de split détail/gros — tout son stock vit en `DETAIL`) se contrôle et se décrémente sur son seul pool réel. Testé de bout en bout sur Neon : kit à 2 composants (1 Famille B + 1 Famille A), goulot d'étranglement correctement identifié sur le composant Famille A, blocage à quantité excessive, vente réussie décrémentant chaque composant sur son pool et lot corrects (FIFO).
+
 ### 8.4 Gestion et archivage des documents
 
 1. Un **Devis** peut être révisé (V1, V2…) tant qu'il n'est pas accepté ; chaque révision archive la précédente sans la supprimer.

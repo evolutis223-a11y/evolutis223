@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
   affaires,
+  articles,
   demandesValidationStock,
   lignesAffaire,
   livraisons,
@@ -17,6 +18,7 @@ import {
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 import { enregistrerAudit } from "@/lib/audit";
+import { calculerStockKit, decrementerKit } from "@/app/stocks/actions";
 
 async function requireAffairesAccess() {
   const session = await getSession();
@@ -190,12 +192,38 @@ export async function validerAffaire(
       return { blocked: true };
     }
 
-    const lignes = await db.select().from(lignesAffaire).where(eq(lignesAffaire.affaireId, affaireId));
+    const lignes = await db
+      .select({
+        id: lignesAffaire.id,
+        articleId: lignesAffaire.articleId,
+        varianteId: lignesAffaire.varianteId,
+        quantite: lignesAffaire.quantite,
+        famille: articles.famille,
+        articleNom: articles.nom,
+      })
+      .from(lignesAffaire)
+      .innerJoin(articles, eq(articles.id, lignesAffaire.articleId))
+      .where(eq(lignesAffaire.affaireId, affaireId));
+
+    // Kits (Famille E, §8.3) : stock "goulot d'étranglement" sur stock gros, jamais la réserve
+    // détail (point 4) — pas de workflow de validation Admin ici, juste un blocage direct si la
+    // variante exacte requise manque (point 7).
+    for (const l of lignes) {
+      if (l.famille !== "E") continue;
+      const { stockKitCalcule, composantLimitant } = await calculerStockKit(l.articleId);
+      if (stockKitCalcule < l.quantite) {
+        return {
+          error: composantLimitant
+            ? `Kit "${l.articleNom}" — stock insuffisant (disponible ${stockKitCalcule}, demandé ${l.quantite}) — composant limitant : variante ${composantLimitant.varianteId} (${composantLimitant.stockVariante} disponible ÷ ${composantLimitant.quantiteRequise} requis).`
+            : `Kit "${l.articleNom}" — recette non définie, aucune vente possible.`,
+        };
+      }
+    }
 
     // Contrôle de disponibilité en réserve détail (§9) avant tout décrément.
     const manques: { varianteId: number; quantiteDemandee: number; manque: number }[] = [];
     for (const l of lignes) {
-      if (!l.varianteId) continue;
+      if (l.famille === "E" || !l.varianteId) continue;
       const [stock] = await db
         .select({ stockDetail: vStockVariante.stockDetail })
         .from(vStockVariante)
@@ -243,7 +271,9 @@ export async function validerAffaire(
 
     await db.transaction(async (tx) => {
       for (const l of lignes) {
-        if (l.varianteId) {
+        if (l.famille === "E") {
+          await decrementerKit(tx, l.articleId, l.quantite, affaireId, session.userId);
+        } else if (l.varianteId) {
           await decrementerFifo(tx, l.varianteId, l.quantite, affaireId, session.userId);
         }
       }
