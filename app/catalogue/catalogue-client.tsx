@@ -86,7 +86,7 @@ export function CatalogueClient({
     return c;
   }, [initialArticles]);
 
-  function handleRowEnter(e: React.MouseEvent<HTMLTableRowElement>, article: Article) {
+  function handleRowEnter(e: React.MouseEvent<HTMLDivElement>, article: Article) {
     const rect = e.currentTarget.getBoundingClientRect();
     let left = rect.right + 14;
     if (left + 240 > window.innerWidth - 12) left = rect.left - 254;
@@ -156,13 +156,15 @@ export function CatalogueClient({
               <tr
                 key={a.id}
                 className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/40"
-                onMouseEnter={(e) => handleRowEnter(e, a)}
-                onMouseLeave={() => setHover(null)}
                 onClick={() => setDetailArticle(a)}
               >
                 <td className="px-4 py-2.5">
                   <div className="flex items-center gap-3">
-                    <div className="h-11 w-11 flex-none overflow-hidden rounded-md border border-border">
+                    <div
+                      className="h-11 w-11 flex-none overflow-hidden rounded-md border border-border"
+                      onMouseEnter={(e) => handleRowEnter(e, a)}
+                      onMouseLeave={() => setHover(null)}
+                    >
                       <Thumb article={a} className="h-full w-full" />
                     </div>
                     <div>
@@ -179,21 +181,32 @@ export function CatalogueClient({
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-2.5 font-medium tabular-nums">{formatFcfa(a.prixVente)}</td>
+                <td className="px-4 py-2.5 text-base font-semibold tabular-nums text-amber-700 dark:text-amber-400">
+                  {formatFcfa(a.prixVente)}
+                </td>
                 <td className="px-4 py-2.5">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      togglePublieBoutique(a.id, !a.publieBoutique);
-                    }}
-                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      a.publieBoutique
-                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {a.publieBoutique ? "Publié" : "Non publié"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePublieBoutique(a.id, !a.publieBoutique);
+                      }}
+                      role="switch"
+                      aria-checked={a.publieBoutique}
+                      className="inline-flex h-5 w-9 flex-none items-center rounded-full transition-colors"
+                      style={{
+                        backgroundColor: a.publieBoutique ? "#10b981" : "var(--border)",
+                      }}
+                    >
+                      <span
+                        className="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform"
+                        style={{ transform: a.publieBoutique ? "translateX(18px)" : "translateX(2px)" }}
+                      />
+                    </button>
+                    <span className="text-xs text-muted-foreground">
+                      {a.publieBoutique ? "Publié" : "Non publié"}
+                    </span>
+                  </div>
                 </td>
               </tr>
             ))}
