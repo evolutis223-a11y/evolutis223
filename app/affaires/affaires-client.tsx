@@ -66,7 +66,18 @@ function LigneEditorRow({
           onChange={(e) => {
             const id = Number(e.target.value);
             const a = articlesList.find((x) => x.id === id);
-            onChange({ ...ligne, articleId: id, varianteId: null, prixUnitaire: a ? Number(a.prixVente) : 0 });
+            // Famille A : la variante (taille/couleur) se choisit explicitement ci-dessous.
+            // Autres familles avec stock (B) : une seule variante par défaut existe déjà
+            // (créée à l'approvisionnement, §4.3) -- on la résout automatiquement, sinon le
+            // contrôle de stock et le décrément FIFO seraient silencieusement ignorés pour
+            // toute vente d'un article Famille B.
+            const varianteParDefaut = a?.famille !== "A" ? variantesList.find((v) => v.articleId === id) : null;
+            onChange({
+              ...ligne,
+              articleId: id,
+              varianteId: varianteParDefaut?.id ?? null,
+              prixUnitaire: a ? Number(a.prixVente) : 0,
+            });
           }}
         >
           <option value="">Choisir un article...</option>
@@ -132,6 +143,8 @@ function NouvelleAffaireDrawer({
   const [lignes, setLignes] = useState<LigneInput[]>([{ articleId: 0, varianteId: null, quantite: 1, prixUnitaire: 0 }]);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [modeFinalisation, setModeFinalisation] = useState<"" | "RETRAIT" | "LIVRAISON">("");
+  const [adresse, setAdresse] = useState("");
 
   const total = lignes.reduce((acc, l) => acc + l.quantite * l.prixUnitaire, 0);
 
@@ -140,8 +153,14 @@ function NouvelleAffaireDrawer({
     if (!clientId) return setError("Client requis.");
     const valid = lignes.filter((l) => l.articleId);
     if (valid.length === 0) return setError("Au moins une ligne requise.");
+    if (modeFinalisation === "LIVRAISON" && !adresse.trim()) return setError("Adresse de livraison requise.");
     setPending(true);
-    const res = await creerAffaire(Number(clientId), valid);
+    const res = await creerAffaire(
+      Number(clientId),
+      valid,
+      modeFinalisation || null,
+      modeFinalisation === "LIVRAISON" ? adresse.trim() : null
+    );
     setPending(false);
     if (res.error) return setError(res.error);
     router.refresh();
@@ -177,6 +196,29 @@ function NouvelleAffaireDrawer({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
+              Finalisation (optionnel — vide = vente comptoir directe)
+            </label>
+            <select
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              value={modeFinalisation}
+              onChange={(e) => setModeFinalisation(e.target.value as "" | "RETRAIT" | "LIVRAISON")}
+            >
+              <option value="">Vente comptoir directe</option>
+              <option value="RETRAIT">Retrait en boutique (préparation avant remise)</option>
+              <option value="LIVRAISON">Livraison</option>
+            </select>
+            {modeFinalisation === "LIVRAISON" && (
+              <input
+                value={adresse}
+                onChange={(e) => setAdresse(e.target.value)}
+                placeholder="Adresse de livraison"
+                className="mt-2 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              />
+            )}
           </div>
 
           <div>

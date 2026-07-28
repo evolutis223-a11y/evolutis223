@@ -7,6 +7,7 @@ import {
   affaires,
   demandesValidationStock,
   lignesAffaire,
+  livraisons,
   lots,
   lotVariantes,
   reglements,
@@ -35,6 +36,16 @@ async function genererNumero(prefix: string): Promise<string> {
   return `${prefix}-${annee}-${seq.toString().padStart(4, "0")}`;
 }
 
+async function genererNumeroLivraison(): Promise<string> {
+  const annee = new Date().getFullYear().toString().slice(-2);
+  const rows = await db
+    .select({ numero: livraisons.numero })
+    .from(livraisons)
+    .where(like(livraisons.numero, `LIV-${annee}-%`));
+  const seq = rows.length + 1;
+  return `LIV-${annee}-${seq.toString().padStart(4, "0")}`;
+}
+
 export interface LigneInput {
   articleId: number;
   varianteId: number | null;
@@ -44,12 +55,17 @@ export interface LigneInput {
 
 export async function creerAffaire(
   clientId: number,
-  lignes: LigneInput[]
+  lignes: LigneInput[],
+  modeFinalisation: "RETRAIT" | "LIVRAISON" | null = null,
+  adresseLivraison: string | null = null
 ): Promise<{ affaireId?: number; error?: string }> {
   try {
     const session = await requireAffairesAccess();
     if (!clientId) return { error: "Client requis." };
     if (lignes.length === 0) return { error: "Au moins une ligne requise." };
+    if (modeFinalisation === "LIVRAISON" && !adresseLivraison) {
+      return { error: "Adresse de livraison requise." };
+    }
 
     const montantTtc = lignes.reduce((acc, l) => acc + l.quantite * l.prixUnitaire, 0);
     const numero = await genererNumero("CDE");
@@ -61,6 +77,7 @@ export async function creerAffaire(
           numero,
           type: "COMMANDE_ATTENTE",
           statut: "EN_ATTENTE",
+          modeFinalisation,
           clientId,
           montantTtc: montantTtc.toFixed(2),
           auteurId: session.userId,
@@ -76,6 +93,16 @@ export async function creerAffaire(
           prixUnitaire: l.prixUnitaire.toFixed(2),
         });
       }
+
+      if (modeFinalisation === "LIVRAISON") {
+        const numeroLivraison = await genererNumeroLivraison();
+        await tx.insert(livraisons).values({
+          numero: numeroLivraison,
+          affaireId: affaire.id,
+          adresse: adresseLivraison,
+        });
+      }
+
       return affaire.id;
     });
 
@@ -185,6 +212,11 @@ export async function validerAffaire(
     }
 
     const numero = await genererNumero("TIC");
+    // Retrait/Livraison : le stock est déjà commité et le document déjà émis à la validation
+    // (§8.4 point 6 — le PDF/cachet ne dépend pas du retrait physique), mais l'affaire reste
+    // VALIDEE tant que le colis n'a pas réellement été remis (§8.1) ; sans mode de finalisation
+    // (vente comptoir directe), il n'y a rien à attendre de plus : CLOTUREE immédiatement.
+    const statutFinal = affaire.modeFinalisation ? "VALIDEE" : "CLOTUREE";
 
     await db.transaction(async (tx) => {
       for (const l of lignes) {
@@ -194,7 +226,7 @@ export async function validerAffaire(
       }
       await tx
         .update(affaires)
-        .set({ type: "TICKET", statut: "CLOTUREE", immuable: true, numero })
+        .set({ type: "TICKET", statut: statutFinal, immuable: true, numero })
         .where(eq(affaires.id, affaireId));
     });
 
@@ -233,4 +265,17 @@ export async function ajouterReglement(
 
   revalidatePath("/affaires");
   return { error: null };
+}
+
+export async function marquerRetiree(affaireId: number): Promise<{ error?: string }> {
+  await requireAffairesAccess();
+  const [affaire] = await db.select().from(affaires).where(eq(affaires.id, affaireId)).limit(1);
+  if (!affaire) return { error: "Affaire introuvable." };
+  if (affaire.modeFinalisation !== "RETRAIT") return { error: "Cette affaire n'est pas en retrait." };
+  if (affaire.statut !== "VALIDEE") return { error: "Affaire pas encore validée." };
+
+  await db.update(affaires).set({ statut: "CLOTUREE" }).where(eq(affaires.id, affaireId));
+  revalidatePath("/affaires");
+  revalidatePath("/commandes");
+  return {};
 }
