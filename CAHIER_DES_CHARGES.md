@@ -67,6 +67,10 @@ Base de données                          Droits d'accès (filtre chaque action)
 
 **Règle générale :** aucun module n'écrit directement en base sans passer par son moteur logique — aucune saisie ne contourne les contrôles (droits, stock, traçabilité).
 
+**Principe de paramétrage, confirmé 2026-07-28 :** l'utilisateur ne code pas — tout ce qui a une vraie raison de changer avec l'activité (un seuil, un tarif, un texte de document, une règle métier appelée à évoluer) doit être exposé en **Paramètres**, pas codé en dur, sinon il ne peut l'ajuster lui-même sans dépendre d'une session de développement. **Ce n'est pas pour autant un mandat de tout rendre configurable partout** : chaque module est évalué au cas par cas selon ce qui a un vrai besoin de bouger (ex. `parametres_vente_gros` §4.7, personnalisation des documents §13) — décidé module par module au moment de sa construction, pas en bloc à l'avance.
+
+**Journal d'audit — confirmé intouchable, y compris pour Super Admin (2026-07-28).** Question posée et tranchée explicitement : même le compte le plus privilégié ne peut ni modifier ni supprimer une entrée du journal d'audit (§4.9). Raison : un journal qu'on peut altérer perd toute valeur probante, précisément dans le seul cas où elle compte (litige, erreur, PIN compromis — y compris celui du Super Admin lui-même). Accès total en **lecture** pour Super Admin, oui ; toute correction passe par une action compensatoire tracée (ex. Avoir), jamais par une suppression/modification de l'historique.
+
 ### 3.2 Stack retenu
 
 | Couche | Choix | Pourquoi |
@@ -707,7 +711,7 @@ Mentions légales communes : Badalabougou, Rue 90, Porte 307 — RCCM MA.BKO.202
 **Paramétrage des documents — exigence nouvelle, 2026-07-28, pas encore conçue.** L'utilisateur veut pouvoir **personnaliser, voire modifier en profondeur**, les documents générés — pas seulement remplir des valeurs dans un gabarit figé codé en dur. Deux niveaux possibles, à trancher avant de construire les 5 modèles restants (retravailler `recu-caisse.tsx` après coup pour l'un ou l'autre coûterait plus cher que de trancher maintenant) :
 1. **Paramétrage par champs/sections (recommandé pour V1)** : un écran Paramètres par type de document permettant de basculer l'affichage de sections optionnelles, surcharger des blocs de texte (mentions légales, message de remerciement), changer logo/cachet, couleur d'accent, colonnes du tableau — mais la structure de mise en page reste celle codée. Techniquement : une table `parametres_documents` (type_document, config JSONB, modifie_par, date_modification — même esprit que `parametres_vente_gros` §4.7), lue par `lib/documents/` à la génération.
 2. **Éditeur de gabarit profond** : l'admin peut réellement réorganiser les sections, ajouter/retirer des colonnes, redéfinir la mise en page elle-même — un mini constructeur de template. Bien plus lourd (schéma de mise en page structuré + UI de construction), risque réel de dépasser le budget de sessions du §14 si fait pour les 6 documents.
-**Pas encore choisi entre les deux — à confirmer avec l'utilisateur avant de généraliser au-delà du Reçu de caisse.**
+**Tranché 2026-07-28 : option 1 (paramétrage par champs/sections)** — cohérent avec le principe de paramétrage ci-dessus (§3.1) : décidé au cas par cas, pas un éditeur de gabarit universel. Table `parametres_documents` (type_document, config JSONB, modifie_par, date_modification) à construire au moment de généraliser aux 5 autres modèles.
 
 ---
 
