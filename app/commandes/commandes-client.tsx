@@ -131,6 +131,15 @@ export function CommandesClient({
                 <span className="text-xs text-muted-foreground">{AFFAIRE_STATUT_LABEL[a.statut]}</span>
                 <span className="font-semibold tabular-nums text-foreground">{formatFcfa(a.montantTtc)}</span>
 
+                <a
+                  href={`/api/documents/bon-livraison/${a.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold text-primary underline-offset-2 hover:underline"
+                >
+                  Bon de livraison
+                </a>
+
                 {a.modeFinalisation === "RETRAIT" && a.statut === "VALIDEE" && (
                   <Button size="sm" disabled={busy === a.id} onClick={() => handleRetrait(a.id)}>
                     Marquer retirée

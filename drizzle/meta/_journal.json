@@ -57,6 +57,13 @@
       "when": 1785283571963,
       "tag": "0007_ambiguous_silver_fox",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785294257164,
+      "tag": "0008_gray_raider",
+      "breakpoints": true
     }
   ]
 }

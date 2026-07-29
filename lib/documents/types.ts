@@ -42,3 +42,26 @@ export interface DocumentGenere {
   /** SHA-256 hex du buffer PDF — destiné à documentsArchives.hashIntegrite (§4.9). */
   hashSha256: string;
 }
+
+export interface LigneBonLivraison {
+  designation: string;
+  quantiteCommandee: number;
+  quantiteLivree: number;
+}
+
+export interface BonLivraisonData {
+  /** Numéro du bon lui-même, ex "BL-26-0001" (§13 — espace de numérotation propre au document imprimé,
+   * distinct du numéro de l'affaire qu'il documente). */
+  numero: string;
+  dateEmission?: Date;
+  /** Numéro de l'affaire liée (Commande, §8.1), ex "CDE-26-0002". */
+  affaireNumero: string;
+  objet: string;
+  clientNom: string;
+  clientContact?: string;
+  /** Canal/mode de finalisation affiché en badge (§8.1 — Retrait boutique ou Livraison). */
+  canal: string;
+  lignes: LigneBonLivraison[];
+  remarques?: string;
+  qrPayload?: string;
+}

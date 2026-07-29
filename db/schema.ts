@@ -593,3 +593,15 @@ export const parametresMarquage = pgTable("parametres_marquage", {
   modifiePar: integer("modifie_par").references(() => utilisateurs.id),
   dateModification: timestamp("date_modification").notNull().defaultNow(),
 });
+
+// Paramétrage par champs/sections des documents imprimables (§13, tranché 2026-07-28 —
+// option 1 : pas d'éditeur de gabarit profond, juste des sections/textes basculables lus par
+// lib/documents/ à la génération). Une ligne par type de document, config = objet libre par
+// générateur (voir lib/documents/parametres.ts pour la forme attendue par document).
+export const parametresDocuments = pgTable("parametres_documents", {
+  id: serial("id").primaryKey(),
+  typeDocument: varchar("type_document", { length: 30 }).notNull().unique(),
+  config: jsonb("config").notNull().default({}),
+  modifiePar: integer("modifie_par").references(() => utilisateurs.id),
+  dateModification: timestamp("date_modification").notNull().defaultNow(),
+});

@@ -1,0 +1,2436 @@
+{
+  "id": "979d4eab-0b9b-4d74-a11d-01f886b81a05",
+  "prevId": "25283adf-ee65-4caf-b438-43b77517128f",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.affaires": {
+      "name": "affaires",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "numero": {
+          "name": "numero",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "statut": {
+          "name": "statut",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'EN_COURS'"
+        },
+        "mode_finalisation": {
+          "name": "mode_finalisation",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "client_id": {
+          "name": "client_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "devis_parent_id": {
+          "name": "devis_parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "affaire_origine_id": {
+          "name": "affaire_origine_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "montant_ttc": {
+          "name": "montant_ttc",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "date_creation": {
+          "name": "date_creation",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "auteur_id": {
+          "name": "auteur_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "immuable": {
+          "name": "immuable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "affaires_client_id_clients_id_fk": {
+          "name": "affaires_client_id_clients_id_fk",
+          "tableFrom": "affaires",
+          "tableTo": "clients",
+          "columnsFrom": [
+            "client_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "affaires_auteur_id_utilisateurs_id_fk": {
+          "name": "affaires_auteur_id_utilisateurs_id_fk",
+          "tableFrom": "affaires",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "auteur_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "affaires_numero_unique": {
+          "name": "affaires_numero_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "numero"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "affaires_type_check": {
+          "name": "affaires_type_check",
+          "value": "\"affaires\".\"type\" in ('COMMANDE_ATTENTE','DEVIS','PROFORMA','BON_COMMANDE','TICKET','FACTURE','AVOIR')"
+        },
+        "affaires_statut_check": {
+          "name": "affaires_statut_check",
+          "value": "\"affaires\".\"statut\" in ('EN_ATTENTE','EN_COURS','VALIDEE','CLOTUREE','ANNULEE')"
+        },
+        "affaires_mode_finalisation_check": {
+          "name": "affaires_mode_finalisation_check",
+          "value": "\"affaires\".\"mode_finalisation\" is null or \"affaires\".\"mode_finalisation\" in ('RETRAIT','LIVRAISON')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.articles": {
+      "name": "articles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nom": {
+          "name": "nom",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "famille": {
+          "name": "famille",
+          "type": "char(1)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "branche_id": {
+          "name": "branche_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "prix_vente": {
+          "name": "prix_vente",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pmp": {
+          "name": "pmp",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "a_variantes": {
+          "name": "a_variantes",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "publie_boutique": {
+          "name": "publie_boutique",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "photo_url": {
+          "name": "photo_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "necessite_assemblage": {
+          "name": "necessite_assemblage",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "categorie_marquage": {
+          "name": "categorie_marquage",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "articles_branche_id_branches_id_fk": {
+          "name": "articles_branche_id_branches_id_fk",
+          "tableFrom": "articles",
+          "tableTo": "branches",
+          "columnsFrom": [
+            "branche_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "articles_code_unique": {
+          "name": "articles_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "articles_famille_check": {
+          "name": "articles_famille_check",
+          "value": "\"articles\".\"famille\" in ('A','B','C','D','E')"
+        },
+        "articles_categorie_marquage_check": {
+          "name": "articles_categorie_marquage_check",
+          "value": "\"articles\".\"categorie_marquage\" is null or \"articles\".\"categorie_marquage\" in ('ENSEMBLE','TISSU')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.bons_decaissement": {
+      "name": "bons_decaissement",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "categorie": {
+          "name": "categorie",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "montant": {
+          "name": "montant",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "motif": {
+          "name": "motif",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auteur_id": {
+          "name": "auteur_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "validateur_id": {
+          "name": "validateur_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_creation": {
+          "name": "date_creation",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bons_decaissement_auteur_id_utilisateurs_id_fk": {
+          "name": "bons_decaissement_auteur_id_utilisateurs_id_fk",
+          "tableFrom": "bons_decaissement",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "auteur_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bons_decaissement_validateur_id_utilisateurs_id_fk": {
+          "name": "bons_decaissement_validateur_id_utilisateurs_id_fk",
+          "tableFrom": "bons_decaissement",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "validateur_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "bons_decaissement_categorie_check": {
+          "name": "bons_decaissement_categorie_check",
+          "value": "\"bons_decaissement\".\"categorie\" in ('ACHAT_MARCHANDISE','CHARGE_GENERAL','RH_SALAIRE')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.branches": {
+      "name": "branches",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nom": {
+          "name": "nom",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "branches_code_unique": {
+          "name": "branches_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.cadres_serigraphie": {
+      "name": "cadres_serigraphie",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nom": {
+          "name": "nom",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prix_cadre": {
+          "name": "prix_cadre",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordre": {
+          "name": "ordre",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "actif": {
+          "name": "actif",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.clients": {
+      "name": "clients",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "type_client": {
+          "name": "type_client",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nom": {
+          "name": "nom",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contact": {
+          "name": "contact",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contrat_ref": {
+          "name": "contrat_ref",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paiement_differe_jours": {
+          "name": "paiement_differe_jours",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "clients_type_client_check": {
+          "name": "clients_type_client_check",
+          "value": "\"clients\".\"type_client\" in ('BOUTIQUE','ONG_CONTRAT')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.clotures_caisse": {
+      "name": "clotures_caisse",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "date_cloture": {
+          "name": "date_cloture",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "solde_theorique": {
+          "name": "solde_theorique",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "comptage_reel": {
+          "name": "comptage_reel",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ecart": {
+          "name": "ecart",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "comptage_reel - solde_theorique",
+            "type": "stored"
+          }
+        },
+        "justification": {
+          "name": "justification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "auteur_id": {
+          "name": "auteur_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "clotures_caisse_auteur_id_utilisateurs_id_fk": {
+          "name": "clotures_caisse_auteur_id_utilisateurs_id_fk",
+          "tableFrom": "clotures_caisse",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "auteur_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "clotures_caisse_date_cloture_unique": {
+          "name": "clotures_caisse_date_cloture_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "date_cloture"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.demandes_validation_stock": {
+      "name": "demandes_validation_stock",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "affaire_id": {
+          "name": "affaire_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "variante_id": {
+          "name": "variante_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantite_demandee": {
+          "name": "quantite_demandee",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "manque": {
+          "name": "manque",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canal": {
+          "name": "canal",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "demandeur_id": {
+          "name": "demandeur_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "statut": {
+          "name": "statut",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'EN_ATTENTE'"
+        },
+        "quantite_rechargee": {
+          "name": "quantite_rechargee",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "traite_par_id": {
+          "name": "traite_par_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_creation": {
+          "name": "date_creation",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "date_traitement": {
+          "name": "date_traitement",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "demandes_validation_stock_affaire_id_affaires_id_fk": {
+          "name": "demandes_validation_stock_affaire_id_affaires_id_fk",
+          "tableFrom": "demandes_validation_stock",
+          "tableTo": "affaires",
+          "columnsFrom": [
+            "affaire_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "demandes_validation_stock_variante_id_variantes_id_fk": {
+          "name": "demandes_validation_stock_variante_id_variantes_id_fk",
+          "tableFrom": "demandes_validation_stock",
+          "tableTo": "variantes",
+          "columnsFrom": [
+            "variante_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "demandes_validation_stock_demandeur_id_utilisateurs_id_fk": {
+          "name": "demandes_validation_stock_demandeur_id_utilisateurs_id_fk",
+          "tableFrom": "demandes_validation_stock",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "demandeur_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "demandes_validation_stock_traite_par_id_utilisateurs_id_fk": {
+          "name": "demandes_validation_stock_traite_par_id_utilisateurs_id_fk",
+          "tableFrom": "demandes_validation_stock",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "traite_par_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "demandes_validation_stock_canal_check": {
+          "name": "demandes_validation_stock_canal_check",
+          "value": "\"demandes_validation_stock\".\"canal\" in ('BOUTIQUE','EN_LIGNE')"
+        },
+        "demandes_validation_stock_statut_check": {
+          "name": "demandes_validation_stock_statut_check",
+          "value": "\"demandes_validation_stock\".\"statut\" in ('EN_ATTENTE','AUTORISEE','RECHARGEE','REFUSEE')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.documents_archives": {
+      "name": "documents_archives",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "affaire_id": {
+          "name": "affaire_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fichier_path": {
+          "name": "fichier_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hash_integrite": {
+          "name": "hash_integrite",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "qr_payload": {
+          "name": "qr_payload",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_emission": {
+          "name": "date_emission",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "documents_archives_affaire_id_affaires_id_fk": {
+          "name": "documents_archives_affaire_id_affaires_id_fk",
+          "tableFrom": "documents_archives",
+          "tableTo": "affaires",
+          "columnsFrom": [
+            "affaire_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.encres_marquage": {
+      "name": "encres_marquage",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nom": {
+          "name": "nom",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "technique": {
+          "name": "technique",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prix_reference": {
+          "name": "prix_reference",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "volume_reference_label": {
+          "name": "volume_reference_label",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "surface_reference_cm2": {
+          "name": "surface_reference_cm2",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actif": {
+          "name": "actif",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "encres_marquage_technique_check": {
+          "name": "encres_marquage_technique_check",
+          "value": "\"encres_marquage\".\"technique\" in ('SUBLIMATION','DTF')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.fonds_circulation": {
+      "name": "fonds_circulation",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "livreur_id": {
+          "name": "livreur_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "affaire_id": {
+          "name": "affaire_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "montant_attendu": {
+          "name": "montant_attendu",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "statut": {
+          "name": "statut",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'EN_CIRCULATION'"
+        },
+        "montant_remis": {
+          "name": "montant_remis",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "validateur_id": {
+          "name": "validateur_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_remise": {
+          "name": "date_remise",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "fonds_circulation_livreur_id_utilisateurs_id_fk": {
+          "name": "fonds_circulation_livreur_id_utilisateurs_id_fk",
+          "tableFrom": "fonds_circulation",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "livreur_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "fonds_circulation_affaire_id_affaires_id_fk": {
+          "name": "fonds_circulation_affaire_id_affaires_id_fk",
+          "tableFrom": "fonds_circulation",
+          "tableTo": "affaires",
+          "columnsFrom": [
+            "affaire_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "fonds_circulation_validateur_id_utilisateurs_id_fk": {
+          "name": "fonds_circulation_validateur_id_utilisateurs_id_fk",
+          "tableFrom": "fonds_circulation",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "validateur_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "fonds_circulation_statut_check": {
+          "name": "fonds_circulation_statut_check",
+          "value": "\"fonds_circulation\".\"statut\" in ('EN_CIRCULATION','VALIDE')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.journal_audit": {
+      "name": "journal_audit",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "table_cible": {
+          "name": "table_cible",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enregistrement_id": {
+          "name": "enregistrement_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "utilisateur_id": {
+          "name": "utilisateur_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "details": {
+          "name": "details",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_action": {
+          "name": "date_action",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "journal_audit_utilisateur_id_utilisateurs_id_fk": {
+          "name": "journal_audit_utilisateur_id_utilisateurs_id_fk",
+          "tableFrom": "journal_audit",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "utilisateur_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.kit_composants": {
+      "name": "kit_composants",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kit_article_id": {
+          "name": "kit_article_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "composant_article_id": {
+          "name": "composant_article_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "variante_id": {
+          "name": "variante_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quantite_requise": {
+          "name": "quantite_requise",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "kit_composants_kit_article_id_articles_id_fk": {
+          "name": "kit_composants_kit_article_id_articles_id_fk",
+          "tableFrom": "kit_composants",
+          "tableTo": "articles",
+          "columnsFrom": [
+            "kit_article_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kit_composants_composant_article_id_articles_id_fk": {
+          "name": "kit_composants_composant_article_id_articles_id_fk",
+          "tableFrom": "kit_composants",
+          "tableTo": "articles",
+          "columnsFrom": [
+            "composant_article_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kit_composants_variante_id_variantes_id_fk": {
+          "name": "kit_composants_variante_id_variantes_id_fk",
+          "tableFrom": "kit_composants",
+          "tableTo": "variantes",
+          "columnsFrom": [
+            "variante_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "kit_composants_quantite_check": {
+          "name": "kit_composants_quantite_check",
+          "value": "\"kit_composants\".\"quantite_requise\" > 0"
+        },
+        "kit_composants_distinct_check": {
+          "name": "kit_composants_distinct_check",
+          "value": "\"kit_composants\".\"kit_article_id\" <> \"kit_composants\".\"composant_article_id\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.lignes_affaire": {
+      "name": "lignes_affaire",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "affaire_id": {
+          "name": "affaire_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "article_id": {
+          "name": "article_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "variante_id": {
+          "name": "variante_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quantite": {
+          "name": "quantite",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prix_unitaire": {
+          "name": "prix_unitaire",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "personnalise": {
+          "name": "personnalise",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "config_marquage": {
+          "name": "config_marquage",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "lignes_affaire_affaire_id_affaires_id_fk": {
+          "name": "lignes_affaire_affaire_id_affaires_id_fk",
+          "tableFrom": "lignes_affaire",
+          "tableTo": "affaires",
+          "columnsFrom": [
+            "affaire_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "lignes_affaire_article_id_articles_id_fk": {
+          "name": "lignes_affaire_article_id_articles_id_fk",
+          "tableFrom": "lignes_affaire",
+          "tableTo": "articles",
+          "columnsFrom": [
+            "article_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "lignes_affaire_variante_id_variantes_id_fk": {
+          "name": "lignes_affaire_variante_id_variantes_id_fk",
+          "tableFrom": "lignes_affaire",
+          "tableTo": "variantes",
+          "columnsFrom": [
+            "variante_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "lignes_affaire_quantite_check": {
+          "name": "lignes_affaire_quantite_check",
+          "value": "\"lignes_affaire\".\"quantite\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.livraisons": {
+      "name": "livraisons",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "numero": {
+          "name": "numero",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "affaire_id": {
+          "name": "affaire_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "livreur_id": {
+          "name": "livreur_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "statut": {
+          "name": "statut",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'EN_ATTENTE'"
+        },
+        "adresse": {
+          "name": "adresse",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_creation": {
+          "name": "date_creation",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "livraisons_affaire_id_affaires_id_fk": {
+          "name": "livraisons_affaire_id_affaires_id_fk",
+          "tableFrom": "livraisons",
+          "tableTo": "affaires",
+          "columnsFrom": [
+            "affaire_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "livraisons_livreur_id_utilisateurs_id_fk": {
+          "name": "livraisons_livreur_id_utilisateurs_id_fk",
+          "tableFrom": "livraisons",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "livreur_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "livraisons_numero_unique": {
+          "name": "livraisons_numero_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "numero"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "livraisons_statut_check": {
+          "name": "livraisons_statut_check",
+          "value": "\"livraisons\".\"statut\" in ('EN_ATTENTE','PRIS_EN_CHARGE','EN_ROUTE','LIVREE','ECHEC')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.lot_variantes": {
+      "name": "lot_variantes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "lot_id": {
+          "name": "lot_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "variante_id": {
+          "name": "variante_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantite_produite": {
+          "name": "quantite_produite",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "uq_lot_variante": {
+          "name": "uq_lot_variante",
+          "columns": [
+            {
+              "expression": "lot_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "variante_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "lot_variantes_lot_id_lots_id_fk": {
+          "name": "lot_variantes_lot_id_lots_id_fk",
+          "tableFrom": "lot_variantes",
+          "tableTo": "lots",
+          "columnsFrom": [
+            "lot_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "lot_variantes_variante_id_variantes_id_fk": {
+          "name": "lot_variantes_variante_id_variantes_id_fk",
+          "tableFrom": "lot_variantes",
+          "tableTo": "variantes",
+          "columnsFrom": [
+            "variante_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "lot_variantes_quantite_check": {
+          "name": "lot_variantes_quantite_check",
+          "value": "\"lot_variantes\".\"quantite_produite\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.lots": {
+      "name": "lots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "article_id": {
+          "name": "article_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reference": {
+          "name": "reference",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_reception": {
+          "name": "date_reception",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "prix_achat_unitaire": {
+          "name": "prix_achat_unitaire",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "lots_article_id_articles_id_fk": {
+          "name": "lots_article_id_articles_id_fk",
+          "tableFrom": "lots",
+          "tableTo": "articles",
+          "columnsFrom": [
+            "article_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ordres_fabrication": {
+      "name": "ordres_fabrication",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "affaire_id": {
+          "name": "affaire_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ligne_affaire_id": {
+          "name": "ligne_affaire_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "etape": {
+          "name": "etape",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'RECEPTION'"
+        },
+        "personnalise": {
+          "name": "personnalise",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "pilote_id": {
+          "name": "pilote_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_creation": {
+          "name": "date_creation",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "ordres_fabrication_affaire_id_affaires_id_fk": {
+          "name": "ordres_fabrication_affaire_id_affaires_id_fk",
+          "tableFrom": "ordres_fabrication",
+          "tableTo": "affaires",
+          "columnsFrom": [
+            "affaire_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ordres_fabrication_ligne_affaire_id_lignes_affaire_id_fk": {
+          "name": "ordres_fabrication_ligne_affaire_id_lignes_affaire_id_fk",
+          "tableFrom": "ordres_fabrication",
+          "tableTo": "lignes_affaire",
+          "columnsFrom": [
+            "ligne_affaire_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ordres_fabrication_pilote_id_utilisateurs_id_fk": {
+          "name": "ordres_fabrication_pilote_id_utilisateurs_id_fk",
+          "tableFrom": "ordres_fabrication",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "pilote_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ordres_fabrication_etape_check": {
+          "name": "ordres_fabrication_etape_check",
+          "value": "\"ordres_fabrication\".\"etape\" in ('RECEPTION','CONCEPTION','PRODUCTION','CONTROLE_QUALITE','PRET')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.paliers_broderie": {
+      "name": "paliers_broderie",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nom": {
+          "name": "nom",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prix": {
+          "name": "prix",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordre": {
+          "name": "ordre",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "actif": {
+          "name": "actif",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.parametres_documents": {
+      "name": "parametres_documents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "type_document": {
+          "name": "type_document",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "config": {
+          "name": "config",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "modifie_par": {
+          "name": "modifie_par",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_modification": {
+          "name": "date_modification",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "parametres_documents_modifie_par_utilisateurs_id_fk": {
+          "name": "parametres_documents_modifie_par_utilisateurs_id_fk",
+          "tableFrom": "parametres_documents",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "modifie_par"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "parametres_documents_type_document_unique": {
+          "name": "parametres_documents_type_document_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "type_document"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.parametres_marquage": {
+      "name": "parametres_marquage",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "main_oeuvre_defaut": {
+          "name": "main_oeuvre_defaut",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'200'"
+        },
+        "marge_defaut": {
+          "name": "marge_defaut",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'300'"
+        },
+        "modifie_par": {
+          "name": "modifie_par",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_modification": {
+          "name": "date_modification",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "parametres_marquage_modifie_par_utilisateurs_id_fk": {
+          "name": "parametres_marquage_modifie_par_utilisateurs_id_fk",
+          "tableFrom": "parametres_marquage",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "modifie_par"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.parametres_tresorerie": {
+      "name": "parametres_tresorerie",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "seuil_validation_decaissement": {
+          "name": "seuil_validation_decaissement",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'50000'"
+        },
+        "modifie_par": {
+          "name": "modifie_par",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_modification": {
+          "name": "date_modification",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "parametres_tresorerie_modifie_par_utilisateurs_id_fk": {
+          "name": "parametres_tresorerie_modifie_par_utilisateurs_id_fk",
+          "tableFrom": "parametres_tresorerie",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "modifie_par"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.parametres_vente_gros": {
+      "name": "parametres_vente_gros",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "article_id": {
+          "name": "article_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "seuil_douzaines": {
+          "name": "seuil_douzaines",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "modifie_par": {
+          "name": "modifie_par",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date_modification": {
+          "name": "date_modification",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "parametres_vente_gros_article_id_articles_id_fk": {
+          "name": "parametres_vente_gros_article_id_articles_id_fk",
+          "tableFrom": "parametres_vente_gros",
+          "tableTo": "articles",
+          "columnsFrom": [
+            "article_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "parametres_vente_gros_modifie_par_utilisateurs_id_fk": {
+          "name": "parametres_vente_gros_modifie_par_utilisateurs_id_fk",
+          "tableFrom": "parametres_vente_gros",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "modifie_par"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.reglements": {
+      "name": "reglements",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "affaire_id": {
+          "name": "affaire_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "montant": {
+          "name": "montant",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mode": {
+          "name": "mode",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date_reglement": {
+          "name": "date_reglement",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "auteur_id": {
+          "name": "auteur_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "reglements_affaire_id_affaires_id_fk": {
+          "name": "reglements_affaire_id_affaires_id_fk",
+          "tableFrom": "reglements",
+          "tableTo": "affaires",
+          "columnsFrom": [
+            "affaire_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "reglements_auteur_id_utilisateurs_id_fk": {
+          "name": "reglements_auteur_id_utilisateurs_id_fk",
+          "tableFrom": "reglements",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "auteur_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "reglements_mode_check": {
+          "name": "reglements_mode_check",
+          "value": "\"reglements\".\"mode\" in ('ESPECES','MOBILE_MONEY','VIREMENT','CARTE')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.roles": {
+      "name": "roles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "libelle": {
+          "name": "libelle",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "roles_code_unique": {
+          "name": "roles_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.stock_mouvements": {
+      "name": "stock_mouvements",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "variante_id": {
+          "name": "variante_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lot_id": {
+          "name": "lot_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pool": {
+          "name": "pool",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantite": {
+          "name": "quantite",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "transfert_ref": {
+          "name": "transfert_ref",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "affaire_id": {
+          "name": "affaire_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "auteur_id": {
+          "name": "auteur_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date_mouvement": {
+          "name": "date_mouvement",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "stock_mouvements_variante_id_variantes_id_fk": {
+          "name": "stock_mouvements_variante_id_variantes_id_fk",
+          "tableFrom": "stock_mouvements",
+          "tableTo": "variantes",
+          "columnsFrom": [
+            "variante_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "stock_mouvements_lot_id_lots_id_fk": {
+          "name": "stock_mouvements_lot_id_lots_id_fk",
+          "tableFrom": "stock_mouvements",
+          "tableTo": "lots",
+          "columnsFrom": [
+            "lot_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "stock_mouvements_auteur_id_utilisateurs_id_fk": {
+          "name": "stock_mouvements_auteur_id_utilisateurs_id_fk",
+          "tableFrom": "stock_mouvements",
+          "tableTo": "utilisateurs",
+          "columnsFrom": [
+            "auteur_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "stock_mouvements_pool_check": {
+          "name": "stock_mouvements_pool_check",
+          "value": "\"stock_mouvements\".\"pool\" in ('GROS','DETAIL')"
+        },
+        "stock_mouvements_type_check": {
+          "name": "stock_mouvements_type_check",
+          "value": "\"stock_mouvements\".\"type\" in ('ENTREE','VENTE','RESERVATION','LIBERATION','AJUSTEMENT')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.supports_marquage": {
+      "name": "supports_marquage",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nom": {
+          "name": "nom",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "technique": {
+          "name": "technique",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prix": {
+          "name": "prix",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "largeur_cm": {
+          "name": "largeur_cm",
+          "type": "numeric(8, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hauteur_cm": {
+          "name": "hauteur_cm",
+          "type": "numeric(8, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actif": {
+          "name": "actif",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "supports_marquage_technique_check": {
+          "name": "supports_marquage_technique_check",
+          "value": "\"supports_marquage\".\"technique\" in ('SUBLIMATION','DTF','FLOCAGE')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.utilisateurs": {
+      "name": "utilisateurs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nom": {
+          "name": "nom",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "telephone": {
+          "name": "telephone",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pin_hash": {
+          "name": "pin_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_id": {
+          "name": "role_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actif": {
+          "name": "actif",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "tentatives_echouees": {
+          "name": "tentatives_echouees",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "bloque_jusqua": {
+          "name": "bloque_jusqua",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "utilisateurs_role_id_roles_id_fk": {
+          "name": "utilisateurs_role_id_roles_id_fk",
+          "tableFrom": "utilisateurs",
+          "tableTo": "roles",
+          "columnsFrom": [
+            "role_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "utilisateurs_telephone_unique": {
+          "name": "utilisateurs_telephone_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "telephone"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.variantes": {
+      "name": "variantes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "article_id": {
+          "name": "article_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "taille": {
+          "name": "taille",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "couleur": {
+          "name": "couleur",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "seuil_alerte": {
+          "name": "seuil_alerte",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "photo_url": {
+          "name": "photo_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "uq_variante_defaut": {
+          "name": "uq_variante_defaut",
+          "columns": [
+            {
+              "expression": "article_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"variantes\".\"taille\" is null and \"variantes\".\"couleur\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "uq_variante_taille_couleur": {
+          "name": "uq_variante_taille_couleur",
+          "columns": [
+            {
+              "expression": "article_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "taille",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "couleur",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"variantes\".\"taille\" is not null or \"variantes\".\"couleur\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "variantes_article_id_articles_id_fk": {
+          "name": "variantes_article_id_articles_id_fk",
+          "tableFrom": "variantes",
+          "tableTo": "articles",
+          "columnsFrom": [
+            "article_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {
+    "public.v_stock_variante": {
+      "columns": {
+        "variante_id": {
+          "name": "variante_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "article_id": {
+          "name": "article_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reserve_detail": {
+          "name": "reserve_detail",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stock_detail": {
+          "name": "stock_detail",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stock_gros": {
+          "name": "stock_gros",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stock_total": {
+          "name": "stock_total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "name": "v_stock_variante",
+      "schema": "public",
+      "isExisting": true,
+      "materialized": false
+    }
+  },
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

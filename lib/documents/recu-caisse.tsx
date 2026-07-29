@@ -9,6 +9,7 @@ import { ASSET_BUFFERS } from "./assets";
 import { formatDateHeure, formatFcfa } from "./format";
 import { sha256Hex } from "./hash";
 import { MENTIONS_LEGALES_TEXTE } from "./legal-mentions";
+import { chargerParametresRecuCaisse, type ParametresRecuCaisse } from "./parametres";
 import { generateQrPngDataUrl, suiviPayloadProvisoire } from "./qr";
 import type { DocumentGenere, ModeReglement, RecuCaisseData } from "./types";
 
@@ -181,11 +182,13 @@ function normaliser(data: RecuCaisseData): RecuCaisseNormalise {
 export function RecuCaisseDocument({
   data,
   qrDataUrl,
+  parametres,
 }: {
   data: RecuCaisseData;
   /** Data URL PNG du QR, déjà généré (voir generateRecuCaissePdf — QRCode.toDataURL est async,
    * ne peut pas être appelé depuis ce composant synchrone). */
   qrDataUrl: string;
+  parametres: ParametresRecuCaisse;
 }) {
   const d = normaliser(data);
 
@@ -263,14 +266,14 @@ export function RecuCaisseDocument({
         <View style={styles.spacer} />
 
         <View style={styles.footer}>
-          <Text style={styles.merci}>Merci pour votre confiance.</Text>
+          <Text style={styles.merci}>{parametres.messageRemerciement}</Text>
           <View style={styles.footerRight}>
             <Image src={ASSET_BUFFERS.cachet} style={styles.cachet} />
             <Image src={qrDataUrl} style={styles.qr} />
           </View>
         </View>
 
-        <Text style={styles.legalMentions}>{MENTIONS_LEGALES_TEXTE}</Text>
+        {parametres.afficherMentionsLegales && <Text style={styles.legalMentions}>{MENTIONS_LEGALES_TEXTE}</Text>}
       </Page>
     </Document>
   );
@@ -282,11 +285,12 @@ export function RecuCaisseDocument({
  * c'est à l'appelant de fournir des valeurs déjà résolues (lignes, totaux, etc.).
  */
 export async function generateRecuCaissePdf(data: RecuCaisseData): Promise<DocumentGenere> {
-  const qrDataUrl = await generateQrPngDataUrl(
-    data.qrPayload ?? suiviPayloadProvisoire(data.numero)
-  );
+  const [qrDataUrl, parametres] = await Promise.all([
+    generateQrPngDataUrl(data.qrPayload ?? suiviPayloadProvisoire(data.numero)),
+    chargerParametresRecuCaisse(),
+  ]);
   const buffer = await renderToBuffer(
-    <RecuCaisseDocument data={data} qrDataUrl={qrDataUrl} />
+    <RecuCaisseDocument data={data} qrDataUrl={qrDataUrl} parametres={parametres} />
   );
   return { buffer, hashSha256: sha256Hex(buffer) };
 }
