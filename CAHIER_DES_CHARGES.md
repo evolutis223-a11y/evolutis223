@@ -716,6 +716,27 @@ Chaque champ du point 1 (Support) a une bascule admin par article : demander au 
 
 ---
 
+## 10ter. Services Famille C — maquette industrielle, cartes de visite, mariage, reportage
+
+**Ajouté le 2026-07-29**, à partir de documents commerciaux réels fournis par l'utilisateur (lettre de partenariat COMATEX SA, tarifs prépresse) et du guide de procédure de commande qu'il a lui-même rédigé pour l'usine.
+
+**Forfaits de conception (maquette), 4 paliers fixes — Famille C, sans stock :**
+
+| Forfait | Contenu | Tarif |
+|---|---|---|
+| **Basique** | Prémaquette basique | 25 000 F |
+| **Vision** *(mis en avant)* | Prémaquette standard | 50 000 F |
+| **Pro** | Maquette industriel | 75 000 F |
+| **Premium** | Dossier technique industriel | Sur devis |
+
+**Autres services Famille C confirmés** (déjà couverts par le modèle existant §5 — "Relooking, reportage photo" — mais pas encore créés comme fiches Catalogue) : cartes de visite, carte de mariage, reportage photo/vidéo.
+
+**Deux paliers de paiement pour un service avec maquette** (révélé par le guide de procédure interne de l'utilisateur, pas encore modélisé dans l'app) : frais de conception payés *avant* le début du dessin, puis un acompte (50% observé en usine) payé *après* approbation de la maquette et *avant* le lancement d'une éventuelle production — à distinguer de l'acompte générique déjà existant (§8.1 point 2). Non implémenté — à construire avec le parcours client guidé.
+
+**Production industrielle de pagne — dossier séparé, hors du moteur `affaires` :** confirmé avec l'utilisateur (2026-07-29). Contrairement aux maquettes (qui s'intègrent normalement au Catalogue/Affaires), une commande de pagne industriel suit un cycle propre — spécifications, maquette liée, acomptes échelonnés, production usine tierce — modélisé dans une table dédiée (ex. `dossiers_pagne`), jamais dans `lignes_affaire` ni `stock_mouvements`. Seul le résultat fini, une fois réceptionné, entre en stock via un appro Famille A classique. Pas encore implémenté.
+
+---
+
 ## 11. Suivi de commande client
 
 Demandé et confirmé (2026-07-27) : une page publique **sans connexion**, liée à la Commande/Affaire, atteignable via le **QR code** déjà présent (mais jusque-là sans usage défini) sur chaque modèle de document (`design/Modele *.dc.html`). Le QR n'est pas réservé au suivi seul — il peut porter d'autres contenus/messages (portée exacte non précisée, à définir au moment du design du payload, cf. `qr_payload` en §4.9).
