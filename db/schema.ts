@@ -92,9 +92,18 @@ export const articles = pgTable(
     // AJOUT 2026-07-28 : Famille E (Kit) uniquement — décide si la vente déclenche un Ordre de
     // Fabrication (§8.1 point 4). Sans effet pour les autres familles (D déclenche toujours un OF).
     necessiteAssemblage: boolean("necessite_assemblage").notNull().default(false),
+    // AJOUT 2026-07-28 (§10bis) : Famille A uniquement — décide les options transverses du
+    // calculateur de marquage. NULL = comportement simple (zones de marquage, sans ensemble ni
+    // mode tissu — ex. casquette). 'ENSEMBLE' = éligible au toggle "Ensemble complet" (haut+bas).
+    // 'TISSU' = mode Zones spécifiques / Toute la surface à la place de l'ensemble.
+    categorieMarquage: varchar("categorie_marquage", { length: 20 }),
   },
   (table) => [
     check("articles_famille_check", sql`${table.famille} in ('A','B','C','D','E')`),
+    check(
+      "articles_categorie_marquage_check",
+      sql`${table.categorieMarquage} is null or ${table.categorieMarquage} in ('ENSEMBLE','TISSU')`
+    ),
   ]
 );
 
@@ -287,6 +296,10 @@ export const lignesAffaire = pgTable(
     // par l'étape Conception (nouveau visuel/design) ou va directement en Production (modèle
     // standard déjà validé). Sans effet pour les autres familles.
     personnalise: boolean("personnalise").notNull().default(true),
+    // AJOUT 2026-07-28 (§10bis) : détail de configuration du calculateur de marquage (zones,
+    // techniques, main d'œuvre, charges, marge) — conservé pour référence/audit, NULL si la ligne
+    // ne vient pas du calculateur. Le prix qui compte reste prixUnitaire, jamais recalculé depuis ce JSON.
+    configMarquage: jsonb("config_marquage"),
   },
   (table) => [check("lignes_affaire_quantite_check", sql`${table.quantite} > 0`)]
 );
@@ -511,4 +524,72 @@ export const journalAudit = pgTable("journal_audit", {
     .references(() => utilisateurs.id),
   details: jsonb("details"),
   dateAction: timestamp("date_action").notNull().defaultNow(),
+});
+
+// §10bis — R&D Calculateurs : marquage personnalisé (maquette Artifact validée 2026-07-28,
+// 6 itérations, "c'est bon"). Bibliothèque de références — modifiée rarement (prix fournisseur),
+// sélectionnée par les calculateurs plutôt qu'un prix embarqué en dur.
+
+// Encre : consommation continue au cm² (prixReference / surfaceReferenceCm2), jamais arrondie —
+// ce n'est pas un support physique. Ex. "Sublimation Claude : 1000F les 100ml = 1 A4 (609cm²)".
+export const encresMarquage = pgTable(
+  "encres_marquage",
+  {
+    id: serial("id").primaryKey(),
+    nom: varchar("nom", { length: 100 }).notNull(),
+    technique: varchar("technique", { length: 20 }).notNull(), // SUBLIMATION | DTF
+    prixReference: numeric("prix_reference", { precision: 12, scale: 2 }).notNull(),
+    volumeReferenceLabel: varchar("volume_reference_label", { length: 30 }), // ex "100 ml" — informatif
+    surfaceReferenceCm2: numeric("surface_reference_cm2", { precision: 10, scale: 2 }).notNull(),
+    actif: boolean("actif").notNull().default(true),
+  },
+  (table) => [check("encres_marquage_technique_check", sql`${table.technique} in ('SUBLIMATION','DTF')`)]
+);
+
+// Support d'impression : physique, compté en feuilles/pièces entières selon SON propre format de
+// vente (indépendant du format de référence de l'encre) — un vinyle flocage se vend différemment
+// d'une feuille A4 de papier sublimation.
+export const supportsMarquage = pgTable(
+  "supports_marquage",
+  {
+    id: serial("id").primaryKey(),
+    nom: varchar("nom", { length: 100 }).notNull(),
+    technique: varchar("technique", { length: 20 }).notNull(), // SUBLIMATION | DTF | FLOCAGE
+    prix: numeric("prix", { precision: 12, scale: 2 }).notNull(),
+    largeurCm: numeric("largeur_cm", { precision: 8, scale: 2 }).notNull(),
+    hauteurCm: numeric("hauteur_cm", { precision: 8, scale: 2 }).notNull(),
+    actif: boolean("actif").notNull().default(true),
+  },
+  (table) => [
+    check("supports_marquage_technique_check", sql`${table.technique} in ('SUBLIMATION','DTF','FLOCAGE')`),
+  ]
+);
+
+// Sérigraphie : prix au nombre de couleurs/cadres (chaque couleur = un cadre physique), pas au cm².
+export const cadresSerigraphie = pgTable("cadres_serigraphie", {
+  id: serial("id").primaryKey(),
+  nom: varchar("nom", { length: 50 }).notNull(), // ex "2 couleurs"
+  prixCadre: numeric("prix_cadre", { precision: 12, scale: 2 }).notNull(),
+  ordre: integer("ordre").notNull().default(0),
+  actif: boolean("actif").notNull().default(true),
+});
+
+// Broderie : paliers de taille discrets (Petit/Moyen/Grand), pas de surface continue — modèle
+// volontairement différent, confirmé par l'expérience professionnelle de l'utilisateur.
+export const paliersBroderie = pgTable("paliers_broderie", {
+  id: serial("id").primaryKey(),
+  nom: varchar("nom", { length: 60 }).notNull(),
+  prix: numeric("prix", { precision: 12, scale: 2 }).notNull(),
+  ordre: integer("ordre").notNull().default(0),
+  actif: boolean("actif").notNull().default(true),
+});
+
+// Réglages globaux du calculateur (singleton) — main d'œuvre et marge par défaut, modifiables par
+// Admin/Super Admin, ajustables ligne par ligne au moment de la vente.
+export const parametresMarquage = pgTable("parametres_marquage", {
+  id: serial("id").primaryKey(),
+  mainOeuvreDefaut: numeric("main_oeuvre_defaut", { precision: 12, scale: 2 }).notNull().default("200"),
+  margeDefaut: numeric("marge_defaut", { precision: 12, scale: 2 }).notNull().default("300"),
+  modifiePar: integer("modifie_par").references(() => utilisateurs.id),
+  dateModification: timestamp("date_modification").notNull().defaultNow(),
 });

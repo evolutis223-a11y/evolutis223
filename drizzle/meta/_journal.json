@@ -50,6 +50,13 @@
       "when": 1785282123324,
       "tag": "0006_amazing_jazinda",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785283571963,
+      "tag": "0007_ambiguous_silver_fox",
+      "breakpoints": true
     }
   ]
 }

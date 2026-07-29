@@ -58,6 +58,9 @@ export interface LigneInput {
   // Famille D uniquement (§8.1) — décide si l'OF généré passe par Conception. true par défaut
   // (nouveau visuel/design), à décocher si c'est une réédition d'un modèle déjà validé.
   personnalise?: boolean;
+  // §10bis — détail de configuration si la ligne vient du calculateur de marquage (zones,
+  // techniques, main d'œuvre, charges, marge), conservé pour référence/audit.
+  configMarquage?: unknown;
 }
 
 export async function creerAffaire(
@@ -99,6 +102,7 @@ export async function creerAffaire(
           quantite: l.quantite,
           prixUnitaire: l.prixUnitaire.toFixed(2),
           personnalise: l.personnalise ?? true,
+          configMarquage: l.configMarquage ?? null,
         });
       }
 

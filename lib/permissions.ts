@@ -36,6 +36,7 @@ export const ROLE_MODULES: Record<string, readonly ModuleName[]> = {
     "Affaires",
     "Clients",
     "Catalogue",
+    "R&D",
     "Stocks",
     "Production",
     "Commandes",
@@ -54,7 +55,7 @@ export const ROLE_MODULES: Record<string, readonly ModuleName[]> = {
   ],
   RESP_COMMERCIAL: ["Tableau de bord", "Affaires", "Clients", "Commercial", "Rapports"],
   COMMERCIAL: ["Tableau de bord", "Affaires", "Clients", "Catalogue", "Commercial"],
-  VENDEUR: ["Tableau de bord", "Affaires", "Catalogue", "Commandes"],
+  VENDEUR: ["Tableau de bord", "Affaires", "Catalogue", "R&D", "Commandes"],
   FREELANCE: ["Tableau de bord", "Commercial"],
   JOURNALIER: [], // pas de compte applicatif (§6) — présent pour complétude, jamais connecté
   EMPLOYE: ["Tableau de bord", "Stocks", "Production", "Commandes"],

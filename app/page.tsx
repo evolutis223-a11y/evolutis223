@@ -13,6 +13,7 @@ import { logout } from "./actions";
 const MODULE_ROUTES: Partial<Record<ModuleName, string>> = {
   Catalogue: "/catalogue",
   "Nos produits": "/boutique",
+  "R&D": "/rd-calculateurs",
   Stocks: "/stocks",
   Production: "/production",
   Clients: "/clients",

@@ -67,6 +67,48 @@ async function main() {
     console.log(`Compte de test créé — ${u.telephone} / PIN ${u.pin} (${u.roleCode}, dev uniquement).`);
   }
 
+  // §10bis — Bibliothèque de références du calculateur de marquage, valeurs de la maquette
+  // validée (2026-07-28) comme point de départ éditable par Admin/Super Admin.
+  const { rows: encreCount } = await pool.query("select count(*)::int as n from encres_marquage");
+  if (encreCount[0].n === 0) {
+    await pool.query(`insert into encres_marquage (nom, technique, prix_reference, volume_reference_label, surface_reference_cm2) values
+      ('Sublimation Claude', 'SUBLIMATION', 1000, '100 ml', 609),
+      ('Sublimation Samba', 'SUBLIMATION', 2000, '100 ml', 609),
+      ('DTF Standard', 'DTF', 3500, '100 ml', 609)`);
+    console.log("3 encres de référence seedées.");
+  }
+
+  const { rows: supportCount } = await pool.query("select count(*)::int as n from supports_marquage");
+  if (supportCount[0].n === 0) {
+    await pool.query(`insert into supports_marquage (nom, technique, prix, largeur_cm, hauteur_cm) values
+      ('Papier ordinaire', 'SUBLIMATION', 50, 29, 21),
+      ('Papier spécial sublimation', 'SUBLIMATION', 150, 29, 21),
+      ('Film DTF spécial', 'DTF', 400, 29, 21),
+      ('Vinyle flocage standard', 'FLOCAGE', 250, 29, 21),
+      ('Vinyle flocage premium (rouleau)', 'FLOCAGE', 450, 30, 30)`);
+    console.log("5 supports de référence seedés.");
+  }
+
+  const { rows: cadreCount } = await pool.query("select count(*)::int as n from cadres_serigraphie");
+  if (cadreCount[0].n === 0) {
+    await pool.query(`insert into cadres_serigraphie (nom, prix_cadre, ordre) values
+      ('1 couleur', 0, 1), ('2 couleurs', 500, 2), ('3 couleurs', 1000, 3), ('4+ couleurs', 1600, 4)`);
+    console.log("4 paliers de cadres sérigraphie seedés.");
+  }
+
+  const { rows: broderieCount } = await pool.query("select count(*)::int as n from paliers_broderie");
+  if (broderieCount[0].n === 0) {
+    await pool.query(`insert into paliers_broderie (nom, prix, ordre) values
+      ('Petit (ex. initiales)', 800, 1), ('Moyen (ex. logo poitrine)', 1500, 2), ('Grand (ex. dos complet)', 2800, 3)`);
+    console.log("3 paliers de broderie seedés.");
+  }
+
+  const { rows: paramCount } = await pool.query("select count(*)::int as n from parametres_marquage");
+  if (paramCount[0].n === 0) {
+    await pool.query("insert into parametres_marquage (main_oeuvre_defaut, marge_defaut) values (200, 300)");
+    console.log("Paramètres marquage par défaut seedés (main d'œuvre 200F, marge 300F).");
+  }
+
   await pool.end();
 }
 
