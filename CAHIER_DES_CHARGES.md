@@ -720,14 +720,25 @@ Chaque champ du point 1 (Support) a une bascule admin par article : demander au 
 
 **Ajouté le 2026-07-29**, à partir de documents commerciaux réels fournis par l'utilisateur (lettre de partenariat COMATEX SA, tarifs prépresse) et du guide de procédure de commande qu'il a lui-même rédigé pour l'usine.
 
-**Forfaits de conception (maquette), 4 paliers fixes — Famille C, sans stock :**
+**Forfaits de conception (maquette), 4 paliers fixes — Famille C, sans stock. Validé le 2026-07-29 :**
 
-| Forfait | Contenu | Tarif |
-|---|---|---|
-| **Basique** | Prémaquette basique | 25 000 F |
-| **Vision** *(mis en avant)* | Prémaquette standard | 50 000 F |
-| **Pro** | Maquette industriel | 75 000 F |
-| **Premium** | Dossier technique industriel | Sur devis |
+| | Basique — 25 000 F | Vision — 50 000 F *(mis en avant)* | Pro — 75 000 F | Premium — sur devis |
+|---|---|---|---|---|
+| Maquettes proposées | 2 (choix dans la bibliothèque existante) | 3 | 3 | Selon contrat |
+| Retouches incluses | 3 | 5 | 5 | Selon contrat |
+| Au-delà des retouches incluses | Retouche additionnelle sur devis | Retouche additionnelle sur devis | Retouche additionnelle sur devis | — |
+| Création de motif original | — | ✔ | ✔ | ✔ |
+| Reproduction de modèle existant | ✔ | — | ✔ | ✔ |
+| Adaptation cahier des charges technique | — | ✔ | ✔ | ✔ |
+| Déclinaisons colorimétriques | 2 | 3 | 3 | Selon contrat |
+| Contenu du livrable final | 1 maquette choisie | 1 maquette choisie | Fichier maquette à l'échelle 1 | Dossier technique complet |
+| Fichier prêt à graver | — | — | ✔ | ✔ |
+| Format | A4 | A4 | A4 + 64/91 cm | Selon contrat |
+| Type de fichier | PDF + JPEG | PDF + JPEG | PDF + JPEG + PSD | PDF + JPEG + PSD (selon contrat) |
+| Exclusivité du design | — | ✔ (sous conditions) | ✔ | ✔ |
+| Délai de livraison | 72 h ouvrées | 48 h ouvrées | 48 h ouvrées | Selon contrat |
+
+Dérivé du tableau tarifaire COMATEX SA (5 offres) fourni par l'utilisateur, regroupé en 4 forfaits, corrigé et validé avec lui ("c'est bon"). Une retouche au-delà du quota inclus est facturée séparément — jamais un passage automatique au forfait supérieur.
 
 **Autres services Famille C confirmés** (déjà couverts par le modèle existant §5 — "Relooking, reportage photo" — mais pas encore créés comme fiches Catalogue) : cartes de visite, carte de mariage, reportage photo/vidéo.
 
