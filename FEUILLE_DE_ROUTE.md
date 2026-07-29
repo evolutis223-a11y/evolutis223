@@ -17,7 +17,7 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 | 2 — Workflows spécifiques | **100%** | 2.1→2.5 tous faits et vérifiés en base réelle. Phase 2 terminée. |
 | 2bis — R&D Calculateurs | **~65%** | Maquette validée (§10bis) puis moteur de coût par technique implémenté et vérifié en base réelle 2026-07-29 (`/rd-calculateurs`, bibliothèque de références, prix calculé en direct, ligne d'affaire normale). Ensemble complet / mode Tissu câblés et vérifiés en base réelle 2026-07-29 (réglage `categorieMarquage` ajouté à la fiche article du Catalogue). Reste : configurateur produit-first guidé (chemin long, §10) pour le client final. |
 | 3 — Configurateur & vitrine | **~45%** | 3.1 (maquette), 3.2 (vitrine `/boutique`) et 3.5 (suivi `/suivi/[numero]`) faits et vérifiés en base réelle. Reste : configurateur réel (3.3 — chemin long plus bloqué côté moteur de coût depuis 2bis, reste bloqué côté chemin court sur le stockage de fichiers), paiement Mobile Money (3.4 — bloqué sur choix d'agrégateur, décision utilisateur). |
-| 4 — Modules périphériques | **0%** | Pas commencé (n'est pas bloquant, peut suivre le lancement). |
+| 4 — Modules périphériques | **~15%** | Fournisseurs fait et vérifié en base réelle 2026-07-29 (`/fournisseurs`, `lots.fournisseur_id` câblé dans les 2 formulaires d'approvisionnement de Stocks). RH, Achats, Dépenses, Charges, Rapports, Marketing pas commencés (n'est pas bloquant, peut suivre le lancement). |
 
 ---
 

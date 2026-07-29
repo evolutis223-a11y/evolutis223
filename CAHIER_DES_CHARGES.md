@@ -521,6 +521,8 @@ Rôles cibles (fusion du schéma SQL d'origine, du prototype et des décisions d
 | Documents | Chaque affaire (Devis/Facture/Reçu/Bon) | Archive imprimable, aucune saisie propre |
 | Rapports | Affaires, Stock, Dépenses/Charges, Commissions, Commandes — tous les modules | Tableaux de bord jour/semaine/mois/semestre/an |
 
+**Fournisseurs — premier module de Phase 4 construit et vérifié en base réelle (2026-07-29)** : table `fournisseurs` (nom, contact, délai de livraison habituel, actif), écran `/fournisseurs` (CRUD léger — création + bascule actif/inactif, pas de suppression), accès Admin/Super Admin/Comptable. `lots.fournisseur_id` (nullable — beaucoup d'achats locaux n'ont pas de fournisseur suivi) ajouté et câblé dans les deux formulaires d'approvisionnement (`/stocks`, Famille A et B) : sélecteur optionnel, testé de bout en bout (fournisseur créé → sélectionné à l'approvisionnement → lot lié → compteur "lot(s) approvisionné(s)" à jour sur la fiche fournisseur).
+
 **Rapport** — 5 fréquences (quotidien, hebdomadaire, mensuel, semestriel, annuel), 4 dimensions (Finance, RH, Incidents, Prévisions). Bénéfice brut = CA − coût d'achat des ventes ; bénéfice net = brut − dépenses/charges/commissions. Toujours recalculé, jamais saisi à la main.
 
 ---

@@ -47,6 +47,7 @@ export const ROLE_MODULES: Record<string, readonly ModuleName[]> = {
   COMPTABLE: [
     "Tableau de bord",
     "Règlements",
+    "Fournisseurs",
     "Achats",
     "Dépenses",
     "Charges",

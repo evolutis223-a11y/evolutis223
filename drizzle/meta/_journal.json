@@ -64,6 +64,13 @@
       "when": 1785294257164,
       "tag": "0008_gray_raider",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785294762514,
+      "tag": "0009_bored_squadron_supreme",
+      "breakpoints": true
     }
   ]
 }

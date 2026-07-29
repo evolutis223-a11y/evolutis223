@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { articles, variantes, vStockVariante } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
-import { calculerStockKit, listerRecetteKit } from "./actions";
+import { calculerStockKit, listerFournisseursActifs, listerRecetteKit } from "./actions";
 import { StocksClient } from "./stocks-client";
 
 export default async function StocksPage() {
@@ -18,7 +18,7 @@ export default async function StocksPage() {
     );
   }
 
-  const [articleRows, variantRows] = await Promise.all([
+  const [articleRows, variantRows, fournisseurRows] = await Promise.all([
     db.select().from(articles).orderBy(desc(articles.id)),
     db
       .select({
@@ -33,6 +33,7 @@ export default async function StocksPage() {
       })
       .from(variantes)
       .leftJoin(vStockVariante, eq(vStockVariante.varianteId, variantes.id)),
+    listerFournisseursActifs(),
   ]);
 
   const kitArticles = articleRows.filter((a) => a.famille === "E");
@@ -44,5 +45,5 @@ export default async function StocksPage() {
     }))
   );
 
-  return <StocksClient articles={articleRows} variantes={variantRows} kits={kits} />;
+  return <StocksClient articles={articleRows} variantes={variantRows} kits={kits} fournisseurs={fournisseurRows} />;
 }

@@ -14,6 +14,7 @@ import {
 } from "./actions";
 
 type Article = typeof articles.$inferSelect;
+type Fournisseur = { id: number; nom: string };
 
 interface RecetteRow {
   id: number;
@@ -76,11 +77,36 @@ function StockBadge({ qty, seuil }: { qty: number; seuil: number }) {
   );
 }
 
+function FournisseurSelect({ fournisseurs }: { fournisseurs: Fournisseur[] }) {
+  if (fournisseurs.length === 0) return null;
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
+        Fournisseur (optionnel)
+      </label>
+      <select
+        name="fournisseurId"
+        defaultValue=""
+        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+      >
+        <option value="">Non renseigné</option>
+        {fournisseurs.map((f) => (
+          <option key={f.id} value={f.id}>
+            {f.nom}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function ApproFamilleAForm({
   article,
+  fournisseurs,
   onDone,
 }: {
   article: Article;
+  fournisseurs: Fournisseur[];
   onDone: () => void;
 }) {
   const [state, action, pending] = useActionState(approvisionnerFamilleA, initialState);
@@ -172,6 +198,8 @@ function ApproFamilleAForm({
         />
       </div>
 
+      <FournisseurSelect fournisseurs={fournisseurs} />
+
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
           Réserve détail demandée (en PIÈCES, pas en douzaines)
@@ -208,7 +236,15 @@ function ApproFamilleAForm({
   );
 }
 
-function ApproFamilleBForm({ article, onDone }: { article: Article; onDone: () => void }) {
+function ApproFamilleBForm({
+  article,
+  fournisseurs,
+  onDone,
+}: {
+  article: Article;
+  fournisseurs: Fournisseur[];
+  onDone: () => void;
+}) {
   const [state, action, pending] = useActionState(approvisionnerFamilleB, initialState);
   const wasPending = useRef(false);
 
@@ -243,6 +279,8 @@ function ApproFamilleBForm({ article, onDone }: { article: Article; onDone: () =
         </label>
         <Input name="seuilAlerte" type="number" min="0" placeholder="Ex. 10" />
       </div>
+
+      <FournisseurSelect fournisseurs={fournisseurs} />
 
       {state.error && (
         <p className="text-sm text-destructive" role="alert">
@@ -480,10 +518,12 @@ export function StocksClient({
   articles: initialArticles,
   variantes,
   kits,
+  fournisseurs,
 }: {
   articles: Article[];
   variantes: VarianteRow[];
   kits: KitData[];
+  fournisseurs: Fournisseur[];
 }) {
   const [approArticle, setApproArticle] = useState<Article | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -649,9 +689,9 @@ export function StocksClient({
             </p>
             <div className="mt-5">
               {approArticle.famille === "A" ? (
-                <ApproFamilleAForm article={approArticle} onDone={() => setApproArticle(null)} />
+                <ApproFamilleAForm article={approArticle} fournisseurs={fournisseurs} onDone={() => setApproArticle(null)} />
               ) : (
-                <ApproFamilleBForm article={approArticle} onDone={() => setApproArticle(null)} />
+                <ApproFamilleBForm article={approArticle} fournisseurs={fournisseurs} onDone={() => setApproArticle(null)} />
               )}
             </div>
           </div>

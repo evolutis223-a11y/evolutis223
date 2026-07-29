@@ -133,6 +133,17 @@ export const variantes = pgTable(
   ]
 );
 
+// §7 module Fournisseurs — "Saisie manuelle (contact, délais) → Prix d'achat et origine des
+// lots à l'approvisionnement". Saisie manuelle volontairement légère (pas de portail fournisseur,
+// pas de compte applicatif) : juste de quoi retrouver qui a livré un lot et son délai habituel.
+export const fournisseurs = pgTable("fournisseurs", {
+  id: serial("id").primaryKey(),
+  nom: varchar("nom", { length: 150 }).notNull(),
+  contact: varchar("contact", { length: 150 }),
+  delaiLivraisonJours: integer("delai_livraison_jours"),
+  actif: boolean("actif").notNull().default(true),
+});
+
 export const lots = pgTable("lots", {
   id: serial("id").primaryKey(),
   articleId: integer("article_id")
@@ -144,6 +155,9 @@ export const lots = pgTable("lots", {
     precision: 12,
     scale: 2,
   }).notNull(),
+  // Origine du lot (§7 module Fournisseurs) — nullable : beaucoup de petits achats locaux
+  // n'ont pas de fournisseur suivi, pas question de le rendre obligatoire à l'approvisionnement.
+  fournisseurId: integer("fournisseur_id").references(() => fournisseurs.id),
   // Suppression possible (droit de retour sur erreur de saisie) uniquement si aucune de ses
   // lot_variantes n'a encore été vendue/libérée — contrôle app-level, pas de colonne dédiée.
 });

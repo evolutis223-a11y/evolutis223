@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { articles, kitComposants, lots, lotVariantes, stockMouvements, variantes, vStockVariante } from "@/db/schema";
+import { articles, fournisseurs, kitComposants, lots, lotVariantes, stockMouvements, variantes, vStockVariante } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 import { repartirReserveAuProrata } from "@/lib/stock/allocation";
@@ -66,6 +66,17 @@ async function trouverOuCreerVariante(
   return created;
 }
 
+// Lecture seule, accessible depuis le formulaire d'approvisionnement (accès Stocks suffit —
+// pas besoin du module Fournisseurs pour juste choisir dans la liste au moment de la saisie).
+export async function listerFournisseursActifs() {
+  await requireStockAccess();
+  return db
+    .select({ id: fournisseurs.id, nom: fournisseurs.nom })
+    .from(fournisseurs)
+    .where(eq(fournisseurs.actif, true))
+    .orderBy(asc(fournisseurs.nom));
+}
+
 export async function approvisionnerFamilleA(
   _prevState: StockActionState,
   formData: FormData
@@ -78,6 +89,8 @@ export async function approvisionnerFamilleA(
     const prixAchatUnitaire = Number(formData.get("prixAchatUnitaire"));
     const reserveDetailPieces = Number(formData.get("reserveDetailPieces") ?? 0);
     const repartitionRaw = String(formData.get("repartitionJson") ?? "{}");
+    const fournisseurIdRaw = String(formData.get("fournisseurId") ?? "").trim();
+    const fournisseurId = fournisseurIdRaw ? Number(fournisseurIdRaw) : null;
 
     if (!Number.isFinite(articleId)) return { error: "Article invalide." };
     if (!couleur) return { error: "Couleur requise." };
@@ -109,7 +122,7 @@ export async function approvisionnerFamilleA(
     await db.transaction(async (tx) => {
       const [lot] = await tx
         .insert(lots)
-        .values({ articleId, prixAchatUnitaire: prixAchatUnitaire.toFixed(2) })
+        .values({ articleId, prixAchatUnitaire: prixAchatUnitaire.toFixed(2), fournisseurId })
         .returning();
 
       for (const taille of tailles) {
@@ -386,6 +399,8 @@ export async function approvisionnerFamilleB(
     const quantite = Number(formData.get("quantite"));
     const prixAchatUnitaire = Number(formData.get("prixAchatUnitaire"));
     const seuilAlerte = Number(formData.get("seuilAlerte") ?? 0);
+    const fournisseurIdRaw = String(formData.get("fournisseurId") ?? "").trim();
+    const fournisseurId = fournisseurIdRaw ? Number(fournisseurIdRaw) : null;
 
     if (!Number.isFinite(articleId)) return { error: "Article invalide." };
     if (!Number.isFinite(quantite) || quantite <= 0) return { error: "Quantité invalide." };
@@ -403,7 +418,7 @@ export async function approvisionnerFamilleB(
 
       const [lot] = await tx
         .insert(lots)
-        .values({ articleId, prixAchatUnitaire: prixAchatUnitaire.toFixed(2) })
+        .values({ articleId, prixAchatUnitaire: prixAchatUnitaire.toFixed(2), fournisseurId })
         .returning();
 
       await tx.insert(lotVariantes).values({
