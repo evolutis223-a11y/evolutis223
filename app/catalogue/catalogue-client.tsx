@@ -4,7 +4,13 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { articles, branches } from "@/db/schema";
-import { createArticle, toggleNecessiteAssemblage, togglePublieBoutique, type CreateArticleState } from "./actions";
+import {
+  createArticle,
+  definirCategorieMarquage,
+  toggleNecessiteAssemblage,
+  togglePublieBoutique,
+  type CreateArticleState,
+} from "./actions";
 import { FAMILLES, FamilleIcon, familleMeta, type FamilleId } from "./familles";
 
 type Article = typeof articles.$inferSelect;
@@ -286,6 +292,26 @@ export function CatalogueClient({
                     Nécessite assemblage — déclenche un Ordre de Fabrication à la vente (§8.1)
                   </label>
                 )}
+                {detailArticle.famille === "A" && (
+                  <div className="mt-3">
+                    <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
+                      Type de marquage (R&amp;D Calculateurs, §10bis)
+                    </label>
+                    <select
+                      value={detailArticle.categorieMarquage ?? ""}
+                      onChange={(e) => {
+                        const next = (e.target.value || null) as "ENSEMBLE" | "TISSU" | null;
+                        definirCategorieMarquage(detailArticle.id, next);
+                        setDetailArticle({ ...detailArticle, categorieMarquage: next });
+                      }}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                    >
+                      <option value="">Non concerné</option>
+                      <option value="ENSEMBLE">Ensemble (bascule haut + bas)</option>
+                      <option value="TISSU">Tissu (zones ou toute la surface)</option>
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex justify-end gap-2 border-t border-border p-4">
@@ -430,6 +456,23 @@ export function CatalogueClient({
                       Import de fichier à venir avec le stockage objet (§3.2) — une URL suffit pour l&apos;instant.
                     </p>
                   </div>
+
+                  {drawerFamille === "A" && (
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
+                        Type de marquage (R&amp;D Calculateurs, §10bis)
+                      </label>
+                      <select
+                        name="categorieMarquage"
+                        defaultValue=""
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                      >
+                        <option value="">Non concerné</option>
+                        <option value="ENSEMBLE">Ensemble (bascule haut + bas)</option>
+                        <option value="TISSU">Tissu (zones ou toute la surface)</option>
+                      </select>
+                    </div>
+                  )}
                 </>
               )}
 

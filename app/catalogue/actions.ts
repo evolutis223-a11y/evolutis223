@@ -30,6 +30,9 @@ export async function createArticle(
   const publieBoutique = formData.get("publieBoutique") === "on";
   const brancheIdRaw = String(formData.get("brancheId") ?? "").trim();
   const brancheId = brancheIdRaw ? Number(brancheIdRaw) : null;
+  const categorieMarquageRaw = String(formData.get("categorieMarquage") ?? "").trim();
+  const categorieMarquage =
+    famille === "A" && ["ENSEMBLE", "TISSU"].includes(categorieMarquageRaw) ? categorieMarquageRaw : null;
 
   if (!nom) return { error: "Nom requis." };
   if (!FAMILLES.includes(famille as (typeof FAMILLES)[number])) {
@@ -59,10 +62,20 @@ export async function createArticle(
     publieBoutique,
     photoUrl: photoUrl || null,
     brancheId,
+    categorieMarquage,
   });
 
   revalidatePath("/catalogue");
   return { error: null };
+}
+
+export async function definirCategorieMarquage(articleId: number, categorie: "ENSEMBLE" | "TISSU" | null) {
+  const session = await getSession();
+  if (!session || !hasModuleAccess(session.roleCode, "Catalogue")) {
+    throw new Error("Accès refusé.");
+  }
+  await db.update(articles).set({ categorieMarquage: categorie }).where(eq(articles.id, articleId));
+  revalidatePath("/catalogue");
 }
 
 export async function togglePublieBoutique(articleId: number, next: boolean) {

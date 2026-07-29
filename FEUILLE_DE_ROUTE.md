@@ -15,7 +15,7 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 | 0 — Fondations | **100%** | 0.1→0.5 fonctionnels, testés en direct dans le navigateur (connexion, déconnexion, modules par rôle). Sécurité PIN (hachage + blocage après tentatives, §16.2) résolue 2026-07-28. |
 | 1 — Cœur métier | **100%** | 1.1→1.6 faits et vérifiés en base réelle. Cycle complet : Catalogue → Stock (appro + réserve détail) → Client → Affaire (commande en attente → contrôle stock → décrément FIFO → ticket) → Commande (Retrait/Livraison) → Règlement → Trésorerie (bon de décaissement, clôture de caisse avec écart + justification). Bug réel trouvé et corrigé en cours de route (Famille B ne résolvait jamais de variante — stock jamais décrémenté). Génération PDF (§8.4) avancée en parallèle (Reçu de caisse seul, 5 restants — pas bloquant). Périphériques restants de Phase 1 (RH, Fournisseurs, Achats, Dépenses, Charges, Rapports) déplacés en Phase 4, cohérent avec le découpage d'origine. |
 | 2 — Workflows spécifiques | **100%** | 2.1→2.5 tous faits et vérifiés en base réelle. Phase 2 terminée. |
-| 2bis — R&D Calculateurs | **~50%** | Maquette validée (§10bis) puis moteur de coût par technique implémenté et vérifié en base réelle 2026-07-29 (`/rd-calculateurs`, bibliothèque de références, prix calculé en direct, ligne d'affaire normale). Reste : écrans Ensemble complet / mode Tissu / configurateur produit-first guidé (chemin long, §10). |
+| 2bis — R&D Calculateurs | **~65%** | Maquette validée (§10bis) puis moteur de coût par technique implémenté et vérifié en base réelle 2026-07-29 (`/rd-calculateurs`, bibliothèque de références, prix calculé en direct, ligne d'affaire normale). Ensemble complet / mode Tissu câblés et vérifiés en base réelle 2026-07-29 (réglage `categorieMarquage` ajouté à la fiche article du Catalogue). Reste : configurateur produit-first guidé (chemin long, §10) pour le client final. |
 | 3 — Configurateur & vitrine | **~45%** | 3.1 (maquette), 3.2 (vitrine `/boutique`) et 3.5 (suivi `/suivi/[numero]`) faits et vérifiés en base réelle. Reste : configurateur réel (3.3 — bloqué sur les calculateurs R&D §10bis, pas encore codés), paiement Mobile Money (3.4 — bloqué sur choix d'agrégateur, décision utilisateur). |
 | 4 — Modules périphériques | **0%** | Pas commencé (n'est pas bloquant, peut suivre le lancement). |
 
@@ -84,7 +84,7 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 | 2bis.1 | Schéma — tables `calculateurs`, `bibliotheque_references` (encres, supports d'impression, matières, emballages, chacune avec variantes nommées), zones de marquage, liaison à un article Catalogue existant |
 | 2bis.2 | Écran principal produit-first — sélecteur de vêtement (Polo/T-shirt/Maillot/Survêtement/Tissu/Casquette), clic-zone (réutilise le composant zone-click du §10), calcul de prix en direct |
 | 2bis.3 | Moteurs de coût par technique — Sérigraphie (couleurs/cadres), DTF/Sublimation (cm² continu encre + support arrondi par feuille), Flocage (cm² support seul), Broderie (paliers Petit/Moyen/Grand) |
-| 2bis.4 | Options transverses — bascule Ensemble complet (haut+bas), mode Tissu (Zones spécifiques / Toute la surface), zones prédéfinies en boutons rapides |
+| 2bis.4 | ✅ Options transverses — bascule Ensemble complet (haut+bas), mode Tissu (Zones spécifiques / Toute la surface), zones prédéfinies en boutons rapides. Réglage `categorieMarquage` par article ajouté à la fiche Catalogue (Famille A). Vérifié en base réelle. |
 | 2bis.5 | Écran admin (bouton discret, Admin/Super Admin uniquement) — bibliothèque de références, main d'œuvre + charges additionnelles (liste ouverte), marge, séparés |
 | 2bis.6 | Intégration Affaires — une config validée devient une `ligne_affaire` calculée, jamais un nouvel article Catalogue |
 
@@ -131,8 +131,8 @@ Le noyau métier (Phases 0, 1, 2) est terminé et vérifié en base réelle. Ce 
 - **Stockage des fichiers uploadés** (photos, logos clients pour le configurateur, §3.2) : jamais tranché — une des questions ouvertes du projet depuis le début.
 
 **B. Pas encore attaqué — gros chantier, pas bloqué, juste pas fait**
-- **R&D Calculateurs (Phase 2bis)** : conception validée (maquette, 6 itérations, "c'est bon" le 2026-07-28, §10bis), **zéro ligne de code réelle**. Le plus gros morceau restant — 5 techniques de marquage, bibliothèque encres/supports, etc. Mérite sa propre session dédiée.
-- **Configurateur réel (3.3)** : dépend directement de 2bis (chemin long) et du stockage (chemin court, point A) — ne peut pas avancer avant.
+- **R&D Calculateurs (Phase 2bis)** : moteur de coût, bibliothèque de références et écrans (Ensemble complet, mode Tissu) codés et vérifiés en base réelle (2026-07-29). Reste seulement le configurateur produit-first guidé pour le client final (chemin long, §10).
+- **Configurateur réel (3.3)** : le moteur de coût (2bis) n'est plus bloquant côté chemin long ; reste bloqué côté chemin court sur le stockage de fichiers (point A).
 - **Modules périphériques (Phase 4)** : le cahier des charges dit lui-même que ça "peut suivre le lancement", volontairement en dernier.
 - **5 des 6 gabarits PDF** (Bon de commande, Bon de livraison, Fiche de paie, Ordre de mission, Courrier) — seul le Reçu de caisse existe.
 
