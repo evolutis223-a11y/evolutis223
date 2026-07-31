@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { affaires, articles, clients, demandesValidationStock, utilisateurs, variantes } from "@/db/schema";
+import { affaires, articles, clients, demandesMaquette, demandesValidationStock, utilisateurs, variantes } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { ValidationsClient } from "./validations-client";
 
@@ -59,5 +59,22 @@ export default async function ValidationsPage() {
     .orderBy(desc(affaires.id))
     .limit(100);
 
-  return <ValidationsClient demandes={demandes} proformas={proformas} />;
+  const demandesMaquettePubliques = await db
+    .select({
+      id: demandesMaquette.id,
+      numero: demandesMaquette.numero,
+      statut: demandesMaquette.statut,
+      nomClient: demandesMaquette.nomClient,
+      telephoneClient: demandesMaquette.telephoneClient,
+      intent: demandesMaquette.intent,
+      forfaitNom: articles.nom,
+      forfaitPrix: articles.prixVente,
+      dateCreation: demandesMaquette.dateCreation,
+    })
+    .from(demandesMaquette)
+    .leftJoin(articles, eq(articles.id, demandesMaquette.forfaitArticleId))
+    .orderBy(desc(demandesMaquette.dateCreation))
+    .limit(100);
+
+  return <ValidationsClient demandes={demandes} proformas={proformas} demandesMaquette={demandesMaquettePubliques} />;
 }

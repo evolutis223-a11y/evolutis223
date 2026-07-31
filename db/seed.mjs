@@ -109,6 +109,28 @@ async function main() {
     console.log("Paramètres marquage par défaut seedés (main d'œuvre 200F, marge 300F).");
   }
 
+  // Parcours maquette public (§10ter) — dispositions par défaut, reprises telles quelles de
+  // l'artefact validé le 2026-07-29 (LAYOUTS), harmonisées/centrées, jamais verrouillées par défaut.
+  const { rows: dispoCount } = await pool.query("select count(*)::int as n from dispositions_maquette");
+  if (dispoCount[0].n === 0) {
+    await pool.query(
+      `insert into dispositions_maquette (nb_elements, positions, verrouille) values
+       (3, $1, false), (4, $2, false), (6, $3, false)`,
+      [
+        JSON.stringify([[32, 14], [32, 50], [32, 86]]),
+        JSON.stringify([[20, 16], [44, 16], [20, 84], [44, 84]]),
+        JSON.stringify([[20, 10], [44, 10], [20, 50], [44, 50], [20, 90], [44, 90]]),
+      ]
+    );
+    console.log("3 dispositions maquette par défaut seedées (3/4/6 éléments).");
+  }
+
+  const { rows: parcoursParamCount } = await pool.query("select count(*)::int as n from parametres_parcours_maquette");
+  if (parcoursParamCount[0].n === 0) {
+    await pool.query("insert into parametres_parcours_maquette (badge_forme, badge_taille) values ('circle', 1)");
+    console.log("Paramètres parcours maquette par défaut seedés (médaillon cercle, taille 100%).");
+  }
+
   await pool.end();
 }
 

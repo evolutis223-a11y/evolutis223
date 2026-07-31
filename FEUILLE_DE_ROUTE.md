@@ -8,7 +8,7 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 
 ## État d'avancement
 
-**À remettre à jour à chaque étape/checkpoint franchi — reflète l'état réel, pas le plan.** Dernière mise à jour : 2026-07-28.
+**À remettre à jour à chaque étape/checkpoint franchi — reflète l'état réel, pas le plan.** Dernière mise à jour : 2026-07-31.
 
 | Phase | % | Détail |
 |---|---|---|
@@ -16,7 +16,8 @@ Référence : toute section `§X` renvoie à `CAHIER_DES_CHARGES.md`.
 | 1 — Cœur métier | **100%** | 1.1→1.6 faits et vérifiés en base réelle. Cycle complet : Catalogue → Stock (appro + réserve détail) → Client → Affaire (commande en attente → contrôle stock → décrément FIFO → ticket) → Commande (Retrait/Livraison) → Règlement → Trésorerie (bon de décaissement, clôture de caisse avec écart + justification). Bug réel trouvé et corrigé en cours de route (Famille B ne résolvait jamais de variante — stock jamais décrémenté). Génération PDF (§8.4/§13) avancée en parallèle : Reçu de caisse et Bon de livraison faits et vérifiés en base réelle (2026-07-29), paramétrage par champs/sections (`parametres_documents`) branché sur les deux ; 4 modèles restants (Bon de commande, Fiche de paie, Ordre de mission, Courrier) attendent les modules Achats/Fournisseurs/RH (Phase 4) — pas bloquant. Périphériques restants de Phase 1 (RH, Fournisseurs, Achats, Dépenses, Charges, Rapports) déplacés en Phase 4, cohérent avec le découpage d'origine. |
 | 2 — Workflows spécifiques | **100%** | 2.1→2.5 tous faits et vérifiés en base réelle. Phase 2 terminée. |
 | 2bis — R&D Calculateurs | **~65%** | Maquette validée (§10bis) puis moteur de coût par technique implémenté et vérifié en base réelle 2026-07-29 (`/rd-calculateurs`, bibliothèque de références, prix calculé en direct, ligne d'affaire normale). Ensemble complet / mode Tissu câblés et vérifiés en base réelle 2026-07-29 (réglage `categorieMarquage` ajouté à la fiche article du Catalogue). Reste : configurateur produit-first guidé (chemin long, §10) pour le client final. |
-| 3 — Configurateur & vitrine | **~45%** | 3.1 (maquette), 3.2 (vitrine `/boutique`) et 3.5 (suivi `/suivi/[numero]`) faits et vérifiés en base réelle. Reste : configurateur réel (3.3 — chemin long plus bloqué côté moteur de coût depuis 2bis, reste bloqué côté chemin court sur le stockage de fichiers), paiement Mobile Money (3.4 — bloqué sur choix d'agrégateur, décision utilisateur). |
+| 3 — Configurateur & vitrine | **~45%** | 3.1 (maquette), 3.2 (vitrine `/boutique`) et 3.5 (suivi `/suivi/[numero]`) faits et vérifiés en base réelle. Reste : configurateur réel (3.3 — chemin long plus bloqué côté moteur de coût depuis 2bis ; le stockage de fichiers n'est plus bloquant côté chemin court, cf. `lib/blob.ts` sous 3bis), paiement Mobile Money (3.4 — bloqué sur choix d'agrégateur, décision utilisateur). |
+| 3bis — Parcours maquette (§10ter) | **100%** | Parcours public `/maquette` (9 écrans, porté depuis la maquette Artifact validée), table dédiée `demandes_maquette` (même logique de dossier séparé que le pagne industriel), upload Vercel Blob (`lib/blob.ts`), intégration à la file `/validations` (Valider → `creerAffaire()` → `COMMANDE_ATTENTE` normale) et admin séparé `/maquette-admin` (Admin/Super Admin). Implémenté et vérifié de bout en bout en base réelle 2026-07-31 : soumission publique → `MAQ-26-0001` → Valider → `CDE-26-0002` réelle dans `/affaires` ; accès admin confirmé bloqué pour un rôle Vendeur. Résout au passage le blocage "stockage des fichiers" (point A ci-dessous) — reste à l'utilisateur de créer un vrai store Vercel Blob et fournir `BLOB_READ_WRITE_TOKEN` avant toute mise en prod ou test avec upload réel. |
 | 4 — Modules périphériques | **~15%** | Fournisseurs fait et vérifié en base réelle 2026-07-29 (`/fournisseurs`, `lots.fournisseur_id` câblé dans les 2 formulaires d'approvisionnement de Stocks). RH, Achats, Dépenses, Charges, Rapports, Marketing pas commencés (n'est pas bloquant, peut suivre le lancement). |
 
 ---
@@ -128,11 +129,11 @@ Le noyau métier (Phases 0, 1, 2) est terminé et vérifié en base réelle. Ce 
 
 **A. Bloqué — décision hors de portée de Claude, besoin de l'utilisateur**
 - **Paiement Mobile Money (3.4)** : choisir un agrégateur réel (PayDunya / CinetPay / Kkiapay) et créer un compte développeur pour obtenir des clés de test — nécessite un compte externe au nom de l'entreprise.
-- **Stockage des fichiers uploadés** (photos, logos clients pour le configurateur, §3.2) : jamais tranché — une des questions ouvertes du projet depuis le début.
+- ~~Stockage des fichiers uploadés~~ : **tranché 2026-07-30 (Vercel Blob)** et implémenté/vérifié 2026-07-31 via le parcours maquette (§10ter, `lib/blob.ts`, réutilisable tel quel par 3.3). Reste un point pratique, pas une décision : l'utilisateur doit créer un vrai store Vercel Blob et fournir `BLOB_READ_WRITE_TOKEN` dans son `.env` réel avant que les uploads fonctionnent en local/prod.
 
 **B. Pas encore attaqué — gros chantier, pas bloqué, juste pas fait**
 - **R&D Calculateurs (Phase 2bis)** : moteur de coût, bibliothèque de références et écrans (Ensemble complet, mode Tissu) codés et vérifiés en base réelle (2026-07-29). Reste seulement le configurateur produit-first guidé pour le client final (chemin long, §10).
-- **Configurateur réel (3.3)** : le moteur de coût (2bis) n'est plus bloquant côté chemin long ; reste bloqué côté chemin court sur le stockage de fichiers (point A).
+- **Configurateur réel (3.3)** : le moteur de coût (2bis) n'est plus bloquant côté chemin long ; le stockage de fichiers (point A) n'est plus bloquant non plus côté chemin court depuis 3bis — reste à construire l'écran lui-même.
 - **Modules périphériques (Phase 4)** : le cahier des charges dit lui-même que ça "peut suivre le lancement", volontairement en dernier.
 - **5 des 6 gabarits PDF** (Bon de commande, Bon de livraison, Fiche de paie, Ordre de mission, Courrier) — seul le Reçu de caisse existe.
 

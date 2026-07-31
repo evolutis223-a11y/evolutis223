@@ -7,6 +7,8 @@ import { db } from "@/db";
 import {
   affaires,
   articles,
+  clients,
+  demandesMaquette,
   demandesValidationStock,
   lotVariantes,
   lots,
@@ -16,7 +18,7 @@ import {
 } from "@/db/schema";
 import { getSession, type SessionPayload } from "@/lib/auth";
 import { enregistrerAudit } from "@/lib/audit";
-import { validerAffaire } from "@/app/affaires/actions";
+import { creerAffaire, validerAffaire } from "@/app/affaires/actions";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -272,6 +274,85 @@ export async function refuserProforma(affaireId: number): Promise<{ error?: stri
 
     revalidatePath("/validations");
     revalidatePath("/commercial");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur inconnue." };
+  }
+}
+
+// §10ter — demande de maquette publique (table dédiée demandes_maquette, pas de session côté
+// client au moment de la soumission). Valider ici la transforme enfin en vraie affaire : trouve
+// ou crée le client (par téléphone), puis une ligne_affaire normale sur le forfait choisi —
+// à partir de là, une demande convertie suit exactement le même chemin que toute autre affaire
+// (§8.1, /affaires) : contrôle, validation, ticket/facture, rien de spécifique à coder ailleurs.
+export async function validerDemandeMaquette(demandeId: number): Promise<{ error?: string }> {
+  try {
+    const session = await requireAdmin();
+    const [demande] = await db.select().from(demandesMaquette).where(eq(demandesMaquette.id, demandeId)).limit(1);
+    if (!demande) return { error: "Demande introuvable." };
+    if (demande.statut !== "EN_ATTENTE") return { error: "Demande déjà traitée." };
+    if (!demande.forfaitArticleId) return { error: "Aucun forfait identifié sur cette demande." };
+
+    const [article] = await db.select().from(articles).where(eq(articles.id, demande.forfaitArticleId)).limit(1);
+    if (!article) return { error: "Forfait introuvable au catalogue." };
+
+    let [client] = await db.select().from(clients).where(eq(clients.contact, demande.telephoneClient)).limit(1);
+    if (!client) {
+      [client] = await db
+        .insert(clients)
+        .values({ typeClient: "BOUTIQUE", nom: demande.nomClient, contact: demande.telephoneClient })
+        .returning();
+    }
+
+    const res = await creerAffaire(client.id, [
+      { articleId: article.id, varianteId: null, quantite: 1, prixUnitaire: Number(article.prixVente) },
+    ]);
+    if (res.error || !res.affaireId) return { error: res.error ?? "Échec de création de l'affaire." };
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(demandesMaquette)
+        .set({ statut: "VALIDEE", traiteParId: session.userId, dateTraitement: new Date(), affaireCreeeId: res.affaireId })
+        .where(eq(demandesMaquette.id, demandeId));
+      await enregistrerAudit(tx, {
+        tableCible: "demandes_maquette",
+        enregistrementId: demandeId,
+        action: "VALIDATION",
+        utilisateurId: session.userId,
+        details: { decision: "VALIDEE", affaireCreeeId: res.affaireId },
+      });
+    });
+
+    revalidatePath("/validations");
+    revalidatePath("/affaires");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur inconnue." };
+  }
+}
+
+export async function refuserDemandeMaquette(demandeId: number): Promise<{ error?: string }> {
+  try {
+    const session = await requireAdmin();
+    const [demande] = await db.select().from(demandesMaquette).where(eq(demandesMaquette.id, demandeId)).limit(1);
+    if (!demande) return { error: "Demande introuvable." };
+    if (demande.statut !== "EN_ATTENTE") return { error: "Demande déjà traitée." };
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(demandesMaquette)
+        .set({ statut: "REFUSEE", traiteParId: session.userId, dateTraitement: new Date() })
+        .where(eq(demandesMaquette.id, demandeId));
+      await enregistrerAudit(tx, {
+        tableCible: "demandes_maquette",
+        enregistrementId: demandeId,
+        action: "VALIDATION",
+        utilisateurId: session.userId,
+        details: { decision: "REFUSEE" },
+      });
+    });
+
+    revalidatePath("/validations");
     return {};
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Erreur inconnue." };

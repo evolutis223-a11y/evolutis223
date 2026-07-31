@@ -8,7 +8,9 @@ import {
   listerDemandesEnAttente,
   rechargerDemande,
   refuserDemande,
+  refuserDemandeMaquette,
   refuserProforma,
+  validerDemandeMaquette,
   validerProforma,
 } from "./actions";
 
@@ -20,6 +22,17 @@ interface Proforma {
   montantTtc: string;
   clientNom: string;
   auteurNom: string;
+  dateCreation: Date;
+}
+interface DemandeMaquette {
+  id: number;
+  numero: string;
+  statut: string;
+  nomClient: string;
+  telephoneClient: string;
+  intent: string;
+  forfaitNom: string | null;
+  forfaitPrix: string | null;
   dateCreation: Date;
 }
 
@@ -53,9 +66,11 @@ function beep() {
 export function ValidationsClient({
   demandes: initial,
   proformas,
+  demandesMaquette,
 }: {
   demandes: Demande[];
   proformas: Proforma[];
+  demandesMaquette: DemandeMaquette[];
 }) {
   const router = useRouter();
   const [enAttente, setEnAttente] = useState<Demande[]>(
@@ -64,6 +79,8 @@ export function ValidationsClient({
   const historique = initial.filter((d) => d.statut !== "EN_ATTENTE").slice(0, 30);
   const proformasEnAttente = proformas.filter((p) => p.statut === "EN_ATTENTE");
   const proformasHistorique = proformas.filter((p) => p.statut !== "EN_ATTENTE").slice(0, 30);
+  const maquetteEnAttente = demandesMaquette.filter((d) => d.statut === "EN_ATTENTE");
+  const maquetteHistorique = demandesMaquette.filter((d) => d.statut !== "EN_ATTENTE").slice(0, 30);
 
   const [alerteActive, setAlerteActive] = useState(false);
   const [pauseJusqua, setPauseJusqua] = useState<number | null>(null);
@@ -279,6 +296,69 @@ export function ValidationsClient({
             ))
           )}
         </section>
+
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Demandes maquette publiques (§10ter) — {maquetteEnAttente.length}
+          </h2>
+          {maquetteEnAttente.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aucune demande en attente.</p>
+          ) : (
+            maquetteEnAttente.map((d) => (
+              <div key={d.id} className="rounded-md border border-border bg-card p-3 text-sm">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="font-medium text-card-foreground">{d.numero}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {d.intent === "pagne" ? "Commander un pagne" : "Créer une maquette"}
+                  </span>
+                </div>
+                <p className="mt-1 text-muted-foreground">
+                  {d.nomClient} — {d.telephoneClient}
+                  {d.forfaitNom && (
+                    <>
+                      {" — "}
+                      <strong>
+                        {d.forfaitNom} ({formatFcfa(d.forfaitPrix ?? 0)})
+                      </strong>
+                    </>
+                  )}
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <Button size="sm" disabled={isPending} onClick={() => traiter(() => validerDemandeMaquette(d.id))}>
+                    Valider (crée l&apos;affaire)
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isPending}
+                    onClick={() => traiter(() => refuserDemandeMaquette(d.id))}
+                  >
+                    Refuser
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </section>
+
+        {maquetteHistorique.length > 0 && (
+          <section className="space-y-2">
+            <h2 className="text-sm font-medium text-muted-foreground">Demandes maquette traitées récemment</h2>
+            <div className="space-y-1">
+              {maquetteHistorique.map((d) => (
+                <div
+                  key={d.id}
+                  className="flex items-center justify-between rounded-md border border-border/60 px-3 py-1.5 text-xs text-muted-foreground"
+                >
+                  <span>
+                    {d.numero} — {d.nomClient}
+                  </span>
+                  <span>{d.statut}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {proformasHistorique.length > 0 && (
           <section className="space-y-2">

@@ -619,3 +619,64 @@ export const parametresDocuments = pgTable("parametres_documents", {
   modifiePar: integer("modifie_par").references(() => utilisateurs.id),
   dateModification: timestamp("date_modification").notNull().defaultNow(),
 });
+
+// §10ter — Parcours maquette public (/maquette), validé par artefact le 2026-07-30 après
+// nombreuses itérations. Table DÉDIÉE plutôt que affaires+PROFORMA : un client public n'a pas
+// de session (affaires.auteur_id est NOT NULL, référence un utilisateur interne — impossible à
+// remplir pour une soumission anonyme). Même logique que le dossier pagne industriel (§10ter,
+// "table dédiée... jamais dans lignes_affaire") : la demande brute vit ici, un Admin la
+// transforme en vraie affaire (client + PROFORMA/DEVIS) au moment du traitement dans /validations.
+export const demandesMaquette = pgTable(
+  "demandes_maquette",
+  {
+    id: serial("id").primaryKey(),
+    numero: varchar("numero", { length: 20 }).notNull().unique(), // ex MAQ-26-0001
+    statut: varchar("statut", { length: 20 }).notNull().default("EN_ATTENTE"),
+    nomClient: varchar("nom_client", { length: 150 }).notNull(),
+    telephoneClient: varchar("telephone_client", { length: 20 }).notNull(),
+    adresseClient: text("adresse_client"),
+    intent: varchar("intent", { length: 20 }).notNull(), // maquette | pagne
+    // Détail complet du parcours : idée de départ, éléments (logos/textes), disposition,
+    // couleurs, explication, mode de livraison souhaité — voir lib/maquette/types.ts.
+    details: jsonb("details").notNull(),
+    forfaitArticleId: integer("forfait_article_id").references(() => articles.id),
+    dateCreation: timestamp("date_creation").notNull().defaultNow(),
+    traiteParId: integer("traite_par_id").references(() => utilisateurs.id),
+    dateTraitement: timestamp("date_traitement"),
+    affaireCreeeId: integer("affaire_creee_id").references(() => affaires.id),
+  },
+  (table) => [
+    check(
+      "demandes_maquette_statut_check",
+      sql`${table.statut} in ('EN_ATTENTE','VALIDEE','REFUSEE')`
+    ),
+    check("demandes_maquette_intent_check", sql`${table.intent} in ('maquette','pagne')`),
+  ]
+);
+
+// Bibliothèque de modèles proposés au client sur "Parcourir vos modèles existants" — admin
+// insère/retire, image stockée sur Vercel Blob (§3.2, tranché 2026-07-30).
+export const modelesMaquette = pgTable("modeles_maquette", {
+  id: serial("id").primaryKey(),
+  blobUrl: text("blob_url").notNull(),
+  tag: varchar("tag", { length: 20 }), // chaud | froid | vif — filtre client, libre
+  actif: boolean("actif").notNull().default(true),
+  dateAjout: timestamp("date_ajout").notNull().defaultNow(),
+});
+
+// Disposition par défaut des médaillons par nombre d'éléments (LAYOUTS de l'artefact) — figée
+// ou modifiable par le client selon `verrouille`, réglée par l'admin dans /maquette-admin.
+export const dispositionsMaquette = pgTable("dispositions_maquette", {
+  nbElements: integer("nb_elements").primaryKey(), // 3, 4, 6
+  positions: jsonb("positions").notNull(), // [[x,y], ...] en % de la tuile 64x110
+  verrouille: boolean("verrouille").notNull().default(false),
+});
+
+// Forme/taille des médaillons — réglage global, singleton (même esprit que parametres_marquage).
+export const parametresParcoursMaquette = pgTable("parametres_parcours_maquette", {
+  id: serial("id").primaryKey(),
+  badgeForme: varchar("badge_forme", { length: 10 }).notNull().default("circle"),
+  badgeTaille: numeric("badge_taille", { precision: 3, scale: 2 }).notNull().default("1"),
+  modifiePar: integer("modifie_par").references(() => utilisateurs.id),
+  dateModification: timestamp("date_modification").notNull().defaultNow(),
+});
