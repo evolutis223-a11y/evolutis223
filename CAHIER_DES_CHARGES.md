@@ -684,6 +684,58 @@ Chaque champ du point 1 (Support) a une bascule admin par article : demander au 
 
 *(Note : `design/Canvas.dc.html` contient trois pistes UI antérieures pour ce configurateur — accordéon une page, onglets+cartes, tableau technique compact. Probablement supplantées par le flux en 5 points ci-dessus ; à vérifier si une de ces pistes doit influencer l'habillage visuel du point 1/2.)*
 
+**Implémenté et vérifié en base réelle (2026-07-31)**, à partir de la maquette validée
+(`design/Schema Configurateur Articles Personnalises.dc.html`) : route publique `/configurateur`
+(proxy.ts), chemin court et chemin long tous les deux fonctionnels.
+
+**Décision utilisateur 2026-07-31 — commande directe, pas de file d'attente :** contrairement au
+parcours maquette (§10ter), une commande configurée a un prix ferme et calculé. Elle devient donc
+directement une vraie affaire `COMMANDE_ATTENTE` (comme une vente boutique), via un **compte
+technique** dédié (`+22300000098`, `actif=false` — bloqué en connexion interactive, sert
+uniquement de `auteurId`) plutôt qu'un utilisateur de session. `creerAffaire` a été refactorée en
+`creerAffaireInterne` (logique transactionnelle pure, sans contrôle de session) + `creerAffaire`
+(wrapper qui exige la session Vendeur/Admin) pour partager le même code entre vente interne et
+commande publique, sans dupliquer la logique. Le contrôle réserve détail (§9, `validerAffaire`)
+s'applique ensuite exactement comme pour une vente créée en interne : testé de bout en bout, une
+commande sur une taille en rupture de réserve détail atterrit bien dans la file `/validations`
+comme n'importe quelle vente bloquée, sans aucune logique de blocage dupliquée pour ce chemin
+public.
+
+**Décision utilisateur 2026-07-31 — coût de zone × quantité totale :** sur une commande à
+plusieurs tailles, le coût de zone de marquage (§10bis — cadre sérigraphie compris) et les
+finitions se multiplient tous par la quantité totale de la commande, sans distinction "mise en
+place one-time" pour cette passe (simplicité choisie explicitement, malgré la réalité usine où un
+cadre sérigraphie sert pour toute une série).
+
+**Ce qui a été construit :** galerie de modèles chemin court (`modeles_configurateur`, admin
+séparé `/configurateur-admin`, upload Vercel Blob), finitions du chemin long éditables
+(`finitions_configurateur`, mêmes 4 valeurs par défaut que la maquette : broderie relief 3D
++800F, patch tissé cousu +500F, étiquette perso +300F, emballage individuel +150F), zones de
+marquage par clic (réutilise le moteur `lib/calculateurs/marquage.ts` du §10bis tel quel), couleur
+en pastilles avec photo réelle par variante (grisée si rupture), écran Taille/Quantité partagé
+entre les deux chemins.
+
+**Simplifications assumées pour cette passe** (non bloquantes, à rouvrir si besoin) : encolure/
+manches (spécifiques t-shirt) non collectées — le schéma articles n'a pas de champ distinguant
+polo/t-shirt, ajouter cette nuance demanderait une décision de modélisation séparée ; l'écran
+"Présentation avec logo" du chemin court affiche la photo produit + vignettes des logos envoyés,
+pas un rendu photoréaliste composé ; le nombre d'écrans réellement affichés (6 pour le chemin
+long, 7 pour le chemin court) condense légèrement les 5/9 points du document source (paiement/
+livraison/contact regroupés en fin de parcours), même esprit que le parcours maquette (§10ter).
+
+**Testé de bout en bout sur Neon (2026-07-31) :** chemin long (Polo Standard, Bleu marine, 1
+zone sérigraphie, 1 finition, 1×L + 1×XL = 19 600 F) → `CDE-26-0003` → validée → `TIC-26-0011`,
+stock décrémenté normalement (réserve suffisante). Chemin court (modèle de test, 1×M = 9 500 F)
+→ nouvelle `CDE-26-0003` → validée → bloquée correctement (réserve détail insuffisante pour cette
+taille), demande visible dans `/validations` avec le même traitement qu'une vente interne. Accès
+`/configurateur-admin` confirmé bloqué pour un rôle Vendeur.
+
+**Reste à construire :** paiement Mobile Money réel (§3.4, bloqué sur le choix d'agrégateur —
+pour l'instant l'écran informe juste que "un commercial vous contactera" pour le règlement,
+comme le parcours maquette) ; mode "Ensemble complet"/Tissu (§10bis) pas branché sur ce
+configurateur (hors périmètre de cette passe, ciblée polo/t-shirt comme la maquette validée) ;
+repositionnement des logos par glisser-déposer sur l'aperçu (actuellement en vignettes fixes).
+
 ---
 
 ## 10bis. Marquage personnalisé et calculateurs de coût (R&D)

@@ -63,14 +63,18 @@ export interface LigneInput {
   configMarquage?: unknown;
 }
 
-export async function creerAffaire(
+// Logique transactionnelle partagée entre la création interne (session Vendeur/Admin) et la
+// création publique via le configurateur (§3.3/§10, compte technique — voir app/configurateur/actions.ts).
+// N'effectue aucun contrôle d'accès ni de session : les appelants sont responsables de vérifier
+// qui a le droit d'appeler avec quel auteurId avant d'y arriver.
+export async function creerAffaireInterne(
+  auteurId: number,
   clientId: number,
   lignes: LigneInput[],
   modeFinalisation: "RETRAIT" | "LIVRAISON" | null = null,
   adresseLivraison: string | null = null
 ): Promise<{ affaireId?: number; error?: string }> {
   try {
-    const session = await requireAffairesAccess();
     if (!clientId) return { error: "Client requis." };
     if (lignes.length === 0) return { error: "Au moins une ligne requise." };
     if (modeFinalisation === "LIVRAISON" && !adresseLivraison) {
@@ -90,7 +94,7 @@ export async function creerAffaire(
           modeFinalisation,
           clientId,
           montantTtc: montantTtc.toFixed(2),
-          auteurId: session.userId,
+          auteurId,
         })
         .returning();
 
@@ -120,6 +124,20 @@ export async function creerAffaire(
 
     revalidatePath("/affaires");
     return { affaireId };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur inconnue." };
+  }
+}
+
+export async function creerAffaire(
+  clientId: number,
+  lignes: LigneInput[],
+  modeFinalisation: "RETRAIT" | "LIVRAISON" | null = null,
+  adresseLivraison: string | null = null
+): Promise<{ affaireId?: number; error?: string }> {
+  try {
+    const session = await requireAffairesAccess();
+    return creerAffaireInterne(session.userId, clientId, lignes, modeFinalisation, adresseLivraison);
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Erreur inconnue." };
   }

@@ -131,6 +131,32 @@ async function main() {
     console.log("Paramètres parcours maquette par défaut seedés (médaillon cercle, taille 100%).");
   }
 
+  // §3.3/§10 — Compte technique utilisé comme auteurId des commandes créées par le configurateur
+  // public (décision utilisateur 2026-07-31 : commande directe, pas de file d'attente). actif=false
+  // pour bloquer toute connexion interactive — sert uniquement de référence FK, jamais de login réel.
+  {
+    const pinHash = await bcrypt.hash(String(Math.random()).slice(2), 10);
+    await pool.query(
+      `insert into utilisateurs (nom, telephone, pin_hash, role_id, actif)
+       select 'Configurateur en ligne (technique)', '+22300000098', $1, id, false from roles where code = 'VENDEUR'
+       on conflict (telephone) do nothing`,
+      [pinHash]
+    );
+    console.log("Compte technique configurateur en ligne seedé (+22300000098, inactif — FK uniquement).");
+  }
+
+  // §10 point 3 — Finitions du chemin long, surcharges fixes de la maquette validée (2026-07-28),
+  // éditables ensuite dans /configurateur-admin.
+  const { rows: finitionCount } = await pool.query("select count(*)::int as n from finitions_configurateur");
+  if (finitionCount[0].n === 0) {
+    await pool.query(`insert into finitions_configurateur (nom, montant, ordre) values
+      ('Broderie relief 3D (au lieu de broderie plate)', 800, 1),
+      ('Patch tissé cousu (au lieu de brodé directement)', 500, 2),
+      ('Étiquette personnalisée (col ou ourlet)', 300, 3),
+      ('Emballage individuel (pochette + pliage soigné)', 150, 4)`);
+    console.log("4 finitions par défaut seedées.");
+  }
+
   await pool.end();
 }
 

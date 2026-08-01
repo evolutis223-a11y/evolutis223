@@ -680,3 +680,38 @@ export const parametresParcoursMaquette = pgTable("parametres_parcours_maquette"
   modifiePar: integer("modifie_par").references(() => utilisateurs.id),
   dateModification: timestamp("date_modification").notNull().defaultNow(),
 });
+
+// §3.3/§10 — Configurateur d'articles personnalisés, validé par artefact le 2026-07-28
+// (design/Schema Configurateur Articles Personnalises.dc.html). Contrairement au parcours
+// maquette (§10ter), une commande configurée a un prix ferme et calculé — décision utilisateur
+// 2026-07-31 : elle devient directement une vraie affaire COMMANDE_ATTENTE (comme une vente
+// boutique), via le compte technique ci-dessous comme auteurId. Le contrôle réserve détail (§9,
+// `validerAffaire`) s'applique ensuite exactement comme pour une vente créée en interne — pas de
+// logique de blocage dupliquée pour ce chemin public.
+
+// Galerie "chemin court" — modèles déjà prêts (photo + prix de départ + zones de logo
+// prédéfinies). Distinct des articles Catalogue bruts : plusieurs modèles peuvent partager le
+// même article/variante support avec des zones de marquage différentes.
+export const modelesConfigurateur = pgTable("modeles_configurateur", {
+  id: serial("id").primaryKey(),
+  nom: varchar("nom", { length: 150 }).notNull(),
+  articleId: integer("article_id")
+    .notNull()
+    .references(() => articles.id),
+  photoUrl: text("photo_url").notNull(),
+  prixDepart: numeric("prix_depart", { precision: 12, scale: 2 }).notNull(),
+  // Zones de logo prédéfinies pour ce modèle : [{ id, label, technique, xPct, yPct, largeurCm, hauteurCm }]
+  zones: jsonb("zones").notNull(),
+  actif: boolean("actif").notNull().default(true),
+  ordre: integer("ordre").notNull().default(99),
+});
+
+// Finitions du chemin long, point 3 (§10) — surcharges fixes cumulables, éditables plutôt
+// qu'embarquées en dur (même logique que la bibliothèque de références du §10bis).
+export const finitionsConfigurateur = pgTable("finitions_configurateur", {
+  id: serial("id").primaryKey(),
+  nom: varchar("nom", { length: 150 }).notNull(),
+  montant: numeric("montant", { precision: 12, scale: 2 }).notNull(),
+  actif: boolean("actif").notNull().default(true),
+  ordre: integer("ordre").notNull().default(99),
+});
