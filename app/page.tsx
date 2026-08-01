@@ -22,6 +22,7 @@ const MODULE_ROUTES: Partial<Record<ModuleName, string>> = {
   Trésorerie: "/tresorerie",
   Commercial: "/commercial",
   Fournisseurs: "/fournisseurs",
+  RH: "/rh",
 };
 
 export default async function DashboardPage() {

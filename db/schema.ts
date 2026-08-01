@@ -715,3 +715,63 @@ export const finitionsConfigurateur = pgTable("finitions_configurateur", {
   actif: boolean("actif").notNull().default(true),
   ordre: integer("ordre").notNull().default(99),
 });
+
+// §7 module RH — "Saisie manuelle (employés/partenaires) → Commissions calculées sur les
+// Affaires → Trésorerie". Registre léger, volontairement découplé de `utilisateurs` : un
+// Journalier n'a explicitement "aucun compte applicatif" (§6) mais doit quand même apparaître en
+// paie. `utilisateurId` optionnel relie une fiche personnel à un compte réel uniquement quand il
+// existe, pour le calcul de commission (somme des affaires dont il est l'auteur).
+export const personnel = pgTable(
+  "personnel",
+  {
+    id: serial("id").primaryKey(),
+    nom: varchar("nom", { length: 150 }).notNull(),
+    telephone: varchar("telephone", { length: 20 }),
+    fonction: varchar("fonction", { length: 100 }),
+    typeContrat: varchar("type_contrat", { length: 20 }).notNull(),
+    utilisateurId: integer("utilisateur_id").references(() => utilisateurs.id),
+    salaireBase: numeric("salaire_base", { precision: 12, scale: 2 }).notNull().default("0"),
+    // % appliqué au total des affaires de la période dont ce personnel est l'auteur (utilisateurId
+    // requis pour que ce calcul ait un sens) — NULL = pas de commission pour ce poste.
+    tauxCommission: numeric("taux_commission", { precision: 5, scale: 2 }),
+    actif: boolean("actif").notNull().default(true),
+    dateEmbauche: date("date_embauche"),
+  },
+  (table) => [
+    check(
+      "personnel_type_contrat_check",
+      sql`${table.typeContrat} in ('SALARIE','JOURNALIER','PARTENAIRE')`
+    ),
+  ]
+);
+
+// Un bulletin par personnel/période (YYYY-MM) — brouillon éditable jusqu'à "Marquer payé", qui
+// génère un vrai bon de décaissement (catégorie RH_SALAIRE, §8.2/§16.7 — même seuil de validation
+// hiérarchique que tout décaissement) plutôt que de dupliquer la logique de seuil ici.
+export const bulletinsPaie = pgTable(
+  "bulletins_paie",
+  {
+    id: serial("id").primaryKey(),
+    personnelId: integer("personnel_id")
+      .notNull()
+      .references(() => personnel.id),
+    periode: varchar("periode", { length: 7 }).notNull(), // "2026-07"
+    salaireBase: numeric("salaire_base", { precision: 12, scale: 2 }).notNull().default("0"),
+    primeTransport: numeric("prime_transport", { precision: 12, scale: 2 }).notNull().default("0"),
+    commission: numeric("commission", { precision: 12, scale: 2 }).notNull().default("0"),
+    retenueInps: numeric("retenue_inps", { precision: 12, scale: 2 }).notNull().default("0"),
+    avance: numeric("avance", { precision: 12, scale: 2 }).notNull().default("0"),
+    netAPayer: numeric("net_a_payer", { precision: 12, scale: 2 }).notNull(),
+    statut: varchar("statut", { length: 20 }).notNull().default("BROUILLON"),
+    decaissementId: integer("decaissement_id").references(() => bonsDecaissement.id),
+    auteurId: integer("auteur_id")
+      .notNull()
+      .references(() => utilisateurs.id),
+    dateCreation: timestamp("date_creation").notNull().defaultNow(),
+    datePaiement: timestamp("date_paiement"),
+  },
+  (table) => [
+    uniqueIndex("uq_bulletin_personnel_periode").on(table.personnelId, table.periode),
+    check("bulletins_paie_statut_check", sql`${table.statut} in ('BROUILLON','PAYE')`),
+  ]
+);

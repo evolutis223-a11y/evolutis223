@@ -22,6 +22,7 @@ async function seuilValidation(): Promise<number> {
 
 export interface BonState {
   error: string | null;
+  bonId?: number;
 }
 
 const CATEGORIES = ["ACHAT_MARCHANDISE", "CHARGE_GENERAL", "RH_SALAIRE"] as const;
@@ -46,16 +47,19 @@ export async function creerBonDecaissement(
   const seuil = await seuilValidation();
   const autoValide = montant <= seuil;
 
-  await db.insert(bonsDecaissement).values({
-    categorie,
-    montant: montant.toFixed(2),
-    motif,
-    auteurId: session.userId,
-    validateurId: autoValide ? session.userId : null,
-  });
+  const [bon] = await db
+    .insert(bonsDecaissement)
+    .values({
+      categorie,
+      montant: montant.toFixed(2),
+      motif,
+      auteurId: session.userId,
+      validateurId: autoValide ? session.userId : null,
+    })
+    .returning();
 
   revalidatePath("/tresorerie");
-  return { error: null };
+  return { error: null, bonId: bon.id };
 }
 
 export async function validerBonDecaissement(bonId: number): Promise<{ error?: string }> {
