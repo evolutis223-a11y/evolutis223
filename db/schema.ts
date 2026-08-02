@@ -873,3 +873,32 @@ export const parametresMarketing = pgTable("parametres_marketing", {
   modifiePar: integer("modifie_par").references(() => utilisateurs.id),
   dateModification: timestamp("date_modification").notNull().defaultNow(),
 });
+
+// Registre des frais liés à la mise en ligne (domaine, hébergement, outils/IA, etc.) — demandé par
+// l'utilisateur (2026-08-02) pour suivre ces coûts en parallèle de la comptabilité opérationnelle
+// (bons_decaissement). Volontairement séparé de /depenses : ce sont des abonnements payés par carte
+// personnelle, pas des sorties de caisse soumises au seuil de validation hiérarchique (§16.7).
+export const fraisNumeriques = pgTable(
+  "frais_numeriques",
+  {
+    id: serial("id").primaryKey(),
+    libelle: varchar("libelle", { length: 150 }).notNull(),
+    categorie: varchar("categorie", { length: 20 }).notNull(),
+    devise: varchar("devise", { length: 4 }).notNull(),
+    montant: numeric("montant", { precision: 12, scale: 2 }).notNull(),
+    frequence: varchar("frequence", { length: 10 }).notNull(),
+    statut: varchar("statut", { length: 10 }).notNull().default("PREVU"),
+    notes: text("notes"),
+    auteurId: integer("auteur_id").references(() => utilisateurs.id),
+    dateCreation: timestamp("date_creation").notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "frais_numeriques_categorie_check",
+      sql`${table.categorie} in ('DOMAINE','HEBERGEMENT','OUTILS_IA','PAIEMENT_LIGNE','BOUTIQUE','AUTRE')`
+    ),
+    check("frais_numeriques_devise_check", sql`${table.devise} in ('USD','FCFA')`),
+    check("frais_numeriques_frequence_check", sql`${table.frequence} in ('UNIQUE','MENSUEL','ANNUEL')`),
+    check("frais_numeriques_statut_check", sql`${table.statut} in ('PREVU','ACTIF')`),
+  ]
+);

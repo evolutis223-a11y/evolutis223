@@ -24,13 +24,14 @@ export const ALL_MODULES = [
   "Trésorerie",
   "Rapports",
   "Paramètres",
+  "Frais numériques",
 ] as const;
 
 export type ModuleName = (typeof ALL_MODULES)[number];
 
 export const ROLE_MODULES: Record<string, readonly ModuleName[]> = {
   SUPER_ADMIN: ALL_MODULES,
-  ADMIN: ALL_MODULES.filter((m) => m !== "Paramètres"),
+  ADMIN: ALL_MODULES.filter((m) => m !== "Paramètres" && m !== "Frais numériques"),
   MANAGER: [
     "Tableau de bord",
     "Affaires",
