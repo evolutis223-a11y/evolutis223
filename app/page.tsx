@@ -14,6 +14,7 @@ const MODULE_ROUTES: Partial<Record<ModuleName, string>> = {
   Catalogue: "/catalogue",
   "Nos produits": "/boutique",
   "R&D": "/rd-calculateurs",
+  Marketing: "/marketing",
   Stocks: "/stocks",
   Production: "/production",
   Clients: "/clients",

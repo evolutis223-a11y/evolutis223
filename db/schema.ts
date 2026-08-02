@@ -835,3 +835,41 @@ export const besoinsSaisonniers = pgTable(
     ),
   ]
 );
+
+// §7 module Marketing — scope délégué à Claude par l'utilisateur (2026-08-02, "tu gères").
+// "Articles du Catalogue → Promos sur prix de vente" (§7) : une promotion réduit l'affichage du
+// prix sur /boutique sans jamais toucher articles.prix_vente — le vrai prix reste la source de
+// vérité, la promo est une couche d'affichage/calcul temporaire, réversible, jamais destructive.
+export const promotions = pgTable(
+  "promotions",
+  {
+    id: serial("id").primaryKey(),
+    nom: varchar("nom", { length: 150 }).notNull(),
+    articleId: integer("article_id")
+      .notNull()
+      .references(() => articles.id),
+    type: varchar("type", { length: 20 }).notNull(), // POURCENTAGE | MONTANT_FIXE
+    valeur: numeric("valeur", { precision: 12, scale: 2 }).notNull(),
+    dateDebut: date("date_debut").notNull(),
+    dateFin: date("date_fin").notNull(),
+    actif: boolean("actif").notNull().default(true),
+    auteurId: integer("auteur_id")
+      .notNull()
+      .references(() => utilisateurs.id),
+    dateCreation: timestamp("date_creation").notNull().defaultNow(),
+  },
+  (table) => [
+    check("promotions_type_check", sql`${table.type} in ('POURCENTAGE','MONTANT_FIXE')`),
+    check("promotions_dates_check", sql`${table.dateFin} >= ${table.dateDebut}`),
+  ]
+);
+
+// Bannière d'annonce affichée en haut de /boutique (soldes, nouveauté, message saisonnier) —
+// singleton, même esprit que parametres_marquage/parametres_tresorerie.
+export const parametresMarketing = pgTable("parametres_marketing", {
+  id: serial("id").primaryKey(),
+  messageBanniere: text("message_banniere"),
+  banniereActive: boolean("banniere_active").notNull().default(false),
+  modifiePar: integer("modifie_par").references(() => utilisateurs.id),
+  dateModification: timestamp("date_modification").notNull().defaultNow(),
+});

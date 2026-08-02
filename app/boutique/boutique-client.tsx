@@ -18,9 +18,19 @@ interface KitStock {
   articleId: number;
   stockKitCalcule: number;
 }
+interface PromotionActive {
+  articleId: number;
+  type: string;
+  valeur: number;
+}
 
 function formatFcfa(v: string | number) {
   return `${Math.round(Number(v)).toLocaleString("fr-FR")} F`;
+}
+
+function prixApresPromo(prixVente: number, promo: PromotionActive | undefined) {
+  if (!promo) return prixVente;
+  return promo.type === "POURCENTAGE" ? prixVente * (1 - promo.valeur / 100) : Math.max(0, prixVente - promo.valeur);
 }
 
 function StockPill({ dispo, label }: { dispo: number | null; label?: string }) {
@@ -50,11 +60,13 @@ function ProductCard({
   variantesArticle,
   kitStock,
   brancheNom,
+  promo,
 }: {
   article: Article;
   variantesArticle: VarianteRow[];
   kitStock?: KitStock;
   brancheNom: string | null;
+  promo?: PromotionActive;
 }) {
   const meta = familleMeta(article.famille);
   const [selectedVarianteId, setSelectedVarianteId] = useState<number | null>(
@@ -91,9 +103,21 @@ function ProductCard({
           <StockPill dispo={dispo} />
         </div>
         {brancheNom && <div className="mt-0.5 text-xs text-muted-foreground">{brancheNom}</div>}
-        <div className="mt-2 text-base font-semibold tabular-nums text-foreground">
-          {formatFcfa(article.prixVente)}
-        </div>
+        {promo ? (
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-base font-semibold tabular-nums text-primary">
+              {formatFcfa(prixApresPromo(Number(article.prixVente), promo))}
+            </span>
+            <span className="text-xs tabular-nums text-muted-foreground line-through">{formatFcfa(article.prixVente)}</span>
+            <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+              {promo.type === "POURCENTAGE" ? `-${promo.valeur}%` : `-${formatFcfa(promo.valeur)}`}
+            </span>
+          </div>
+        ) : (
+          <div className="mt-2 text-base font-semibold tabular-nums text-foreground">
+            {formatFcfa(article.prixVente)}
+          </div>
+        )}
 
         {article.famille === "A" && variantesArticle.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
@@ -129,14 +153,19 @@ export function BoutiqueClient({
   variantes,
   branches,
   kitStocks,
+  promotions,
+  banniere,
 }: {
   articles: Article[];
   variantes: VarianteRow[];
   branches: Branche[];
   kitStocks: KitStock[];
+  promotions: PromotionActive[];
+  banniere: { message: string | null; active: boolean };
 }) {
   const [activeFamille, setActiveFamille] = useState<FamilleId | "TOUS">("TOUS");
   const brancheNom = (id: number | null) => branches.find((b) => b.id === id)?.nom ?? null;
+  const promoByArticle = useMemo(() => new Map(promotions.map((p) => [p.articleId, p])), [promotions]);
 
   const variantesByArticle = useMemo(() => {
     const m = new Map<number, VarianteRow[]>();
@@ -157,6 +186,11 @@ export function BoutiqueClient({
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
+      {banniere.active && banniere.message && (
+        <div className="mb-4 rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-semibold text-primary-foreground">
+          {banniere.message}
+        </div>
+      )}
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">EVOLUTIS223 — Nos produits</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -207,6 +241,7 @@ export function BoutiqueClient({
               variantesArticle={variantesByArticle.get(a.id) ?? []}
               kitStock={kitStockByArticle.get(a.id)}
               brancheNom={brancheNom(a.brancheId)}
+              promo={promoByArticle.get(a.id)}
             />
           ))}
         </div>
