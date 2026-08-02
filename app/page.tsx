@@ -22,6 +22,9 @@ const MODULE_ROUTES: Partial<Record<ModuleName, string>> = {
   Trésorerie: "/tresorerie",
   Commercial: "/commercial",
   Fournisseurs: "/fournisseurs",
+  Achats: "/achats",
+  Dépenses: "/depenses",
+  Charges: "/charges",
   RH: "/rh",
   Rapports: "/rapports",
 };

@@ -1,0 +1,19 @@
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth";
+import { hasModuleAccess } from "@/lib/permissions";
+import { chargerDonneesDepenses } from "./actions";
+import { DepensesClient } from "./depenses-client";
+
+export default async function DepensesPage() {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  if (!hasModuleAccess(session.roleCode, "Dépenses") && !hasModuleAccess(session.roleCode, "Charges")) {
+    return (
+      <main className="p-6">
+        <p className="text-sm text-muted-foreground">Ce rôle n&apos;a pas accès aux dépenses/charges.</p>
+      </main>
+    );
+  }
+  const donnees = await chargerDonneesDepenses();
+  return <DepensesClient {...donnees} />;
+}
