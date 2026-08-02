@@ -124,18 +124,20 @@ Aucun ne bloque le démarrage, mais à trancher avant la phase concernée : rôl
 
 ---
 
-## Ce qui reste à faire — et pourquoi (2026-07-28)
+## Ce qui reste à faire — et pourquoi (mise à jour 2026-08-02)
 
-Le noyau métier (Phases 0, 1, 2) est terminé et vérifié en base réelle. Ce qui reste se répartit en quatre catégories bien différentes — le "pourquoi" change ce qu'il faut faire ensuite.
+Le noyau métier (Phases 0, 1, 2), le parcours maquette (§10ter), le configurateur public (§3.3/§10), RH (§7) et Rapports/Finance (§7) sont terminés et vérifiés en base réelle. Ce qui reste se répartit en quatre catégories bien différentes — le "pourquoi" change ce qu'il faut faire ensuite.
 
 **A. Bloqué — décision hors de portée de Claude, besoin de l'utilisateur**
-- **Paiement Mobile Money (3.4)** : choisir un agrégateur réel (PayDunya / CinetPay / Kkiapay) et créer un compte développeur pour obtenir des clés de test — nécessite un compte externe au nom de l'entreprise.
-- ~~Stockage des fichiers uploadés~~ : **tranché 2026-07-30 (Vercel Blob)** et implémenté/vérifié 2026-07-31 via le parcours maquette (§10ter, `lib/blob.ts`, réutilisable tel quel par 3.3). Reste un point pratique, pas une décision : l'utilisateur doit créer un vrai store Vercel Blob et fournir `BLOB_READ_WRITE_TOKEN` dans son `.env` réel avant que les uploads fonctionnent en local/prod.
+- **Paiement Mobile Money (3.4)** : choisir un agrégateur réel (PayDunya / CinetPay / Kkiapay) et créer un compte développeur pour obtenir des clés de test — nécessite un compte externe au nom de l'entreprise. **Seul vrai blocage restant avant la mise en ligne.**
+- **Vercel Blob non configuré côté utilisateur** : le code est fait et vérifié (§10ter/3ter), mais aucun store réel n'existe encore — `BLOB_READ_WRITE_TOKEN` manquant dans le `.env` réel. Sans ça, aucun upload (logo maquette, logo configurateur, modèle admin) ne fonctionne en pratique. Pas une décision à prendre, juste une action à faire (créer le store sur vercel.com, copier le token).
 
-**B. Pas encore attaqué — gros chantier, pas bloqué, juste pas fait**
-- **R&D Calculateurs (Phase 2bis)** : moteur de coût, bibliothèque de références et écrans (Ensemble complet, mode Tissu) codés et vérifiés en base réelle (2026-07-29). Reste le configurateur produit-first guidé interne (Cas B, distinct du configurateur client `/configurateur` livré en 3ter).
-- **Modules périphériques (Phase 4)** : le cahier des charges dit lui-même que ça "peut suivre le lancement", volontairement en dernier.
-- **3 des 6 gabarits PDF** (Bon de commande, Ordre de mission, Courrier) — Reçu de caisse, Bon de livraison et Fiche de paie existent déjà.
+**B. Pas encore attaqué — sous-spécifié dans le cahier des charges, decision utilisateur nécessaire avant de coder**
+- **Achats, Dépenses, Charges comme modules dédiés** : juste un nom dans la liste des 19 modules (§7), aucun champ/écran décrit. Les catégories Dépenses/Charges existent déjà en pratique via les bons de décaissement (`/tresorerie`, catégories ACHAT_MARCHANDISE/CHARGE_GENERAL) — reste à savoir ce qu'un module "Achats" ajouterait de plus (bons de commande fournisseurs ? suivi de commandes en cours ?).
+- **Marketing** : une ligne de spec ("Articles du Catalogue → Promos sur prix de vente, demandes de devis → Affaires"), pas assez pour coder sans deviner l'écran. Lié à l'incohérence de rôle non résolue (point D).
+- **Rapports — dimensions RH, Incidents, Prévisions** : la dimension Finance est faite (§7) ; ces trois-là n'ont aucune définition ("Incidents" = quoi exactement ? "Prévisions" = quel modèle de calcul ?).
+- **Configurateur produit-first guidé interne (R&D, Cas B)** : distinct du configurateur client public déjà livré — écran "produit d'abord" pour la vente interne assistée, jamais détaillé au-delà d'une mention (§10bis).
+- **3 des 6 gabarits PDF restants** (Bon de commande, Ordre de mission, Courrier) — les deux premiers dépendent du module Achats/Fournisseurs (Bon de commande) ; le Courrier n'a pas de point d'intégration identifié dans l'appli (à qui/quoi sert-il concrètement ?).
 
 **C. Mis de côté — à la demande explicite de l'utilisateur**
 - **Production industrielle de pagne** : retirée du module R&D sur instruction directe (expérience professionnelle de 10 ans en usine textile au Mali — "on n'a pas toutes les cartes en main") ; à configurer séparément plus tard, quand l'utilisateur rouvrira le sujet.
