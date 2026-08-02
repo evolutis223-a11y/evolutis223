@@ -29,6 +29,16 @@ export const DEFAUTS_BON_LIVRAISON: ParametresBonLivraison = {
   labelSignataireDroite: "EVOLUTIS223",
 };
 
+export interface ParametresFichePaie {
+  afficherMentionsLegales: boolean;
+  labelSignataire: string;
+}
+
+export const DEFAUTS_FICHE_PAIE: ParametresFichePaie = {
+  afficherMentionsLegales: true,
+  labelSignataire: "L'employé(e)",
+};
+
 async function chargerConfig(type: TypeDocument): Promise<Record<string, unknown> | null> {
   const [row] = await db
     .select({ config: parametresDocuments.config })
@@ -46,6 +56,11 @@ export async function chargerParametresRecuCaisse(): Promise<ParametresRecuCaiss
 export async function chargerParametresBonLivraison(): Promise<ParametresBonLivraison> {
   const config = await chargerConfig("BON_LIVRAISON");
   return { ...DEFAUTS_BON_LIVRAISON, ...config };
+}
+
+export async function chargerParametresFichePaie(): Promise<ParametresFichePaie> {
+  const config = await chargerConfig("FICHE_PAIE");
+  return { ...DEFAUTS_FICHE_PAIE, ...config };
 }
 
 export async function enregistrerParametresDocument(

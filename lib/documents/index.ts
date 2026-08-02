@@ -6,17 +6,30 @@
 
 export { generateRecuCaissePdf, RecuCaisseDocument } from "./recu-caisse";
 export { generateBonLivraisonPdf, BonLivraisonDocument } from "./bon-livraison";
+export { generateFichePaiePdf, FichePaieDocument } from "./fiche-paie";
 export { ENTREPRISE, MENTIONS_LEGALES_TEXTE } from "./legal-mentions";
 export { sha256Hex } from "./hash";
 export { formatFcfa, formatDateHeure } from "./format";
 export {
   chargerParametresRecuCaisse,
   chargerParametresBonLivraison,
+  chargerParametresFichePaie,
   enregistrerParametresDocument,
   DEFAUTS_RECU_CAISSE,
   DEFAUTS_BON_LIVRAISON,
+  DEFAUTS_FICHE_PAIE,
   type TypeDocument,
   type ParametresRecuCaisse,
   type ParametresBonLivraison,
+  type ParametresFichePaie,
 } from "./parametres";
-export type { RecuCaisseData, LigneRecu, ModeReglement, BonLivraisonData, LigneBonLivraison, DocumentGenere } from "./types";
+export type {
+  RecuCaisseData,
+  LigneRecu,
+  ModeReglement,
+  BonLivraisonData,
+  LigneBonLivraison,
+  FichePaieData,
+  RubriquePaie,
+  DocumentGenere,
+} from "./types";

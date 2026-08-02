@@ -49,6 +49,24 @@ export interface LigneBonLivraison {
   quantiteLivree: number;
 }
 
+export interface RubriquePaie {
+  designation: string;
+  /** Montant signé — positif pour un gain (salaire, prime, commission), négatif pour une retenue. */
+  montant: number;
+}
+
+export interface FichePaieData {
+  /** Numéro d'affichage du document, ex "PAIE-2026-08-0001" (dérivé, pas stocké — même logique que BL-). */
+  numero: string;
+  dateEmission?: Date;
+  periode: string; // "2026-08"
+  employeNom: string;
+  employeFonction?: string;
+  typeContrat: string;
+  rubriques: RubriquePaie[];
+  netAPayer: number;
+}
+
 export interface BonLivraisonData {
   /** Numéro du bon lui-même, ex "BL-26-0001" (§13 — espace de numérotation propre au document imprimé,
    * distinct du numéro de l'affaire qu'il documente). */

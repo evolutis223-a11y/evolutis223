@@ -353,7 +353,15 @@ function PaieTab({
                 <div className="text-sm text-foreground">{b.personnelNom} — {b.periode}</div>
                 <div className="text-xs text-muted-foreground">Net à payer : {fmt(b.netAPayer)}</div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <a
+                  href={`/api/documents/fiche-paie/${b.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold text-primary underline-offset-2 hover:underline"
+                >
+                  PDF
+                </a>
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${b.statut === "PAYE" ? "bg-green-700/20 text-green-700" : "bg-muted text-muted-foreground"}`}>
                   {b.statut}
                 </span>
