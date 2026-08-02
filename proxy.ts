@@ -12,11 +12,16 @@ const PUBLIC_PATHS = ["/login", "/boutique", "/suivi", "/maquette", "/configurat
 const CHEMINS_GRAND_PUBLIC = ["/boutique", "/maquette", "/configurateur", "/suivi"];
 const COOKIE_APERCU = "evolutis223_apercu";
 
-function verifierVerrouPublic(request: NextRequest): NextResponse | null {
+async function verifierVerrouPublic(request: NextRequest): Promise<NextResponse | null> {
   const { pathname, searchParams } = request.nextUrl;
   const estGrandPublic = CHEMINS_GRAND_PUBLIC.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   if (!estGrandPublic) return null;
   if (process.env.SITE_OUVERT_AU_PUBLIC === "true") return null;
+
+  // Le propriétaire/personnel connecté (session valide) voit toujours tout, verrou ou pas — le
+  // verrou vise les visiteurs anonymes, jamais quelqu'un qui a déjà un compte (2026-08-02).
+  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (token && (await verifySessionToken(token))) return null;
 
   const motDePasse = process.env.SITE_MOT_DE_PASSE_APERCU;
   if (!motDePasse) return null; // pas configuré (ex. dev local) = pas de verrou
@@ -46,7 +51,7 @@ function verifierVerrouPublic(request: NextRequest): NextResponse | null {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const reponseVerrou = verifierVerrouPublic(request);
+  const reponseVerrou = await verifierVerrouPublic(request);
   if (reponseVerrou) return reponseVerrou;
 
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {

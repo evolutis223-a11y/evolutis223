@@ -146,3 +146,4 @@ Le noyau métier (Phases 0, 1, 2), le parcours maquette (§10ter), le configurat
 - Sauvegardes/plan de reprise de la base — à trancher avant la mise en prod, pas avant.
 - Migration de données existantes — inconnu s'il y a des données papier ou d'un système antérieur à reprendre.
 - Fournisseur SMS réel pour le flux téléphone+PIN — pas encore vérifié auprès d'un fournisseur au Mali.
+- **Authentification à deux facteurs (2FA) sur les comptes des services externes** (Vercel, GitHub, Namecheap, Neon) — ignorée pendant la mise en place initiale (2026-08-02) pour avancer plus vite, à activer ensuite. L'utilisateur a explicitement demandé qu'on n'oublie pas ce point.
