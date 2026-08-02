@@ -10,6 +10,7 @@ const ROLES = [
   ["COMPTABLE", "Comptable"],
   ["RESP_COMMERCIAL", "Responsable Commercial"],
   ["COMMERCIAL", "Commercial"],
+  ["AGENT_MARKETING", "Agent marketing"],
   ["VENDEUR", "Vendeur"],
   ["FREELANCE", "Freelance"],
   ["JOURNALIER", "Journalier"],
@@ -33,6 +34,7 @@ const DEV_USERS = [
   { nom: "Compte de test — Comptable", telephone: "+22300000002", pin: "1234", roleCode: "COMPTABLE" },
   { nom: "Compte de test — Livreur", telephone: "+22300000003", pin: "1234", roleCode: "LIVREUR" },
   { nom: "Ibrahim Diarra", telephone: "+22300000004", pin: "1234", roleCode: "EMPLOYE" },
+  { nom: "Compte de test — Agent marketing", telephone: "+22300000005", pin: "1234", roleCode: "AGENT_MARKETING" },
 ];
 
 async function main() {

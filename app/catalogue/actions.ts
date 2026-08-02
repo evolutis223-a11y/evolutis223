@@ -33,6 +33,15 @@ export async function createArticle(
   const categorieMarquageRaw = String(formData.get("categorieMarquage") ?? "").trim();
   const categorieMarquage =
     famille === "A" && ["ENSEMBLE", "TISSU"].includes(categorieMarquageRaw) ? categorieMarquageRaw : null;
+  // Prix de revient (Famille C/D uniquement) — ces familles n'ont pas de lot d'approvisionnement
+  // qui alimenterait pmp automatiquement (§4.3), donc saisie manuelle à la création. Décision
+  // utilisateur 2026-08-02 (pagne industriel notamment) : suivre juste ce prix pour commencer,
+  // le vrai système de gestion de production viendra plus tard.
+  const prixRevientRaw = String(formData.get("prixRevient") ?? "").trim();
+  const prixRevient = (famille === "C" || famille === "D") && prixRevientRaw ? Number(prixRevientRaw) : null;
+  if (prixRevient !== null && (!Number.isFinite(prixRevient) || prixRevient < 0)) {
+    return { error: "Prix de revient invalide." };
+  }
 
   if (!nom) return { error: "Nom requis." };
   if (!FAMILLES.includes(famille as (typeof FAMILLES)[number])) {
@@ -58,6 +67,7 @@ export async function createArticle(
     nom,
     famille,
     prixVente: prix.toFixed(2),
+    pmp: prixRevient !== null ? prixRevient.toFixed(2) : "0",
     aVariantes: famille === "A",
     publieBoutique,
     photoUrl: photoUrl || null,
@@ -75,6 +85,19 @@ export async function definirCategorieMarquage(articleId: number, categorie: "EN
     throw new Error("Accès refusé.");
   }
   await db.update(articles).set({ categorieMarquage: categorie }).where(eq(articles.id, articleId));
+  revalidatePath("/catalogue");
+}
+
+// Famille C/D uniquement — pmp normalement alimenté par les lots d'approvisionnement (§4.3),
+// inexistants pour ces familles. Saisie manuelle du prix de revient (décision utilisateur
+// 2026-08-02) — alimente aussi le coût d'achat des ventes dans /rapports (dimension Finance).
+export async function definirPrixRevient(articleId: number, prixRevient: number) {
+  const session = await getSession();
+  if (!session || !hasModuleAccess(session.roleCode, "Catalogue")) {
+    throw new Error("Accès refusé.");
+  }
+  if (!Number.isFinite(prixRevient) || prixRevient < 0) throw new Error("Prix de revient invalide.");
+  await db.update(articles).set({ pmp: prixRevient.toFixed(2) }).where(eq(articles.id, articleId));
   revalidatePath("/catalogue");
 }
 

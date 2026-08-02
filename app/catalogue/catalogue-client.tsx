@@ -7,6 +7,7 @@ import type { articles, branches } from "@/db/schema";
 import {
   createArticle,
   definirCategorieMarquage,
+  definirPrixRevient,
   toggleNecessiteAssemblage,
   togglePublieBoutique,
   type CreateArticleState,
@@ -312,6 +313,29 @@ export function CatalogueClient({
                     </select>
                   </div>
                 )}
+                {(detailArticle.famille === "C" || detailArticle.famille === "D") && (
+                  <div className="mt-3">
+                    <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
+                      Prix de revient
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1"
+                      defaultValue={detailArticle.pmp}
+                      onBlur={(e) => {
+                        const next = Number(e.target.value);
+                        if (!Number.isFinite(next) || next < 0) return;
+                        definirPrixRevient(detailArticle.id, next);
+                        setDetailArticle({ ...detailArticle, pmp: next.toFixed(2) });
+                      }}
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Saisie manuelle — pas de lot d&apos;approvisionnement pour cette famille (§4.3). Alimente le coût
+                      d&apos;achat des ventes dans /rapports.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex justify-end gap-2 border-t border-border p-4">
@@ -426,6 +450,18 @@ export function CatalogueClient({
                     </label>
                     <Input name="prixVente" type="number" min="0" step="1" placeholder="Ex. 9000" required />
                   </div>
+
+                  {(drawerFamille === "C" || drawerFamille === "D") && (
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
+                        Prix de revient (optionnel)
+                      </label>
+                      <Input name="prixRevient" type="number" min="0" step="1" placeholder="Ex. 5000" />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Pas de lot d&apos;approvisionnement pour cette famille — saisie manuelle, modifiable ensuite.
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">

@@ -136,11 +136,11 @@ Le noyau métier (Phases 0, 1, 2), le parcours maquette (§10ter), le configurat
 - **Configurateur produit-first guidé interne (R&D, Cas B)** : distinct du configurateur client public déjà livré — écran "produit d'abord" pour la vente interne assistée, jamais détaillé au-delà d'une mention (§10bis). Rappel (2026-08-02) : R&D est en réalité un module plus large — un bac à sable pour d'autres applications de l'utilisateur (ex. tunnels de vente) en test avant d'être branchées à leur place définitive, potentiellement accessible à des partenaires/développeurs externes — pas juste le calculateur de marquage.
 - **3 des 6 gabarits PDF restants** (Bon de commande, Ordre de mission, Courrier) — les deux premiers dépendent du module Achats/Fournisseurs (Bon de commande, achats de matières/consommables plutôt que sorties de caisse déjà couvertes) ; le Courrier n'a pas de point d'intégration identifié dans l'appli (à qui/quoi sert-il concrètement ?).
 
-**C. Mis de côté — à la demande explicite de l'utilisateur**
-- **Production industrielle de pagne** : retirée du module R&D sur instruction directe (expérience professionnelle de 10 ans en usine textile au Mali — "on n'a pas toutes les cartes en main") ; à configurer séparément plus tard, quand l'utilisateur rouvrira le sujet.
+**C. Résolu depuis (2026-08-02)**
+- ~~Production industrielle de pagne~~ : **tranchée différemment** — traitée comme un article normal via Devis/Proforma → Facture (§4.5/§12), plus de dossier séparé. Prix de revient saisi manuellement sur la fiche article (Famille C/D, `/catalogue`) construit et vérifié en base réelle. Le système de suivi de production plus complet reste explicitement pour plus tard, à la demande de l'utilisateur.
+- ~~Incohérence des rôles "Marketing"/"Agent marketing"~~ : **résolue** — rôle Agent marketing créé (Tableau de bord/Marketing/Clients), personne ne l'occupe encore mais le poste est prêt dès l'embauche. Voir CAHIER_DES_CHARGES.md §6.
 
 **D. Petits points ouverts (§16), non bloquants**
 - Sauvegardes/plan de reprise de la base — à trancher avant la mise en prod, pas avant.
-- Incohérence des rôles "Marketing"/"Agent marketing" dans le prototype d'origine — décision utilisateur, pas d'invention de structure de rôle sans feu vert.
 - Migration de données existantes — inconnu s'il y a des données papier ou d'un système antérieur à reprendre.
 - Fournisseur SMS réel pour le flux téléphone+PIN — pas encore vérifié auprès d'un fournisseur au Mali.

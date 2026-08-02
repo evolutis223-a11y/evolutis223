@@ -56,6 +56,11 @@ export const ROLE_MODULES: Record<string, readonly ModuleName[]> = {
   ],
   RESP_COMMERCIAL: ["Tableau de bord", "Affaires", "Clients", "Commercial", "Rapports"],
   COMMERCIAL: ["Tableau de bord", "Affaires", "Clients", "Catalogue", "Commercial"],
+  // Bras terrain du Marketing (§6, tranché 2026-08-02) : campagnes, prospection, transforme les
+  // prospects en clients. Recrutement définitif ou temporaire (une campagne, ex. un mois) — même
+  // registre RH que les autres (type_contrat SALARIE ou PARTENAIRE selon le cas), rien de
+  // spécifique à modéliser côté RH pour cette distinction.
+  AGENT_MARKETING: ["Tableau de bord", "Marketing", "Clients"],
   VENDEUR: ["Tableau de bord", "Affaires", "Catalogue", "R&D", "Commandes"],
   FREELANCE: ["Tableau de bord", "Commercial"],
   JOURNALIER: [], // pas de compte applicatif (§6) — présent pour complétude, jamais connecté
