@@ -3,7 +3,7 @@
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { affaires, bulletinsPaie, personnel, utilisateurs } from "@/db/schema";
+import { affaires, besoinsSaisonniers, bulletinsPaie, incidentsPersonnel, personnel, utilisateurs } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 import { creerBonDecaissement } from "@/app/tresorerie/actions";
@@ -17,7 +17,7 @@ async function requireRhAccess() {
 }
 
 export async function chargerDonneesRh() {
-  const [personnelRows, bulletinRows, utilisateurRows] = await Promise.all([
+  const [personnelRows, bulletinRows, utilisateurRows, incidentRows, besoinRows] = await Promise.all([
     db.select().from(personnel).orderBy(personnel.nom),
     db
       .select({
@@ -40,6 +40,23 @@ export async function chargerDonneesRh() {
       .orderBy(desc(bulletinsPaie.dateCreation))
       .limit(100),
     db.select({ id: utilisateurs.id, nom: utilisateurs.nom }).from(utilisateurs).where(eq(utilisateurs.actif, true)),
+    db
+      .select({
+        id: incidentsPersonnel.id,
+        personnelId: incidentsPersonnel.personnelId,
+        personnelNom: personnel.nom,
+        type: incidentsPersonnel.type,
+        dateIncident: incidentsPersonnel.dateIncident,
+        description: incidentsPersonnel.description,
+        impact: incidentsPersonnel.impact,
+        obligationsLegales: incidentsPersonnel.obligationsLegales,
+        statut: incidentsPersonnel.statut,
+      })
+      .from(incidentsPersonnel)
+      .innerJoin(personnel, eq(personnel.id, incidentsPersonnel.personnelId))
+      .orderBy(desc(incidentsPersonnel.dateIncident))
+      .limit(100),
+    db.select().from(besoinsSaisonniers).orderBy(desc(besoinsSaisonniers.periodeDebut)).limit(100),
   ]);
 
   return {
@@ -58,7 +75,101 @@ export async function chargerDonneesRh() {
       netAPayer: Number(b.netAPayer),
     })),
     utilisateurs: utilisateurRows,
+    incidents: incidentRows,
+    besoins: besoinRows,
   };
+}
+
+export interface IncidentState {
+  error: string | null;
+  incidentId?: number;
+}
+
+export async function declarerIncident(_prev: IncidentState, formData: FormData): Promise<IncidentState> {
+  try {
+    const session = await requireRhAccess();
+    const personnelId = Number(formData.get("personnelId"));
+    const type = String(formData.get("type") ?? "");
+    const dateIncident = String(formData.get("dateIncident") ?? "").trim();
+    const description = String(formData.get("description") ?? "").trim();
+    const impact = String(formData.get("impact") ?? "").trim();
+    const obligationsLegales = String(formData.get("obligationsLegales") ?? "").trim();
+
+    if (!personnelId) return { error: "Personnel requis." };
+    if (!["MALADIE", "BLESSURE", "DECES", "CATASTROPHE_NATURELLE", "BLOCAGE_RECRUTEMENT", "AUTRE"].includes(type)) {
+      return { error: "Type d'incident invalide." };
+    }
+    if (!dateIncident) return { error: "Date requise." };
+
+    const [created] = await db
+      .insert(incidentsPersonnel)
+      .values({
+        personnelId,
+        type,
+        dateIncident,
+        description: description || null,
+        impact: impact || null,
+        obligationsLegales: obligationsLegales || null,
+        auteurId: session.userId,
+      })
+      .returning();
+    revalidatePath("/rh");
+    return { error: null, incidentId: created.id };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur." };
+  }
+}
+
+export async function changerStatutIncident(id: number, statut: string) {
+  await requireRhAccess();
+  if (!["DECLARE", "EN_COURS", "RESOLU"].includes(statut)) return;
+  await db.update(incidentsPersonnel).set({ statut }).where(eq(incidentsPersonnel.id, id));
+  revalidatePath("/rh");
+}
+
+export interface BesoinState {
+  error: string | null;
+  besoinId?: number;
+}
+
+export async function ajouterBesoinSaisonnier(_prev: BesoinState, formData: FormData): Promise<BesoinState> {
+  try {
+    const session = await requireRhAccess();
+    const titre = String(formData.get("titre") ?? "").trim();
+    const fonction = String(formData.get("fonction") ?? "").trim();
+    const nombrePersonnesRequis = Number(formData.get("nombrePersonnesRequis") || 1);
+    const periodeDebut = String(formData.get("periodeDebut") ?? "").trim();
+    const periodeFin = String(formData.get("periodeFin") ?? "").trim();
+    const notes = String(formData.get("notes") ?? "").trim();
+
+    if (!titre) return { error: "Titre requis." };
+    if (!periodeDebut || !periodeFin) return { error: "Période requise." };
+    if (!Number.isFinite(nombrePersonnesRequis) || nombrePersonnesRequis < 1) return { error: "Nombre de personnes invalide." };
+
+    const [created] = await db
+      .insert(besoinsSaisonniers)
+      .values({
+        titre,
+        fonction: fonction || null,
+        nombrePersonnesRequis,
+        periodeDebut,
+        periodeFin,
+        notes: notes || null,
+        auteurId: session.userId,
+      })
+      .returning();
+    revalidatePath("/rh");
+    return { error: null, besoinId: created.id };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur." };
+  }
+}
+
+export async function changerStatutBesoin(id: number, statut: string) {
+  await requireRhAccess();
+  if (!["PLANIFIE", "EN_COURS", "POURVU", "ANNULE"].includes(statut)) return;
+  await db.update(besoinsSaisonniers).set({ statut }).where(eq(besoinsSaisonniers.id, id));
+  revalidatePath("/rh");
 }
 
 export interface PersonnelState {

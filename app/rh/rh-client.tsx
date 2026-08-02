@@ -4,9 +4,13 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  ajouterBesoinSaisonnier,
   ajouterPersonnel,
   basculerActifPersonnel,
   calculerCommissionSuggeree,
+  changerStatutBesoin,
+  changerStatutIncident,
+  declarerIncident,
   genererBulletin,
   marquerBulletinPaye,
 } from "./actions";
@@ -36,6 +40,27 @@ type Bulletin = {
   statut: string;
 };
 type UtilisateurOpt = { id: number; nom: string };
+type Incident = {
+  id: number;
+  personnelId: number;
+  personnelNom: string;
+  type: string;
+  dateIncident: string;
+  description: string | null;
+  impact: string | null;
+  obligationsLegales: string | null;
+  statut: string;
+};
+type Besoin = {
+  id: number;
+  titre: string;
+  fonction: string | null;
+  nombrePersonnesRequis: number;
+  periodeDebut: string;
+  periodeFin: string;
+  notes: string | null;
+  statut: string;
+};
 
 function fmt(n: number) {
   return `${Math.round(n).toLocaleString("fr-FR")} F`;
@@ -43,37 +68,54 @@ function fmt(n: number) {
 function moisCourant() {
   return new Date().toISOString().slice(0, 7);
 }
+function ajourdhui() {
+  return new Date().toISOString().slice(0, 10);
+}
 const TYPE_LABELS: Record<string, string> = { SALARIE: "Salarié", JOURNALIER: "Journalier", PARTENAIRE: "Partenaire" };
+const INCIDENT_TYPE_LABELS: Record<string, string> = {
+  MALADIE: "Maladie",
+  BLESSURE: "Blessure",
+  DECES: "Décès",
+  CATASTROPHE_NATURELLE: "Catastrophe naturelle",
+  BLOCAGE_RECRUTEMENT: "Blocage de recrutement",
+  AUTRE: "Autre",
+};
 
 export function RhClient({
   personnel: initialPersonnel,
   bulletins: initialBulletins,
   utilisateurs,
+  incidents: initialIncidents,
+  besoins: initialBesoins,
 }: {
   personnel: Personnel[];
   bulletins: Bulletin[];
   utilisateurs: UtilisateurOpt[];
+  incidents: Incident[];
+  besoins: Besoin[];
 }) {
-  const [tab, setTab] = useState<"personnel" | "paie">("personnel");
+  const [tab, setTab] = useState<"personnel" | "paie" | "incidents" | "previsions">("personnel");
   const [personnel, setPersonnel] = useState(initialPersonnel);
   const [bulletins, setBulletins] = useState(initialBulletins);
+  const [incidents, setIncidents] = useState(initialIncidents);
+  const [besoins, setBesoins] = useState(initialBesoins);
 
   return (
     <main className="mx-auto max-w-4xl p-6">
       <h1 className="text-xl font-semibold text-foreground">RH (§7)</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Registre du personnel (salariés, journaliers, partenaires) et bulletins de paie — les commissions se calculent sur les
-        affaires dont la personne est l&apos;auteur.
+        Registre du personnel (salariés, journaliers, partenaires), bulletins de paie, incidents et besoins saisonniers — les
+        commissions se calculent sur les affaires dont la personne est l&apos;auteur.
       </p>
 
-      <div className="mt-5 flex gap-1.5 border-b border-border">
-        {(["personnel", "paie"] as const).map((t) => (
+      <div className="mt-5 flex flex-wrap gap-1.5 border-b border-border">
+        {(["personnel", "paie", "incidents", "previsions"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`rounded-t-md border border-b-0 px-4 py-2 text-sm font-semibold ${tab === t ? "border-border bg-muted text-foreground" : "border-transparent text-muted-foreground"}`}
           >
-            {t === "personnel" ? "Personnel" : "Paie"}
+            {t === "personnel" ? "Personnel" : t === "paie" ? "Paie" : t === "incidents" ? "Incidents" : "Prévisions"}
           </button>
         ))}
       </div>
@@ -85,6 +127,10 @@ export function RhClient({
         {tab === "paie" && (
           <PaieTab personnel={personnel} bulletins={bulletins} setBulletins={setBulletins} />
         )}
+        {tab === "incidents" && (
+          <IncidentsTab personnel={personnel} incidents={incidents} setIncidents={setIncidents} />
+        )}
+        {tab === "previsions" && <PrevisionsTab besoins={besoins} setBesoins={setBesoins} />}
       </div>
     </main>
   );
@@ -375,6 +421,248 @@ function PaieTab({
           ))}
           {bulletins.length === 0 && <p className="text-sm text-muted-foreground">Aucun bulletin pour l&apos;instant.</p>}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function IncidentsTab({
+  personnel,
+  incidents,
+  setIncidents,
+}: {
+  personnel: Personnel[];
+  incidents: Incident[];
+  setIncidents: (fn: (i: Incident[]) => Incident[]) => void;
+}) {
+  const [personnelId, setPersonnelId] = useState("");
+  const [type, setType] = useState("MALADIE");
+  const [dateIncident, setDateIncident] = useState(ajourdhui());
+  const [description, setDescription] = useState("");
+  const [impact, setImpact] = useState("");
+  const [obligationsLegales, setObligationsLegales] = useState("");
+  const [pending, setPending] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  async function handleDeclarer() {
+    if (!personnelId) {
+      setErreur("Personnel requis.");
+      return;
+    }
+    setPending(true);
+    setErreur(null);
+    const fd = new FormData();
+    fd.set("personnelId", personnelId);
+    fd.set("type", type);
+    fd.set("dateIncident", dateIncident);
+    fd.set("description", description);
+    fd.set("impact", impact);
+    fd.set("obligationsLegales", obligationsLegales);
+    const res = await declarerIncident({ error: null }, fd);
+    setPending(false);
+    if (res.error || !res.incidentId) {
+      setErreur(res.error ?? "Erreur.");
+      return;
+    }
+    const p = personnel.find((x) => x.id === Number(personnelId));
+    setIncidents((prev) => [
+      {
+        id: res.incidentId!,
+        personnelId: Number(personnelId),
+        personnelNom: p?.nom ?? "",
+        type,
+        dateIncident,
+        description: description || null,
+        impact: impact || null,
+        obligationsLegales: obligationsLegales || null,
+        statut: "DECLARE",
+      },
+      ...prev,
+    ]);
+    setDescription("");
+    setImpact("");
+    setObligationsLegales("");
+  }
+
+  async function handleStatut(id: number, statut: string) {
+    setIncidents((prev) => prev.map((i) => (i.id === id ? { ...i, statut } : i)));
+    await changerStatutIncident(id, statut);
+  }
+
+  return (
+    <div>
+      <p className="mb-3 text-xs text-muted-foreground">
+        Événements humains touchant le personnel — maladie, blessure, décès, catastrophe naturelle, blocage de recrutement.
+        Le champ « obligations légales » est une saisie libre : aucune règle de droit du travail n&apos;est déduite ou codée en
+        dur ici, à vérifier au cas par cas.
+      </p>
+
+      <div className="flex flex-col gap-2">
+        {incidents.map((i) => (
+          <div key={i.id} className="rounded-md border border-border bg-card p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="text-sm font-semibold text-foreground">
+                  {INCIDENT_TYPE_LABELS[i.type] ?? i.type} — {i.personnelNom}
+                </div>
+                <div className="text-xs text-muted-foreground">{i.dateIncident}</div>
+              </div>
+              <select
+                value={i.statut}
+                onChange={(e) => handleStatut(i.id, e.target.value)}
+                className="h-7 rounded-md border border-input bg-background px-1.5 text-xs"
+              >
+                <option value="DECLARE">Déclaré</option>
+                <option value="EN_COURS">En cours</option>
+                <option value="RESOLU">Résolu</option>
+              </select>
+            </div>
+            {i.description && <p className="mt-1.5 text-xs text-foreground">{i.description}</p>}
+            {i.impact && <p className="mt-1 text-xs text-muted-foreground">Impact : {i.impact}</p>}
+            {i.obligationsLegales && <p className="mt-1 text-xs text-muted-foreground">Obligations légales : {i.obligationsLegales}</p>}
+          </div>
+        ))}
+        {incidents.length === 0 && <p className="text-sm text-muted-foreground">Aucun incident déclaré.</p>}
+      </div>
+
+      <div className="mt-4 flex flex-col gap-2 rounded-md border border-border bg-card p-3">
+        <select value={personnelId} onChange={(e) => setPersonnelId(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
+          <option value="">Personnel concerné...</option>
+          {personnel.map((p) => (
+            <option key={p.id} value={p.id}>{p.nom}</option>
+          ))}
+        </select>
+        <div className="grid grid-cols-2 gap-2">
+          <select value={type} onChange={(e) => setType(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
+            {Object.entries(INCIDENT_TYPE_LABELS).map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
+          <Input type="date" value={dateIncident} onChange={(e) => setDateIncident(e.target.value)} />
+        </div>
+        <Input placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <Input placeholder="Impact opérationnel (ex. absence 2 semaines, remplacement nécessaire)" value={impact} onChange={(e) => setImpact(e.target.value)} />
+        <Input placeholder="Obligations légales (à vérifier vous-même, non déduites automatiquement)" value={obligationsLegales} onChange={(e) => setObligationsLegales(e.target.value)} />
+        <Button onClick={handleDeclarer} disabled={pending || !personnelId}>
+          {pending ? "Déclaration..." : "Déclarer l'incident"}
+        </Button>
+        {erreur && <p className="text-xs text-destructive">{erreur}</p>}
+      </div>
+    </div>
+  );
+}
+
+function PrevisionsTab({
+  besoins,
+  setBesoins,
+}: {
+  besoins: Besoin[];
+  setBesoins: (fn: (b: Besoin[]) => Besoin[]) => void;
+}) {
+  const [titre, setTitre] = useState("");
+  const [fonction, setFonction] = useState("");
+  const [nombrePersonnesRequis, setNombrePersonnesRequis] = useState("1");
+  const [periodeDebut, setPeriodeDebut] = useState("");
+  const [periodeFin, setPeriodeFin] = useState("");
+  const [notes, setNotes] = useState("");
+  const [pending, setPending] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  async function handleAjouter() {
+    if (!titre.trim() || !periodeDebut || !periodeFin) {
+      setErreur("Titre et période requis.");
+      return;
+    }
+    setPending(true);
+    setErreur(null);
+    const fd = new FormData();
+    fd.set("titre", titre);
+    fd.set("fonction", fonction);
+    fd.set("nombrePersonnesRequis", nombrePersonnesRequis);
+    fd.set("periodeDebut", periodeDebut);
+    fd.set("periodeFin", periodeFin);
+    fd.set("notes", notes);
+    const res = await ajouterBesoinSaisonnier({ error: null }, fd);
+    setPending(false);
+    if (res.error || !res.besoinId) {
+      setErreur(res.error ?? "Erreur.");
+      return;
+    }
+    setBesoins((prev) => [
+      {
+        id: res.besoinId!,
+        titre,
+        fonction: fonction || null,
+        nombrePersonnesRequis: Number(nombrePersonnesRequis),
+        periodeDebut,
+        periodeFin,
+        notes: notes || null,
+        statut: "PLANIFIE",
+      },
+      ...prev,
+    ]);
+    setTitre("");
+    setFonction("");
+    setNombrePersonnesRequis("1");
+    setPeriodeDebut("");
+    setPeriodeFin("");
+    setNotes("");
+  }
+
+  async function handleStatut(id: number, statut: string) {
+    setBesoins((prev) => prev.map((b) => (b.id === id ? { ...b, statut } : b)));
+    await changerStatutBesoin(id, statut);
+  }
+
+  return (
+    <div>
+      <p className="mb-3 text-xs text-muted-foreground">
+        Planification des besoins de personnel à venir — renfort saisonnier, contrats partenaires, recrutement à anticiper.
+      </p>
+
+      <div className="flex flex-col gap-2">
+        {besoins.map((b) => (
+          <div key={b.id} className="rounded-md border border-border bg-card p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="text-sm font-semibold text-foreground">{b.titre}</div>
+                <div className="text-xs text-muted-foreground">
+                  {b.fonction ? `${b.fonction} · ` : ""}
+                  {b.nombrePersonnesRequis} pers. · {b.periodeDebut} → {b.periodeFin}
+                </div>
+              </div>
+              <select
+                value={b.statut}
+                onChange={(e) => handleStatut(b.id, e.target.value)}
+                className="h-7 rounded-md border border-input bg-background px-1.5 text-xs"
+              >
+                <option value="PLANIFIE">Planifié</option>
+                <option value="EN_COURS">En cours</option>
+                <option value="POURVU">Pourvu</option>
+                <option value="ANNULE">Annulé</option>
+              </select>
+            </div>
+            {b.notes && <p className="mt-1.5 text-xs text-muted-foreground">{b.notes}</p>}
+          </div>
+        ))}
+        {besoins.length === 0 && <p className="text-sm text-muted-foreground">Aucun besoin planifié.</p>}
+      </div>
+
+      <div className="mt-4 flex flex-col gap-2 rounded-md border border-border bg-card p-3">
+        <Input placeholder="Titre (ex. Renfort saison pluvieuse 2026)" value={titre} onChange={(e) => setTitre(e.target.value)} />
+        <div className="grid grid-cols-2 gap-2">
+          <Input placeholder="Fonction recherchée" value={fonction} onChange={(e) => setFonction(e.target.value)} />
+          <Input type="number" min={1} placeholder="Nombre de personnes" value={nombrePersonnesRequis} onChange={(e) => setNombrePersonnesRequis(e.target.value)} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Input type="date" value={periodeDebut} onChange={(e) => setPeriodeDebut(e.target.value)} />
+          <Input type="date" value={periodeFin} onChange={(e) => setPeriodeFin(e.target.value)} />
+        </div>
+        <Input placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <Button onClick={handleAjouter} disabled={pending || !titre.trim()}>
+          {pending ? "Ajout..." : "Ajouter le besoin"}
+        </Button>
+        {erreur && <p className="text-xs text-destructive">{erreur}</p>}
       </div>
     </div>
   );

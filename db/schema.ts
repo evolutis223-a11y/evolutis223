@@ -775,3 +775,63 @@ export const bulletinsPaie = pgTable(
     check("bulletins_paie_statut_check", sql`${table.statut} in ('BROUILLON','PAYE')`),
   ]
 );
+
+// Dimension "Incidents" de Rapports (§7), clarifiée par l'utilisateur (2026-08-02) : ce n'est PAS
+// financier — ce sont des événements humains touchant le personnel (maladie, blessure, décès,
+// catastrophe naturelle empêchant le travail, blocage de recrutement), avec une dimension légale
+// réelle ("qu'est-ce que la loi dit"). Le champ `obligationsLegales` est un texte libre éditable
+// par l'utilisateur — Claude ne doit jamais y coder de règle de droit du travail malien en dur
+// (non vérifiable de manière fiable), juste stocker ce que l'utilisateur y renseigne lui-même.
+export const incidentsPersonnel = pgTable(
+  "incidents_personnel",
+  {
+    id: serial("id").primaryKey(),
+    personnelId: integer("personnel_id")
+      .notNull()
+      .references(() => personnel.id),
+    type: varchar("type", { length: 30 }).notNull(),
+    dateIncident: date("date_incident").notNull(),
+    description: text("description"),
+    impact: text("impact"), // conséquence opérationnelle (ex. absence prévue, remplacement nécessaire)
+    obligationsLegales: text("obligations_legales"), // saisie libre — jamais déduit/inventé par le code
+    statut: varchar("statut", { length: 20 }).notNull().default("DECLARE"),
+    auteurId: integer("auteur_id")
+      .notNull()
+      .references(() => utilisateurs.id),
+    dateCreation: timestamp("date_creation").notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "incidents_personnel_type_check",
+      sql`${table.type} in ('MALADIE','BLESSURE','DECES','CATASTROPHE_NATURELLE','BLOCAGE_RECRUTEMENT','AUTRE')`
+    ),
+    check("incidents_personnel_statut_check", sql`${table.statut} in ('DECLARE','EN_COURS','RESOLU')`),
+  ]
+);
+
+// Dimension "Prévisions" de Rapports (§7), clarifiée par l'utilisateur (2026-08-02) : planification
+// RH des besoins de personnel à venir (ex. renfort saisonnier avant la saison des pluies, gestion
+// des contrats partenaires) — pas une prévision financière.
+export const besoinsSaisonniers = pgTable(
+  "besoins_saisonniers",
+  {
+    id: serial("id").primaryKey(),
+    titre: varchar("titre", { length: 150 }).notNull(),
+    fonction: varchar("fonction", { length: 100 }),
+    nombrePersonnesRequis: integer("nombre_personnes_requis").notNull().default(1),
+    periodeDebut: date("periode_debut").notNull(),
+    periodeFin: date("periode_fin").notNull(),
+    notes: text("notes"),
+    statut: varchar("statut", { length: 20 }).notNull().default("PLANIFIE"),
+    auteurId: integer("auteur_id")
+      .notNull()
+      .references(() => utilisateurs.id),
+    dateCreation: timestamp("date_creation").notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "besoins_saisonniers_statut_check",
+      sql`${table.statut} in ('PLANIFIE','EN_COURS','POURVU','ANNULE')`
+    ),
+  ]
+);

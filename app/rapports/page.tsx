@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
-import { chargerRapportFinance } from "./actions";
+import { chargerRapportFinance, chargerRapportRh } from "./actions";
 import { RapportsClient } from "./rapports-client";
 
 export default async function RapportsPage() {
@@ -14,6 +14,6 @@ export default async function RapportsPage() {
       </main>
     );
   }
-  const initial = await chargerRapportFinance("MOIS");
-  return <RapportsClient initial={initial} />;
+  const [initialFinance, initialRh] = await Promise.all([chargerRapportFinance("MOIS"), chargerRapportRh("MOIS")]);
+  return <RapportsClient initialFinance={initialFinance} initialRh={initialRh} />;
 }

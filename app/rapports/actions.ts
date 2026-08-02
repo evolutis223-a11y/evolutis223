@@ -1,8 +1,17 @@
 "use server";
 
-import { and, eq, gte, inArray, isNotNull, lt, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, lt, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { affaires, articles, bonsDecaissement, bulletinsPaie, lignesAffaire } from "@/db/schema";
+import {
+  affaires,
+  articles,
+  besoinsSaisonniers,
+  bonsDecaissement,
+  bulletinsPaie,
+  incidentsPersonnel,
+  lignesAffaire,
+  personnel,
+} from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 
@@ -48,6 +57,14 @@ function bornesPeriode(frequence: Frequence, reference: Date): { debut: Date; fi
   const fin = new Date(r.getFullYear() + 1, 0, 1);
   return { debut, fin };
 }
+
+const LABELS_FREQUENCE: Record<Frequence, string> = {
+  JOUR: "Aujourd'hui",
+  SEMAINE: "Cette semaine",
+  MOIS: "Ce mois",
+  SEMESTRE: "Ce semestre",
+  ANNEE: "Cette année",
+};
 
 export interface RapportFinance {
   periodeLabel: string;
@@ -125,16 +142,8 @@ export async function chargerRapportFinance(frequence: Frequence): Promise<Rappo
   const beneficeBrut = chiffreAffaires - coutAchatVentes;
   const beneficeNet = beneficeBrut - depensesCharges - commissions;
 
-  const labels: Record<Frequence, string> = {
-    JOUR: "Aujourd'hui",
-    SEMAINE: "Cette semaine",
-    MOIS: "Ce mois",
-    SEMESTRE: "Ce semestre",
-    ANNEE: "Cette année",
-  };
-
   return {
-    periodeLabel: labels[frequence],
+    periodeLabel: LABELS_FREQUENCE[frequence],
     chiffreAffaires,
     coutAchatVentes,
     beneficeBrut,
@@ -142,5 +151,62 @@ export async function chargerRapportFinance(frequence: Frequence): Promise<Rappo
     commissions,
     beneficeNet,
     nombreVentes: Number(venteRow.nombre),
+  };
+}
+
+export interface RapportRh {
+  periodeLabel: string;
+  effectifActif: number;
+  masseSalariale: number;
+  incidents: { type: string; nombre: number }[];
+  besoinsActifs: { titre: string; fonction: string | null; nombrePersonnesRequis: number; periodeDebut: string; periodeFin: string; statut: string }[];
+}
+
+// §7 — dimensions RH/Incidents/Prévisions, clarifiées par l'utilisateur (2026-08-02) : humaines,
+// pas financières. Incidents = maladie/blessure/décès/catastrophe naturelle/blocage de
+// recrutement touchant le personnel (`/rh`, onglet Incidents). Prévisions = besoins de personnel
+// à venir planifiés par RH (`/rh`, onglet Prévisions) — pas une prévision de chiffre d'affaires.
+export async function chargerRapportRh(frequence: Frequence): Promise<RapportRh> {
+  await requireRapportsAccess();
+  const { debut, fin } = bornesPeriode(frequence, new Date());
+  const debutStr = debut.toISOString().slice(0, 10);
+  const finStr = fin.toISOString().slice(0, 10);
+
+  const [effectifRow] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(personnel)
+    .where(eq(personnel.actif, true));
+
+  const [masseRow] = await db
+    .select({ total: sql<string>`coalesce(sum(${bulletinsPaie.netAPayer}), 0)` })
+    .from(bulletinsPaie)
+    .where(and(eq(bulletinsPaie.statut, "PAYE"), gte(bulletinsPaie.datePaiement, debut), lt(bulletinsPaie.datePaiement, fin)));
+
+  const incidentRows = await db
+    .select({ type: incidentsPersonnel.type, n: sql<number>`count(*)` })
+    .from(incidentsPersonnel)
+    .where(and(gte(incidentsPersonnel.dateIncident, debutStr), lt(incidentsPersonnel.dateIncident, finStr)))
+    .groupBy(incidentsPersonnel.type);
+
+  // "Besoins actifs" = tout besoin dont la période chevauche la fenêtre courante, pas seulement
+  // ceux créés dedans — une prévision de personnel se planifie à l'avance, pas rétroactivement.
+  const besoinRows = await db
+    .select()
+    .from(besoinsSaisonniers)
+    .where(and(lte(besoinsSaisonniers.periodeDebut, finStr), gte(besoinsSaisonniers.periodeFin, debutStr)));
+
+  return {
+    periodeLabel: LABELS_FREQUENCE[frequence],
+    effectifActif: Number(effectifRow.n),
+    masseSalariale: Number(masseRow.total),
+    incidents: incidentRows.map((r) => ({ type: r.type, nombre: Number(r.n) })),
+    besoinsActifs: besoinRows.map((b) => ({
+      titre: b.titre,
+      fonction: b.fonction,
+      nombrePersonnesRequis: b.nombrePersonnesRequis,
+      periodeDebut: b.periodeDebut,
+      periodeFin: b.periodeFin,
+      statut: b.statut,
+    })),
   };
 }
