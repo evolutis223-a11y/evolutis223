@@ -122,6 +122,18 @@ export default async function DashboardPage() {
             </Link>
           </section>
         )}
+
+        {hasModuleAccess(user.roleCode, "Affaires") && (
+          <section>
+            <h2 className="mb-3 text-sm font-medium text-muted-foreground">Poste dédié</h2>
+            <Link
+              href="/vente-comptoir"
+              className="block rounded-md border border-border bg-card px-3 py-2 text-sm text-card-foreground hover:bg-muted/60"
+            >
+              Poste de vente comptoir — résiste aux coupures internet (§3.3)
+            </Link>
+          </section>
+        )}
       </div>
     </main>
   );

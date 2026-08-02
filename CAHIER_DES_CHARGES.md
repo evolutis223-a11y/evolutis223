@@ -77,13 +77,15 @@ Base de données                          Droits d'accès (filtre chaque action)
 
 | Couche | Choix | Pourquoi |
 |---|---|---|
-| Application | **Next.js / TypeScript**, installable en PWA | Un seul code pour back-office et vitrine ; installable sur téléphone (icône, plein écran) sans app store. |
+| Application | **Next.js / TypeScript**, installable en PWA | Un seul code pour back-office et vitrine ; installable sur téléphone (icône, plein écran) sans app store. **Implémenté et vérifié le 2026-08-02** (manifest.json, icônes, service worker minimal — voir juste ci-dessous) après avoir constaté que ça n'avait jamais été réellement construit malgré la décision de cadrage. |
 | Base de données | **PostgreSQL**, centrale, hébergée en ligne | Déjà imposé par le schéma SQL (§4) ; une seule vérité partagée par tous les utilisateurs, où qu'ils soient. |
 | Accès BDD | **Drizzle ORM** | Plus proche du SQL brut que Prisma — préserve les contraintes CHECK, colonnes générées et triggers d'audit déjà conçus dans le schéma. |
 | UI | **Tailwind + shadcn/ui** | Cohérent avec le thème sombre/clair déjà vu dans le prototype, rapide à construire. |
 | Authentification | **Téléphone + PIN**, maison (pas email, pas OAuth) | Décision du 2026-07-27 — voir §3.4. |
 | Stockage fichiers | Objet compatible S3 (logos, photos produits, uploads du configurateur) | Ne pas stocker sur disque local d'un serveur éphémère. |
 | Documents imprimables | Génération PDF côté serveur à partir du HTML stylé déjà conçu (`design/Modele *.dc.html`), cachet intégré automatiquement à la validation | Pas d'impression ni de tampon physique obligatoires — voir §8.4. |
+
+**PWA installable — implémenté et vérifié en base réelle (2026-08-02) :** `public/manifest.json` (nom, icônes, `display: "standalone"` — plein écran, pas de barre d'adresse), `app/layout.tsx` mis à jour (balises `manifest`/`apple-touch-icon`/`appleWebApp` via l'API Metadata de Next.js — couvre aussi iOS), service worker minimal (`public/sw.js`, juste pour satisfaire les critères d'installabilité de certains navigateurs, **aucune mise en cache** — le tampon hors ligne du poste comptoir ci-dessous est indépendant, géré en `localStorage`). Icône temporaire : le cachet de l'entreprise (`design/assets/cachet.png`, quasi carré) — pas de logo carré dédié pour l'instant, à remplacer facilement le jour où un vrai logo-icône existe. Vérifié techniquement : manifeste servi (200), balises présentes, service worker actif, titre d'onglet corrigé ("EVOLUTIS223" au lieu du défaut "Create Next App" jamais changé jusqu'ici).
 
 ### 3.3 Topologie — pourquoi pas une appli locale
 
@@ -92,6 +94,8 @@ Direction initiale envisagée (locale, native, offline-first) **abandonnée** ap
 - **Une seule application cloud**, une seule base centrale — tout le monde voit le même stock en direct.
 - **PWA installable** sur téléphone — c'est ce qui permet de facturer depuis un téléphone n'importe où.
 - **Le poste dédié à la boutique** garde une résilience locale : cache du catalogue/prix + file d'attente de synchronisation, pour qu'une coupure internet momentanée n'empêche pas d'encaisser au comptoir. Ce n'est **pas** une base de données locale complète — juste un tampon de secours pour ce poste précis.
+
+**Implémenté et vérifié en base réelle (2026-08-02)**, après avoir constaté que cette décision de cadrage n'avait en réalité jamais été construite : route dédiée `/vente-comptoir` (Vendeur/Admin — module Affaires), volontairement séparée de l'écran `/affaires` complet (Devis/B2B) pour ne pas risquer de le modifier. Le catalogue (articles Famille A/B + variantes + stock détail) est mis en cache dans `localStorage` du navigateur à chaque chargement en ligne. Hors ligne (détecté via `navigator.onLine` + événements `online`/`offline`) : le catalogue en cache reste utilisable, une vente est stockée dans une file d'attente locale au lieu d'être envoyée. Dès la reconnexion détectée, la file se vide automatiquement — chaque vente en attente repasse par `creerAffaire()`, donc par le contrôle réserve détail (§9) exactement comme une vente saisie en direct, sans logique de blocage dupliquée. Testé de bout en bout : vente en ligne (CDE-26-0005) ; coupure simulée → vente mise en attente → reconnexion simulée → file vidée automatiquement → vraie affaire créée (CDE-26-0006). Volontairement pas de service worker pour ce tampon (juste du `localStorage` + JS classique) — plus simple à vérifier, évite les bugs classiques de cache figé d'un service worker plus ambitieux.
 
 ### 3.4 Authentification
 

@@ -1,0 +1,13 @@
+{
+  "name": "EVOLUTIS223",
+  "short_name": "EVOLUTIS223",
+  "description": "Gestion interne et boutique EVOLUTIS223",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "orientation": "any",
+  "icons": [
+    { "src": "/icons/icon.png", "sizes": "336x334", "type": "image/png", "purpose": "any" }
+  ]
+}
