@@ -283,16 +283,31 @@ export function CatalogueClient({
         {/* Détail — même patron que /affaires : liste à gauche, aperçu permanent à droite */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
           {!detailArticle ? (
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#666", fontSize: 13, border: "1px solid #262626", borderRadius: 8 }}>
-              Sélectionne un article à gauche.
+            <div style={{ flex: 1, overflowY: "auto", border: "1px solid #262626", borderRadius: 8, padding: 20 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 4 }}>Catalogue — vue d&apos;ensemble</div>
+              <div style={{ fontSize: 12.5, color: "#888", marginBottom: 16 }}>Cliquez un article à gauche pour voir sa fiche détaillée.</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+                <div style={{ background: "#151515", border: "1px solid #262626", borderRadius: 8, padding: 14 }}>
+                  <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase" }}>Articles au total</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginTop: 4 }}>{counts.TOUS}</div>
+                </div>
+                <div style={{ background: "#151515", border: "1px solid #262626", borderRadius: 8, padding: 14 }}>
+                  <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase" }}>Publiés sur la boutique</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#34d399", marginTop: 4 }}>{initialArticles.filter((a) => a.publieBoutique).length}</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", marginBottom: 8 }}>Répartition par famille</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {FAMILLES.map((f) => (
+                  <div key={f.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#ccc", padding: "6px 0", borderBottom: "1px solid #262626" }}>
+                    <span>{f.id} · {f.short}</span>
+                    <span style={{ fontWeight: 700, color: "#fff" }}>{counts[f.id] ?? 0}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div style={{ flex: 1, overflowY: "auto", border: "1px solid #262626", borderRadius: 8, padding: 20 }}>
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <button onClick={() => setDetailArticle(null)} style={{ background: "none", border: "none", color: "#888", fontSize: 18, cursor: "pointer" }}>
-                  &times;
-                </button>
-              </div>
               <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
                 <div style={{ width: 90, height: 90, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
                   <Thumb article={detailArticle} size={90} />
