@@ -1,9 +1,10 @@
 import { desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { articles, variantes, vStockVariante } from "@/db/schema";
+import { articles, variantes, vStockVariante, utilisateurs, roles } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { buildShellModules } from "@/lib/shell-modules";
 import { calculerStockKit, listerFournisseursActifs, listerRecetteKit } from "./actions";
 import { StocksClient } from "./stocks-client";
 
@@ -18,7 +19,13 @@ export default async function StocksPage() {
     );
   }
 
-  const [articleRows, variantRows, fournisseurRows] = await Promise.all([
+  const [[user], articleRows, variantRows, fournisseurRows] = await Promise.all([
+    db
+      .select({ nom: utilisateurs.nom, roleLibelle: roles.libelle })
+      .from(utilisateurs)
+      .innerJoin(roles, eq(utilisateurs.roleId, roles.id))
+      .where(eq(utilisateurs.id, session.userId))
+      .limit(1),
     db.select().from(articles).orderBy(desc(articles.id)),
     db
       .select({
@@ -45,5 +52,15 @@ export default async function StocksPage() {
     }))
   );
 
-  return <StocksClient articles={articleRows} variantes={variantRows} kits={kits} fournisseurs={fournisseurRows} />;
+  return (
+    <StocksClient
+      userName={user.nom}
+      roleLibelle={user.roleLibelle}
+      modules={buildShellModules(session.roleCode)}
+      articles={articleRows}
+      variantes={variantRows}
+      kits={kits}
+      fournisseurs={fournisseurRows}
+    />
+  );
 }

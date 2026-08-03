@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import {
   ajouterBesoinSaisonnier,
   ajouterPersonnel,
@@ -82,12 +83,18 @@ const INCIDENT_TYPE_LABELS: Record<string, string> = {
 };
 
 export function RhClient({
+  userName,
+  roleLibelle,
+  modules,
   personnel: initialPersonnel,
   bulletins: initialBulletins,
   utilisateurs,
   incidents: initialIncidents,
   besoins: initialBesoins,
 }: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
   personnel: Personnel[];
   bulletins: Bulletin[];
   utilisateurs: UtilisateurOpt[];
@@ -101,7 +108,8 @@ export function RhClient({
   const [besoins, setBesoins] = useState(initialBesoins);
 
   return (
-    <main className="mx-auto max-w-4xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="RH" modules={modules}>
+    <div className="mx-auto max-w-4xl p-6">
       <h1 className="text-xl font-semibold text-foreground">RH (§7)</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Registre du personnel (salariés, journaliers, partenaires), bulletins de paie, incidents et besoins saisonniers — les
@@ -132,7 +140,8 @@ export function RhClient({
         )}
         {tab === "previsions" && <PrevisionsTab besoins={besoins} setBesoins={setBesoins} />}
       </div>
-    </main>
+    </div>
+    </AppShell>
   );
 }
 

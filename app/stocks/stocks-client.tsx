@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import type { articles } from "@/db/schema";
 import {
   ajouterComposantKit,
@@ -515,11 +516,17 @@ function KitsSection({
 }
 
 export function StocksClient({
+  userName,
+  roleLibelle,
+  modules,
   articles: initialArticles,
   variantes,
   kits,
   fournisseurs,
 }: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
   articles: Article[];
   variantes: VarianteRow[];
   kits: KitData[];
@@ -556,7 +563,8 @@ export function StocksClient({
   }
 
   return (
-    <main className="mx-auto max-w-5xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Stocks" modules={modules}>
+    <div className="mx-auto max-w-5xl p-6">
       <h1 className="text-xl font-semibold text-foreground">Stocks</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Seules les familles A (textile/douzaine) et B (unité simple) ont un stock direct
@@ -697,6 +705,7 @@ export function StocksClient({
           </div>
         </div>
       )}
-    </main>
+    </div>
+    </AppShell>
   );
 }

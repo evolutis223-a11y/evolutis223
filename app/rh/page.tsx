@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { buildShellModules } from "@/lib/shell-modules";
+import { chargerUtilisateurAffiche } from "@/lib/session-user";
 import { chargerDonneesRh } from "./actions";
 import { RhClient } from "./rh-client";
 
@@ -14,6 +16,6 @@ export default async function RhPage() {
       </main>
     );
   }
-  const donnees = await chargerDonneesRh();
-  return <RhClient {...donnees} />;
+  const [donnees, user] = await Promise.all([chargerDonneesRh(), chargerUtilisateurAffiche(session.userId)]);
+  return <RhClient {...donnees} userName={user.nom} roleLibelle={user.roleLibelle} modules={buildShellModules(session.roleCode)} />;
 }
