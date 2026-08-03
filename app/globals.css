@@ -6,6 +6,18 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Décision utilisateur 2026-08-03 : aucune case numérique n'affiche les flèches
+   +/- natives du navigateur — n'existent pas sur la maquette. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 @layer base {
   :root {
     --background: oklch(1 0 0);

@@ -80,6 +80,10 @@ export interface DetailsAffaireInput {
   // n'exposent pas ce choix (configurateur public, boutique, maquette). Le contrôle de réserve
   // stock (validerAffaire, §9) ne dépend jamais de ce champ — même filet de sécurité pour tous.
   docType?: "COMMANDE_ATTENTE" | "DEVIS" | "FACTURE" | "PROFORMA" | "TICKET";
+  // Bloc "À livrer" de la maquette — coût de livraison facturé au client (distinct du transport
+  // interne), NULL/absent = livraison incluse dans le prix.
+  coutLivraison?: number | null;
+  coutLivraisonPaye?: boolean;
 }
 
 const PREFIXE_PAR_TYPE: Record<string, string> = {
@@ -150,6 +154,8 @@ export async function creerAffaireInterne(
           numero: numeroLivraison,
           affaireId: affaire.id,
           adresse: adresseLivraison,
+          coutLivraison: details.coutLivraison != null ? details.coutLivraison.toFixed(2) : null,
+          coutLivraisonPaye: details.coutLivraisonPaye ?? false,
         });
       }
 

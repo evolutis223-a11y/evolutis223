@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell, type ShellModule } from "@/components/app-shell";
-import { formatFcfa } from "@/lib/format";
+import { formatFcfa, formatNombre } from "@/lib/format";
 import type { affaires, articles, demandesValidationStock, lignesAffaire, reglements } from "@/db/schema";
 import {
   ajouterReglement,
@@ -257,6 +257,9 @@ function NouvelleAffairePage({
   const [lignes, setLignes] = useState<LigneInput[]>([{ articleId: 0, varianteId: null, quantite: 1, prixUnitaire: 0 }]);
   const [modeFinalisation, setModeFinalisation] = useState<"" | "RETRAIT" | "LIVRAISON">("");
   const [adresseLivraison, setAdresseLivraison] = useState("");
+  const [coutLivraisonMode, setCoutLivraisonMode] = useState<"montant" | "inclus">("montant");
+  const [coutLivraison, setCoutLivraison] = useState("");
+  const [coutLivraisonPaye, setCoutLivraisonPaye] = useState(false);
   const [delaiNombre, setDelaiNombre] = useState("");
   const [delaiUnite, setDelaiUnite] = useState("Jour");
   const [dateLivraison, setDateLivraison] = useState("");
@@ -348,6 +351,9 @@ function NouvelleAffairePage({
     setFormKey((k) => k + 1);
     setModeFinalisation("");
     setAdresseLivraison("");
+    setCoutLivraisonMode("montant");
+    setCoutLivraison("");
+    setCoutLivraisonPaye(false);
     setDelaiNombre("");
     setDelaiUnite("Jour");
     setDateLivraison("");
@@ -372,6 +378,8 @@ function NouvelleAffairePage({
       remiseMontant: remise ? Number(remise) : null,
       remiseUnite: remise ? remiseUnite : null,
       docType,
+      coutLivraison: modeFinalisation === "LIVRAISON" && coutLivraisonMode === "montant" && coutLivraison ? Number(coutLivraison) : null,
+      coutLivraisonPaye: modeFinalisation === "LIVRAISON" && coutLivraisonMode === "montant" ? coutLivraisonPaye : false,
     };
     const res = await creerAffaireDepuisFormulaire(
       nomClient.trim(),
@@ -517,7 +525,27 @@ function NouvelleAffairePage({
           </div>
           {modeFinalisation === "LIVRAISON" && (
             <div style={{ marginTop: 16, padding: 16, background: "#121212", borderRadius: 8 }}>
-              <input value={adresseLivraison} onChange={(e) => setAdresseLivraison(e.target.value)} placeholder="Adresse de livraison" style={inputStyle} />
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <input value={adresseLivraison} onChange={(e) => setAdresseLivraison(e.target.value)} placeholder="Adresse de livraison" style={{ ...inputStyle, flex: 1.1, minWidth: 120 }} />
+                <select value={coutLivraisonMode} onChange={(e) => setCoutLivraisonMode(e.target.value as "montant" | "inclus")} style={{ ...inputStyle, flex: 0.55, minWidth: 95 }}>
+                  <option value="montant">Montant</option>
+                  <option value="inclus">Livr. incluse</option>
+                </select>
+                {coutLivraisonMode === "montant" && (
+                  <>
+                    <input
+                      value={coutLivraison}
+                      onChange={(e) => setCoutLivraison(e.target.value)}
+                      placeholder="Coût de livraison (FCFA)"
+                      type="number"
+                      style={{ ...inputStyle, flex: 0.8, minWidth: 110 }}
+                    />
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#ccc", background: "#1e1e1e", border: "1px solid #333", padding: "0 12px", borderRadius: 8, whiteSpace: "nowrap", flexShrink: 0 }}>
+                      <input type="checkbox" checked={coutLivraisonPaye} onChange={(e) => setCoutLivraisonPaye(e.target.checked)} /> Payé
+                    </label>
+                  </>
+                )}
+              </div>
             </div>
           )}
 
@@ -618,12 +646,18 @@ function NouvelleAffairePage({
           </div>
 
           <div style={{ borderTop: "2px solid #3a3a3a", marginTop: 6 }} />
-          <div style={{ fontSize: 20, fontWeight: 700, color: "#3b82f6", marginTop: 8 }}>Total HT : {formatFcfa(brut)}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#3b82f6", marginTop: 8 }}>
+            Total HT : {formatNombre(brut)}
+            <span style={{ fontSize: 12, fontWeight: 400, marginLeft: 4 }}>FCFA</span>
+          </div>
           <div style={{ display: "flex", justifyContent: "space-between", margin: "6px 0", fontSize: 14, color: "#ccc" }}>
             <span>TVA ({tva || 0}%) : {tvaValeur > 0 ? formatFcfa(tvaValeur) : "—"}</span>
             <span>Remise : {remiseValeur > 0 ? formatFcfa(remiseValeur) : "—"}</span>
           </div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: "#10b981", marginTop: 4 }}>Total TTC : {formatFcfa(total)}</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "#10b981", marginTop: 4 }}>
+            Total TTC : {formatNombre(total)}
+            <span style={{ fontSize: 13, fontWeight: 400, marginLeft: 4 }}>FCFA</span>
+          </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, flexWrap: "wrap", gap: "6px 12px" }}>
             <span style={{ fontSize: 14, color: "#ccc", whiteSpace: "nowrap" }}>
               <b style={{ fontWeight: 700, color: "#e0e0e0" }}>Montant reçu : {montantRecuNum > 0 ? formatFcfa(montantRecuNum) : "—"}</b>
@@ -643,7 +677,20 @@ function NouvelleAffairePage({
               {modeFinalisation && (
                 <div style={{ marginBottom: 4 }}>🚚 {modeFinalisation === "LIVRAISON" ? "À livrer" : "Retrait en boutique"}</div>
               )}
-              {modeFinalisation === "LIVRAISON" && adresseLivraison && <div>🏠 Adresse : {adresseLivraison}</div>}
+              {modeFinalisation === "LIVRAISON" && adresseLivraison && (
+                <div style={{ marginBottom: coutLivraisonMode === "montant" && coutLivraison ? 4 : 0 }}>🏠 Adresse : {adresseLivraison}</div>
+              )}
+              {modeFinalisation === "LIVRAISON" && coutLivraisonMode === "inclus" && <div>🚚 Livraison incluse dans la somme</div>}
+              {modeFinalisation === "LIVRAISON" && coutLivraisonMode === "montant" && coutLivraison && (
+                <div>
+                  💵 Coût de livraison : {formatFcfa(Number(coutLivraison))} —{" "}
+                  {coutLivraisonPaye ? (
+                    <b style={{ color: "#10b981" }}>✅ Payé</b>
+                  ) : (
+                    <b style={{ color: "#dc2626" }}>❌ Non payé</b>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

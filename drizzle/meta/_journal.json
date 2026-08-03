@@ -127,6 +127,13 @@
       "when": 1785751990438,
       "tag": "0017_cool_mimic",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1785794980226,
+      "tag": "0018_ancient_bulldozer",
+      "breakpoints": true
     }
   ]
 }

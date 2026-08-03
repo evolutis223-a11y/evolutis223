@@ -401,6 +401,11 @@ export const livraisons = pgTable(
     livreurId: integer("livreur_id").references(() => utilisateurs.id), // rôle LIVREUR ou LIVREUR_PARTENAIRE
     statut: varchar("statut", { length: 20 }).notNull().default("EN_ATTENTE"),
     adresse: text("adresse"),
+    // AJOUT 2026-08-03 (maquette, écran isNouveau, bloc "À livrer") : coût de livraison facturé
+    // au client, distinct du coût de fabrication/transport interne. NULL = livraison incluse dans
+    // le prix (pas de ligne séparée), sinon montant + indicateur payé/à percevoir.
+    coutLivraison: numeric("cout_livraison", { precision: 12, scale: 2 }),
+    coutLivraisonPaye: boolean("cout_livraison_paye").notNull().default(false),
     dateCreation: timestamp("date_creation").notNull().defaultNow(),
   },
   (table) => [
