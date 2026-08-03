@@ -64,7 +64,7 @@ type Besoin = {
 };
 
 function fmt(n: number) {
-  return `${Math.round(n).toLocaleString("fr-FR")} F`;
+  return `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
 }
 function moisCourant() {
   return new Date().toISOString().slice(0, 7);

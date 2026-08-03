@@ -19,7 +19,7 @@ type Article = typeof articles.$inferSelect;
 type Branche = typeof branches.$inferSelect;
 
 function formatFcfa(value: string | number): string {
-  return `${Math.round(Number(value)).toLocaleString("fr-FR")} F`;
+  return `${Math.round(Number(value)).toLocaleString("fr-FR")} FCFA`;
 }
 
 const inputStyle: React.CSSProperties = {

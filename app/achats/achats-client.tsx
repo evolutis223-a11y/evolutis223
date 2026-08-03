@@ -20,7 +20,7 @@ type Lot = {
 type Bon = { id: number; montant: number; motif: string; dateCreation: Date | string; valide: boolean };
 
 function fmt(n: number) {
-  return `${Math.round(n).toLocaleString("fr-FR")} F`;
+  return `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
 }
 function fmtDate(d: Date | string) {
   return new Date(d).toLocaleDateString("fr-FR");

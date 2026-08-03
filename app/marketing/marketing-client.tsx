@@ -22,7 +22,7 @@ type Promotion = {
 type ArticleOpt = { id: number; nom: string; code: string; prixVente: number };
 
 function fmt(n: number) {
-  return `${Math.round(n).toLocaleString("fr-FR")} F`;
+  return `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
 }
 function prixPromo(p: { prixVente: number; type: string; valeur: number }) {
   return p.type === "POURCENTAGE" ? p.prixVente * (1 - p.valeur / 100) : Math.max(0, p.prixVente - p.valeur);

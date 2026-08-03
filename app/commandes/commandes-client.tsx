@@ -21,7 +21,7 @@ type Livraison = typeof livraisons.$inferSelect;
 type Livreur = { id: number; nom: string; roleCode: string };
 
 function formatFcfa(v: string | number) {
-  return `${Math.round(Number(v)).toLocaleString("fr-FR")} F`;
+  return `${Math.round(Number(v)).toLocaleString("fr-FR")} FCFA`;
 }
 
 const LIVRAISON_LABEL: Record<string, string> = {

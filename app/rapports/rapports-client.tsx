@@ -5,7 +5,7 @@ import { AppShell, type ShellModule } from "@/components/app-shell";
 import { chargerRapportFinance, chargerRapportRh, type Frequence, type RapportFinance, type RapportRh } from "./actions";
 
 function fmt(n: number) {
-  return `${Math.round(n).toLocaleString("fr-FR")} F`;
+  return `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
 }
 
 const FREQUENCES: { value: Frequence; label: string }[] = [

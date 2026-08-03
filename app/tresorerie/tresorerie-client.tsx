@@ -20,7 +20,7 @@ type Cloture = typeof cloturesCaisse.$inferSelect;
 type Utilisateur = typeof utilisateurs.$inferSelect;
 
 function formatFcfa(v: string | number) {
-  return `${Math.round(Number(v)).toLocaleString("fr-FR")} F`;
+  return `${Math.round(Number(v)).toLocaleString("fr-FR")} FCFA`;
 }
 
 const CATEGORIE_LABEL: Record<string, string> = {

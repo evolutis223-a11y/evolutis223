@@ -36,7 +36,7 @@ const FREQUENCES: Record<string, string> = {
 };
 
 function fmtFcfa(n: number) {
-  return `${Math.round(n).toLocaleString("fr-FR")} F`;
+  return `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
 }
 function fmtUsd(n: number) {
   return `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;

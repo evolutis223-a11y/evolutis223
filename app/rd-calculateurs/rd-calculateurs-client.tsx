@@ -45,7 +45,7 @@ const PRESET_ZONES = [
 ];
 
 function fmt(n: number) {
-  return `${Math.round(n).toLocaleString("fr-FR")} F`;
+  return `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
 }
 let localId = 1;
 function nextLocalId() {

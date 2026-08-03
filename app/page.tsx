@@ -9,7 +9,7 @@ import { AppShell } from "@/components/app-shell";
 import { buildShellModules } from "@/lib/shell-modules";
 
 function fmt(n: number) {
-  return `${Math.round(n).toLocaleString("fr-FR")} F`;
+  return `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
 }
 
 export default async function DashboardPage() {

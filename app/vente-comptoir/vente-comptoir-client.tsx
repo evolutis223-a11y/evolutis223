@@ -26,7 +26,7 @@ const CACHE_KEY = "evolutis223_comptoir_catalogue";
 const QUEUE_KEY = "evolutis223_comptoir_file_attente";
 
 function fmt(n: number) {
-  return `${Math.round(n).toLocaleString("fr-FR")} F`;
+  return `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
 }
 
 function lireCache(): (Catalogue & { savedAt: string }) | null {

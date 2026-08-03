@@ -109,7 +109,7 @@ function DemandeMaquetteDetail({ details }: { details: unknown }) {
 }
 
 function formatFcfa(v: string | number) {
-  return `${Math.round(Number(v)).toLocaleString("fr-FR")} F`;
+  return `${Math.round(Number(v)).toLocaleString("fr-FR")} FCFA`;
 }
 
 const POLL_MS = 10_000;

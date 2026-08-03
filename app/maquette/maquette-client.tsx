@@ -36,7 +36,7 @@ const STEPS = ["landing", "intent", "depart", "explication", "elements", "couleu
 type Step = (typeof STEPS)[number];
 
 function fmt(n: number) {
-  return `${Math.round(n).toLocaleString("fr-FR")} F`;
+  return `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
 }
 
 export function MaquetteClient({ donnees, forfaits }: { donnees: Donnees; forfaits: Forfait[] }) {

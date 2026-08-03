@@ -14,7 +14,7 @@ const ETAPES = [
 ] as const;
 
 function formatFcfa(v: string | number) {
-  return `${Math.round(Number(v)).toLocaleString("fr-FR")} F`;
+  return `${Math.round(Number(v)).toLocaleString("fr-FR")} FCFA`;
 }
 
 function etapeActuelle(

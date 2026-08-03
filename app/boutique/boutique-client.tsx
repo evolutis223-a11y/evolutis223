@@ -35,7 +35,7 @@ interface CartItem {
 }
 
 function formatFcfa(v: string | number) {
-  return `${Math.round(Number(v)).toLocaleString("fr-FR")} F`;
+  return `${Math.round(Number(v)).toLocaleString("fr-FR")} FCFA`;
 }
 
 function prixApresPromo(prixVente: number, promo: PromotionActive | undefined) {

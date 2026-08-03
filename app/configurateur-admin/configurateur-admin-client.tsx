@@ -25,7 +25,7 @@ const TECHNIQUES = [
 let zoneIdCounter = 1;
 
 function fmt(n: number) {
-  return `${Math.round(n).toLocaleString("fr-FR")} F`;
+  return `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
 }
 
 export function ConfigurateurAdminClient({

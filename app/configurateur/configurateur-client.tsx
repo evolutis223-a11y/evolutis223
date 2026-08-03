@@ -34,7 +34,7 @@ function nextLocalId() {
   return `z${localIdCounter++}`;
 }
 function fmt(n: number) {
-  return `${Math.round(n).toLocaleString("fr-FR")} F`;
+  return `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
 }
 
 export function ConfigurateurClient({ donnees }: { donnees: Donnees }) {
