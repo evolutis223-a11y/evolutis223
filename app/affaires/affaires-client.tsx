@@ -163,8 +163,25 @@ function NouvelleAffairePage({
 
   const brut = lignes.reduce((acc, l) => acc + l.quantite * l.prixUnitaire, 0);
   const remiseValeur = remiseUnite === "%" ? brut * ((Number(remise) || 0) / 100) : Number(remise) || 0;
+  // Même formule que creerAffaireInterne (actions.ts) : la TVA est capturée pour le document
+  // mais n'est PAS ajoutée au total — montantTtc = brut - remise uniquement. Ligne d'info séparée
+  // ci-dessous, pas incluse dans le calcul, pour ne pas afficher un aperçu qui ment sur le vrai total.
   const total = Math.max(0, brut - remiseValeur);
+  const tvaValeur = total * ((Number(tva) || 0) / 100);
   const solde = total - (Number(montantRecu) || 0);
+
+  const lignesApercu = lignes
+    .filter((l) => l.articleId)
+    .map((l) => {
+      const art = articlesList.find((a) => a.id === l.articleId);
+      const vnt = variantesList.find((v) => v.id === l.varianteId);
+      return {
+        designation: [art?.nom, vnt?.taille, vnt?.couleur].filter(Boolean).join(" — ") || "Article",
+        quantite: l.quantite,
+        prixUnitaire: l.prixUnitaire,
+        total: l.quantite * l.prixUnitaire,
+      };
+    });
 
   function reinitialiser() {
     setProvenance("");
@@ -226,8 +243,8 @@ function NouvelleAffairePage({
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 24 }}>
+    <div style={{ padding: 20, display: "flex", gap: 20 }}>
+      <div style={{ flex: 1, minWidth: 0, background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 24 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>+ Nouvelle affaire</div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -357,6 +374,126 @@ function NouvelleAffairePage({
           <button type="button" disabled={pending || !provenance} onClick={submit} style={darkButton("#3b82f6")}>
             {pending ? "Création..." : "Créer l'affaire"}
           </button>
+        </div>
+      </div>
+
+      {/* Aperçu instantané — reflète en direct ce que sera le document, même formule que le PDF réel */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ background: "#fff", color: "#000", borderRadius: 8, padding: 28, fontFamily: "Helvetica, Arial, sans-serif", fontSize: 12.5, position: "sticky", top: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #000", paddingBottom: 10, marginBottom: 14 }}>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>EVOLUTIS223</div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>Commande</div>
+              <div style={{ fontSize: 10, color: "#444" }}>N° à venir — {new Date().toLocaleDateString("fr-FR")}</div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 20, marginBottom: 12 }}>
+            <div style={{ flex: 1 }}>
+              {objet && (
+                <div style={{ marginBottom: 3 }}>
+                  <b>Objet : </b>
+                  {objet}
+                </div>
+              )}
+              {provenance && (
+                <div>
+                  <b>Provenance : </b>
+                  {provenance}
+                </div>
+              )}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ marginBottom: 3 }}>
+                <b>Client : </b>
+                {nomClient || "—"}
+              </div>
+              {telephoneClient && <div style={{ marginBottom: 3 }}>Contact : {telephoneClient}</div>}
+              {adresseClient && <div>Adresse : {adresseClient}</div>}
+            </div>
+          </div>
+
+          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12 }}>
+            <thead>
+              <tr style={{ background: "#000" }}>
+                <th style={{ color: "#fff", textAlign: "left", padding: 5, fontSize: 11 }}>Désignation</th>
+                <th style={{ color: "#fff", textAlign: "center", padding: 5, fontSize: 11 }}>Qté</th>
+                <th style={{ color: "#fff", textAlign: "right", padding: 5, fontSize: 11 }}>Prix unitaire</th>
+                <th style={{ color: "#fff", textAlign: "right", padding: 5, fontSize: 11 }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lignesApercu.length === 0 ? (
+                <tr>
+                  <td colSpan={4} style={{ padding: 10, textAlign: "center", color: "#999", borderBottom: "1px solid #ddd" }}>
+                    Ajoutez des articles pour voir l&apos;aperçu.
+                  </td>
+                </tr>
+              ) : (
+                lignesApercu.map((l, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #ddd" }}>
+                    <td style={{ padding: 6 }}>{l.designation}</td>
+                    <td style={{ padding: 6, textAlign: "center" }}>{l.quantite}</td>
+                    <td style={{ padding: 6, textAlign: "right" }}>{formatFcfa(l.prixUnitaire)}</td>
+                    <td style={{ padding: 6, textAlign: "right" }}>{formatFcfa(l.total)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+
+          <div style={{ marginLeft: "auto", width: 240 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
+              <span>Sous-total</span>
+              <span>{formatFcfa(brut)}</span>
+            </div>
+            {remiseValeur > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
+                <span>Remise</span>
+                <span>-{formatFcfa(remiseValeur)}</span>
+              </div>
+            )}
+            {tvaValeur > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
+                <span>TVA ({tva}%)</span>
+                <span>{formatFcfa(tvaValeur)}</span>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderTop: "1px solid #000", marginTop: 2, fontWeight: 700, fontSize: 14 }}>
+              <span>Total TTC</span>
+              <span>{formatFcfa(total)}</span>
+            </div>
+            {Number(montantRecu) > 0 && (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
+                  <span>Montant reçu</span>
+                  <span>{formatFcfa(Number(montantRecu))}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
+                  <span>Solde</span>
+                  <span>{formatFcfa(Math.max(0, solde))}</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {infosComplementaires && (
+            <div style={{ marginTop: 16, fontSize: 11.5 }}>
+              <b>Informations complémentaires : </b>
+              {infosComplementaires}
+            </div>
+          )}
+
+          <div style={{ marginTop: 30, display: "flex", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontStyle: "italic", textDecoration: "underline", fontSize: 11 }}>Le Client</div>
+              <div style={{ marginTop: 30, borderTop: "1px solid #000", width: 140 }} />
+            </div>
+            <div>
+              <div style={{ fontStyle: "italic", textDecoration: "underline", fontSize: 11 }}>EVOLUTIS223</div>
+              <div style={{ marginTop: 30, borderTop: "1px solid #000", width: 140 }} />
+            </div>
+          </div>
         </div>
       </div>
     </div>
