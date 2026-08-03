@@ -11,6 +11,7 @@ import {
   lignesAffaire,
   reglements,
   variantes,
+  vStockVariante,
 } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
@@ -37,7 +38,16 @@ export default async function AffairesPage() {
         .where(eq(utilisateurs.id, session.userId))
         .limit(1),
       db.select().from(articles).orderBy(articles.nom),
-      db.select().from(variantes),
+      db
+        .select({
+          id: variantes.id,
+          articleId: variantes.articleId,
+          taille: variantes.taille,
+          couleur: variantes.couleur,
+          stockDetail: vStockVariante.stockDetail,
+        })
+        .from(variantes)
+        .leftJoin(vStockVariante, eq(vStockVariante.varianteId, variantes.id)),
       db
         .select({
           id: affaires.id,

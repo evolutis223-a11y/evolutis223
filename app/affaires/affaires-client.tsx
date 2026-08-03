@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell, type ShellModule } from "@/components/app-shell";
-import type { affaires, articles, demandesValidationStock, lignesAffaire, reglements, variantes } from "@/db/schema";
+import type { affaires, articles, demandesValidationStock, lignesAffaire, reglements } from "@/db/schema";
 import {
   ajouterReglement,
   creerAffaireDepuisFormulaire,
@@ -14,7 +14,13 @@ import {
 } from "./actions";
 
 type Article = typeof articles.$inferSelect;
-type Variante = typeof variantes.$inferSelect;
+type Variante = {
+  id: number;
+  articleId: number;
+  taille: string | null;
+  couleur: string | null;
+  stockDetail?: number | null;
+};
 type AffaireRow = {
   id: number;
   numero: string;
@@ -64,69 +70,141 @@ function darkButton(bg: string, color = "#fff"): React.CSSProperties {
   return { background: bg, color, border: "none", padding: "9px 16px", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" };
 }
 
+const TRASH_RED_FILTER = "brightness(0) saturate(100%) invert(13%) sepia(94%) saturate(7471%) hue-rotate(2deg) brightness(96%) contrast(119%)";
+
+function articleHorsStock(article: Article, variantesList: Variante[]): boolean {
+  if (article.famille !== "A") return false;
+  const variantesArticle = variantesList.filter((v) => v.articleId === article.id);
+  if (variantesArticle.length === 0) return false;
+  return variantesArticle.every((v) => (v.stockDetail ?? 0) <= 0);
+}
+
 export function LigneEditorRow({
   articlesList,
   variantesList,
   ligne,
+  canSeePrixAchat = false,
   onChange,
   onRemove,
 }: {
   articlesList: Article[];
   variantesList: Variante[];
   ligne: LigneInput;
+  canSeePrixAchat?: boolean;
   onChange: (l: LigneInput) => void;
   onRemove: () => void;
 }) {
   const article = articlesList.find((a) => a.id === ligne.articleId);
   const variantesArticle = variantesList.filter((v) => v.articleId === ligne.articleId);
+  const [query, setQuery] = useState(article?.nom ?? "");
+  const [focused, setFocused] = useState(false);
+
+  const suggestions =
+    focused && query.trim() && (!article || article.nom !== query)
+      ? articlesList.filter((a) => a.nom.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 8)
+      : [];
+
+  function pick(a: Article) {
+    const varianteParDefaut = a.famille !== "A" ? variantesList.find((v) => v.articleId === a.id) : null;
+    onChange({ ...ligne, articleId: a.id, varianteId: varianteParDefaut?.id ?? null, prixUnitaire: Number(a.prixVente) });
+    setQuery(a.nom);
+    setFocused(false);
+  }
+
+  const isHorsStock = article ? articleHorsStock(article, variantesList) : false;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8, border: "1px solid #333", borderRadius: 8, padding: 12 }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <select
-          style={inputStyle}
-          value={ligne.articleId || ""}
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8, alignItems: "center" }}>
+      <div style={{ position: "relative", flex: 1.5, minWidth: 140 }}>
+        <input
+          value={query}
           onChange={(e) => {
-            const id = Number(e.target.value);
-            const a = articlesList.find((x) => x.id === id);
-            const varianteParDefaut = a?.famille !== "A" ? variantesList.find((v) => v.articleId === id) : null;
-            onChange({ ...ligne, articleId: id, varianteId: varianteParDefaut?.id ?? null, prixUnitaire: a ? Number(a.prixVente) : 0 });
+            setQuery(e.target.value);
+            if (article) onChange({ ...ligne, articleId: 0, varianteId: null, prixUnitaire: 0 });
           }}
-        >
-          <option value="">Choisir un article...</option>
-          {articlesList.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.nom} ({a.code})
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 120)}
+          placeholder="Saisir le nom de l'article…"
+          spellCheck
+          lang="fr"
+          style={inputStyle}
+        />
+        {suggestions.length > 0 && (
+          <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, marginTop: 4, maxHeight: 220, overflowY: "auto", zIndex: 30, boxShadow: "0 8px 20px rgba(0,0,0,0.4)" }}>
+            {suggestions.map((a) => {
+              const horsStock = articleHorsStock(a, variantesList);
+              return (
+                <div key={a.id} style={{ padding: "9px 12px", borderBottom: "1px solid #262626" }}>
+                  <div onMouseDown={() => pick(a)} style={{ cursor: "pointer", fontSize: 13.5, color: horsStock ? "#888" : "#e0e0e0" }}>
+                    {a.nom}
+                    {horsStock && " — rupture"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {article?.famille === "A" && (
+        <select style={{ ...inputStyle, flex: 1, minWidth: 130 }} value={ligne.varianteId ?? ""} onChange={(e) => onChange({ ...ligne, varianteId: Number(e.target.value) })}>
+          <option value="">Taille/couleur...</option>
+          {variantesArticle.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.taille} {v.couleur}
             </option>
           ))}
         </select>
+      )}
 
-        {article?.famille === "A" && (
-          <select style={inputStyle} value={ligne.varianteId ?? ""} onChange={(e) => onChange({ ...ligne, varianteId: Number(e.target.value) })}>
-            <option value="">Choisir une variante (taille/couleur)...</option>
-            {variantesArticle.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.taille} {v.couleur}
-              </option>
-            ))}
-          </select>
-        )}
+      {isHorsStock && (
+        <span title="Article hors stock — cas exceptionnel, tracé pour le rapport" style={{ background: "#f59e0b", color: "#000", fontSize: 10, fontWeight: 700, padding: "3px 6px", borderRadius: 5, flexShrink: 0, whiteSpace: "nowrap" }}>
+          HORS STOCK
+        </span>
+      )}
 
-        <div style={{ display: "flex", gap: 8 }}>
-          <input type="number" min="1" value={ligne.quantite} onChange={(e) => onChange({ ...ligne, quantite: Number(e.target.value) })} placeholder="Qté" style={inputStyle} />
-          <input type="number" min="0" value={ligne.prixUnitaire} onChange={(e) => onChange({ ...ligne, prixUnitaire: Number(e.target.value) })} placeholder="Prix unitaire" style={inputStyle} />
-        </div>
-
-        {article?.famille === "D" && (
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, color: "#888" }}>
-            <input type="checkbox" checked={ligne.personnalise ?? true} onChange={(e) => onChange({ ...ligne, personnalise: e.target.checked })} />
-            Nouveau visuel/design à concevoir (décocher si modèle déjà validé — l&apos;OF ira directement en Production)
-          </label>
-        )}
-      </div>
-      <button onClick={onRemove} aria-label="Retirer" style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: 18 }}>
-        &times;
+      <input
+        type="number"
+        min="1"
+        value={ligne.quantite}
+        onChange={(e) => onChange({ ...ligne, quantite: Number(e.target.value) })}
+        placeholder="Qté"
+        style={{ ...inputStyle, width: 60, textAlign: "center" }}
+      />
+      {canSeePrixAchat && (
+        <input
+          type="number"
+          min="0"
+          value={article ? Number(article.pmp) : ""}
+          readOnly
+          title="Prix d'achat"
+          placeholder="Auto (stock)"
+          style={{ ...inputStyle, width: 95, background: "#0c0c0c", color: "#888" }}
+        />
+      )}
+      <input
+        type="number"
+        min="0"
+        value={ligne.prixUnitaire}
+        onChange={(e) => onChange({ ...ligne, prixUnitaire: Number(e.target.value) })}
+        placeholder="Prix de vente"
+        title="Prix de vente"
+        style={{ ...inputStyle, width: 110 }}
+      />
+      <button
+        onClick={onRemove}
+        aria-label="Retirer"
+        style={{ background: "none", border: "1px solid #333", borderRadius: 8, width: 36, height: 36, flexShrink: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+      >
+        <span style={{ fontSize: 18, filter: TRASH_RED_FILTER }}>🗑️</span>
       </button>
+
+      {article?.famille === "D" && (
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, color: "#888", width: "100%" }}>
+          <input type="checkbox" checked={ligne.personnalise ?? true} onChange={(e) => onChange({ ...ligne, personnalise: e.target.checked })} />
+          Nouveau visuel/design à concevoir (décocher si modèle déjà validé — l&apos;OF ira directement en Production)
+        </label>
+      )}
     </div>
   );
 }
@@ -181,11 +259,53 @@ function NouvelleAffairePage({
   const [lignes, setLignes] = useState<LigneInput[]>([{ articleId: 0, varianteId: null, quantite: 1, prixUnitaire: 0 }]);
   const [modeFinalisation, setModeFinalisation] = useState<"" | "RETRAIT" | "LIVRAISON">("");
   const [adresseLivraison, setAdresseLivraison] = useState("");
+  const [delaiNombre, setDelaiNombre] = useState("");
+  const [delaiUnite, setDelaiUnite] = useState("Jour");
+  const [dateLivraison, setDateLivraison] = useState("");
   const [infosComplementaires, setInfosComplementaires] = useState("");
   const [montantRecu, setMontantRecu] = useState("");
   const [modeReglement, setModeReglement] = useState("ESPECES");
   const [error, setError] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState(0);
   const [pending, setPending] = useState(false);
+  const [draftMsg, setDraftMsg] = useState<string | null>(null);
+
+  const DRAFT_KEY = "evolutis223_brouillon_affaire";
+
+  useEffect(() => {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    try {
+      const d = JSON.parse(raw);
+      setProvenance(d.provenance ?? "");
+      setDocType(d.docType ?? docTypeOptions[0].value);
+      setNomClient(d.nomClient ?? "");
+      setTelephoneClient(d.telephoneClient ?? "");
+      setEmailClient(d.emailClient ?? "");
+      setAdresseClient(d.adresseClient ?? "");
+      setObjet(d.objet ?? "");
+      setTva(d.tva ?? "");
+      setRemise(d.remise ?? "");
+      setRemiseUnite(d.remiseUnite ?? "%");
+      setLignes(d.lignes ?? [{ articleId: 0, varianteId: null, quantite: 1, prixUnitaire: 0 }]);
+      setModeFinalisation(d.modeFinalisation ?? "");
+      setAdresseLivraison(d.adresseLivraison ?? "");
+      setInfosComplementaires(d.infosComplementaires ?? "");
+      setDraftMsg("Brouillon restauré.");
+    } catch {
+      // brouillon corrompu — ignoré silencieusement, pas bloquant pour l'écran.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function sauvegarderBrouillon() {
+    const d = {
+      provenance, docType, nomClient, telephoneClient, emailClient, adresseClient, objet, tva, remise, remiseUnite,
+      lignes, modeFinalisation, adresseLivraison, infosComplementaires,
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+    setDraftMsg(`Brouillon enregistré — ${new Date().toLocaleTimeString("fr-FR")}`);
+  }
 
   const brut = lignes.reduce((acc, l) => acc + l.quantite * l.prixUnitaire, 0);
   const remiseValeur = remiseUnite === "%" ? brut * ((Number(remise) || 0) / 100) : Number(remise) || 0;
@@ -219,11 +339,17 @@ function NouvelleAffairePage({
     setTva("");
     setRemise("");
     setLignes([{ articleId: 0, varianteId: null, quantite: 1, prixUnitaire: 0 }]);
+    setFormKey((k) => k + 1);
     setModeFinalisation("");
     setAdresseLivraison("");
+    setDelaiNombre("");
+    setDelaiUnite("Jour");
+    setDateLivraison("");
     setInfosComplementaires("");
     setMontantRecu("");
     setError(null);
+    setDraftMsg(null);
+    localStorage.removeItem(DRAFT_KEY);
   }
 
   async function submit() {
@@ -264,6 +390,7 @@ function NouvelleAffairePage({
       fd.set("mode", modeReglement);
       await ajouterReglement({ error: null }, fd);
     }
+    localStorage.removeItem(DRAFT_KEY);
     setPending(false);
     router.refresh();
     onClose();
@@ -335,24 +462,29 @@ function NouvelleAffairePage({
           </div>
 
           <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginTop: 16, marginBottom: 8 }}>Articles</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div>
             {lignes.map((l, i) => (
               <LigneEditorRow
-                key={i}
+                key={`${formKey}-${i}`}
                 articlesList={articlesList}
                 variantesList={variantesList}
                 ligne={l}
-                onChange={(nl) => setLignes((arr) => arr.map((x, j) => (j === i ? nl : x)))}
-                onRemove={() => setLignes((arr) => arr.filter((_, j) => j !== i))}
+                canSeePrixAchat={roleCode === "SUPER_ADMIN" || roleCode === "ADMIN"}
+                onChange={(nl) => {
+                  setLignes((arr) => {
+                    const next = arr.map((x, j) => (j === i ? nl : x));
+                    // La dernière ligne se transforme automatiquement en ligne vide dès qu'un
+                    // article y est choisi — pas de bouton "+ Article" (n'existe pas sur la maquette).
+                    if (i === arr.length - 1 && nl.articleId) {
+                      next.push({ articleId: 0, varianteId: null, quantite: 1, prixUnitaire: 0 });
+                    }
+                    return next;
+                  });
+                }}
+                onRemove={() => setLignes((arr) => (arr.length > 1 ? arr.filter((_, j) => j !== i) : arr))}
               />
             ))}
           </div>
-          <button
-            onClick={() => setLignes((arr) => [...arr, { articleId: 0, varianteId: null, quantite: 1, prixUnitaire: 0 }])}
-            style={{ marginTop: 8, background: "#3b82f6", color: "#fff", border: "none", padding: "10px 26px", borderRadius: 6, fontSize: 14, cursor: "pointer" }}
-          >
-            + Article
-          </button>
 
           <div style={{ display: "flex", gap: 10, marginTop: 16, alignItems: "center", flexWrap: "wrap" }}>
             <select value={modeFinalisation} onChange={(e) => setModeFinalisation(e.target.value as "" | "RETRAIT" | "LIVRAISON")} style={{ ...inputStyle, flex: 1, minWidth: 160 }}>
@@ -360,6 +492,24 @@ function NouvelleAffairePage({
               <option value="RETRAIT">Retrait en boutique (préparation avant remise)</option>
               <option value="LIVRAISON">À livrer</option>
             </select>
+            <span title="Délai de livraison" style={{ fontSize: 28, filter: "grayscale(1)", opacity: 0.6 }}>🚚</span>
+            <input value={delaiNombre} onChange={(e) => setDelaiNombre(e.target.value)} placeholder="Nombre" style={{ ...inputStyle, width: 64, flexShrink: 0, textAlign: "center" }} />
+            <select value={delaiUnite} onChange={(e) => setDelaiUnite(e.target.value)} style={{ ...inputStyle, width: 110, flexShrink: 0 }}>
+              <option value="Jour">Jour(s)</option>
+              <option value="Semaine">Semaine(s)</option>
+              <option value="Mois">Mois</option>
+              <option value="Année">Année(s)</option>
+            </select>
+            <div style={{ position: "relative", width: 36, height: 36, flexShrink: 0, background: "#121212", border: "1px solid #333", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 16, pointerEvents: "none" }}>📅</span>
+              <input
+                type="date"
+                value={dateLivraison}
+                onChange={(e) => setDateLivraison(e.target.value)}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", boxSizing: "border-box" }}
+              />
+            </div>
+            {dateLivraison && <span style={{ fontSize: 13, color: "#ccc", whiteSpace: "nowrap" }}>{new Date(dateLivraison).toLocaleDateString("fr-FR")}</span>}
           </div>
           {modeFinalisation === "LIVRAISON" && (
             <div style={{ marginTop: 16, padding: 16, background: "#121212", borderRadius: 8 }}>
@@ -386,8 +536,21 @@ function NouvelleAffairePage({
                 <option value="VIREMENT">Virement</option>
                 <option value="CARTE">Carte</option>
               </select>
-              <div style={{ flex: 1, background: "#1e1e1e", border: "1px solid #333", color: solde > 0 ? "#f59e0b" : "#10b981", padding: "12px 14px", borderRadius: 8, fontSize: 15, fontWeight: 700, textAlign: "center" }}>
-                {solde > 0 ? `Solde ${formatFcfa(solde)}` : "Soldé"}
+              <div
+                style={{
+                  flex: 1,
+                  background: "#1e1e1e",
+                  border: "1px solid #333",
+                  color: Number(montantRecu) <= 0 ? "#666" : solde > 0 ? "#f59e0b" : "#10b981",
+                  padding: "12px 14px",
+                  borderRadius: 8,
+                  fontSize: 15,
+                  fontWeight: Number(montantRecu) <= 0 ? 400 : 700,
+                  textAlign: "center",
+                  fontStyle: Number(montantRecu) <= 0 ? "italic" : "normal",
+                }}
+              >
+                {Number(montantRecu) <= 0 ? "Reliquat / Reste" : solde > 0 ? `Solde ${formatFcfa(solde)}` : "Soldé"}
               </div>
             </div>
           </div>
@@ -400,13 +563,19 @@ function NouvelleAffairePage({
             {error}
           </p>
         )}
+        {draftMsg && (
+          <p style={{ marginTop: 10, fontSize: 12.5, color: "#34d399" }}>{draftMsg}</p>
+        )}
 
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16, borderTop: "1px solid #333", paddingTop: 16 }}>
-          <button type="button" onClick={onClose} style={darkButton("#333", "#e0e0e0")}>
-            Annuler
+        <div style={{ display: "flex", gap: 8, marginTop: 24 }}>
+          <button type="button" disabled={pending || !provenance} onClick={submit} style={{ flex: 1, minWidth: 0, background: "#10b981", color: "#fff", border: "none", padding: "11px 8px", borderRadius: 6, fontSize: 15, cursor: "pointer" }}>
+            {pending ? "..." : "💾 Enregistrer"}
           </button>
-          <button type="button" disabled={pending || !provenance} onClick={submit} style={darkButton("#3b82f6")}>
-            {pending ? "Création..." : "Créer l'affaire"}
+          <button type="button" onClick={sauvegarderBrouillon} style={{ flex: 1, minWidth: 0, background: "#3b3b3b", color: "#fff", border: "none", padding: "11px 8px", borderRadius: 6, fontSize: 15, cursor: "pointer" }}>
+            📝 Brouillon
+          </button>
+          <button type="button" onClick={onClose} style={{ flex: 1, minWidth: 0, background: "none", color: "#dc2626", border: "1px solid #dc2626", padding: "11px 8px", borderRadius: 6, fontSize: 15, cursor: "pointer" }}>
+            ✕ Annuler
           </button>
         </div>
       </div>
