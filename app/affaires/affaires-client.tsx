@@ -3,10 +3,16 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell, type ShellModule } from "@/components/app-shell";
-import type { affaires, articles, clients, demandesValidationStock, lignesAffaire, reglements, variantes } from "@/db/schema";
-import { ajouterReglement, creerAffaire, validerAffaire, type LigneInput, type ReglementState } from "./actions";
+import type { affaires, articles, demandesValidationStock, lignesAffaire, reglements, variantes } from "@/db/schema";
+import {
+  ajouterReglement,
+  creerAffaireDepuisFormulaire,
+  validerAffaire,
+  type DetailsAffaireInput,
+  type LigneInput,
+  type ReglementState,
+} from "./actions";
 
-type Client = typeof clients.$inferSelect;
 type Article = typeof articles.$inferSelect;
 type Variante = typeof variantes.$inferSelect;
 type AffaireRow = {
@@ -125,124 +131,232 @@ export function LigneEditorRow({
   );
 }
 
-function NouvelleAffaireDrawer({
-  clients,
+const PROVENANCES = ["Boutique physique", "Boutique en ligne", "WhatsApp", "TikTok", "Facebook"];
+
+function NouvelleAffairePage({
   articlesList,
   variantesList,
   onClose,
 }: {
-  clients: Client[];
   articlesList: Article[];
   variantesList: Variante[];
   onClose: () => void;
 }) {
   const router = useRouter();
-  const [clientId, setClientId] = useState<number | "">("");
+  const [provenance, setProvenance] = useState("");
+  const [nomClient, setNomClient] = useState("");
+  const [telephoneClient, setTelephoneClient] = useState("");
+  const [emailClient, setEmailClient] = useState("");
+  const [adresseClient, setAdresseClient] = useState("");
+  const [objet, setObjet] = useState("");
+  const [tva, setTva] = useState("");
+  const [remise, setRemise] = useState("");
+  const [remiseUnite, setRemiseUnite] = useState<"%" | "F">("%");
   const [lignes, setLignes] = useState<LigneInput[]>([{ articleId: 0, varianteId: null, quantite: 1, prixUnitaire: 0 }]);
+  const [modeFinalisation, setModeFinalisation] = useState<"" | "RETRAIT" | "LIVRAISON">("");
+  const [adresseLivraison, setAdresseLivraison] = useState("");
+  const [infosComplementaires, setInfosComplementaires] = useState("");
+  const [montantRecu, setMontantRecu] = useState("");
+  const [modeReglement, setModeReglement] = useState("ESPECES");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [modeFinalisation, setModeFinalisation] = useState<"" | "RETRAIT" | "LIVRAISON">("");
-  const [adresse, setAdresse] = useState("");
 
-  const total = lignes.reduce((acc, l) => acc + l.quantite * l.prixUnitaire, 0);
+  const brut = lignes.reduce((acc, l) => acc + l.quantite * l.prixUnitaire, 0);
+  const remiseValeur = remiseUnite === "%" ? brut * ((Number(remise) || 0) / 100) : Number(remise) || 0;
+  const total = Math.max(0, brut - remiseValeur);
+  const solde = total - (Number(montantRecu) || 0);
+
+  function reinitialiser() {
+    setProvenance("");
+    setNomClient("");
+    setTelephoneClient("");
+    setEmailClient("");
+    setAdresseClient("");
+    setObjet("");
+    setTva("");
+    setRemise("");
+    setLignes([{ articleId: 0, varianteId: null, quantite: 1, prixUnitaire: 0 }]);
+    setModeFinalisation("");
+    setAdresseLivraison("");
+    setInfosComplementaires("");
+    setMontantRecu("");
+    setError(null);
+  }
 
   async function submit() {
     setError(null);
-    if (!clientId) return setError("Client requis.");
+    if (!nomClient.trim() || !telephoneClient.trim()) return setError("Nom et téléphone du client requis.");
     const valid = lignes.filter((l) => l.articleId);
     if (valid.length === 0) return setError("Au moins une ligne requise.");
-    if (modeFinalisation === "LIVRAISON" && !adresse.trim()) return setError("Adresse de livraison requise.");
+    if (modeFinalisation === "LIVRAISON" && !adresseLivraison.trim()) return setError("Adresse de livraison requise.");
+
     setPending(true);
-    const res = await creerAffaire(Number(clientId), valid, modeFinalisation || null, modeFinalisation === "LIVRAISON" ? adresse.trim() : null);
+    const details: DetailsAffaireInput = {
+      provenance: provenance || null,
+      objet: objet.trim() || null,
+      tvaPct: tva ? Number(tva) : null,
+      remiseMontant: remise ? Number(remise) : null,
+      remiseUnite: remise ? remiseUnite : null,
+      infosComplementaires: infosComplementaires.trim() || null,
+    };
+    const res = await creerAffaireDepuisFormulaire(
+      nomClient.trim(),
+      telephoneClient.trim(),
+      emailClient.trim() || null,
+      adresseClient.trim() || null,
+      valid,
+      modeFinalisation || null,
+      modeFinalisation === "LIVRAISON" ? adresseLivraison.trim() : null,
+      details
+    );
+    if (res.error || !res.affaireId) {
+      setPending(false);
+      return setError(res.error ?? "Erreur inconnue.");
+    }
+    if (Number(montantRecu) > 0) {
+      const fd = new FormData();
+      fd.set("affaireId", String(res.affaireId));
+      fd.set("montant", montantRecu);
+      fd.set("mode", modeReglement);
+      await ajouterReglement({ error: null }, fd);
+    }
     setPending(false);
-    if (res.error) return setError(res.error);
     router.refresh();
     onClose();
   }
 
   return (
-    <div
-      style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 10, padding: 24, width: 560, maxWidth: "92vw", maxHeight: "86vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: "#fff", margin: 0 }}>Nouvelle affaire</h2>
-          <button onClick={onClose} aria-label="Fermer" style={{ background: "none", border: "none", color: "#888", fontSize: 20, cursor: "pointer", lineHeight: 1 }}>
-            &times;
-          </button>
-        </div>
-        <p style={{ marginTop: 4, fontSize: 12, color: "#888" }}>
-          Entre d&apos;abord comme Commande en attente (§8.1) — la validation contrôle le stock et décrémente en FIFO.
-        </p>
-
-        <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Client</label>
-            <select style={inputStyle} value={clientId} onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : "")}>
-              <option value="">Choisir un client...</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nom}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>
-              Finalisation (optionnel — vide = vente comptoir directe)
-            </label>
-            <select style={inputStyle} value={modeFinalisation} onChange={(e) => setModeFinalisation(e.target.value as "" | "RETRAIT" | "LIVRAISON")}>
-              <option value="">Vente comptoir directe</option>
-              <option value="RETRAIT">Retrait en boutique (préparation avant remise)</option>
-              <option value="LIVRAISON">Livraison</option>
-            </select>
-            {modeFinalisation === "LIVRAISON" && (
-              <input value={adresse} onChange={(e) => setAdresse(e.target.value)} placeholder="Adresse de livraison" style={{ ...inputStyle, marginTop: 8 }} />
-            )}
-          </div>
-
-          <div>
-            <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Lignes</label>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {lignes.map((l, i) => (
-                <LigneEditorRow
-                  key={i}
-                  articlesList={articlesList}
-                  variantesList={variantesList}
-                  ligne={l}
-                  onChange={(nl) => setLignes((arr) => arr.map((x, j) => (j === i ? nl : x)))}
-                  onRemove={() => setLignes((arr) => arr.filter((_, j) => j !== i))}
-                />
-              ))}
-            </div>
-            <button
-              onClick={() => setLignes((arr) => [...arr, { articleId: 0, varianteId: null, quantite: 1, prixUnitaire: 0 }])}
-              style={{ marginTop: 8, background: "none", border: "1px solid #333", color: "#3b82f6", padding: "6px 12px", borderRadius: 6, fontSize: 12, cursor: "pointer" }}
-            >
-              + Ajouter une ligne
+    <div style={{ padding: 20 }}>
+      <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>+ Nouvelle affaire</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={reinitialiser} style={{ background: "none", border: "1px solid #333", color: "#888", fontSize: 11, padding: "4px 9px", borderRadius: 5, cursor: "pointer" }}>
+              ↺ Réinitialiser
+            </button>
+            <button onClick={onClose} style={{ background: "none", border: "1px solid #333", color: "#888", fontSize: 11, padding: "4px 9px", borderRadius: 5, cursor: "pointer" }}>
+              ← Retour à la liste
             </button>
           </div>
+        </div>
 
-          <div style={{ borderTop: "1px solid #333", paddingTop: 12, textAlign: "right", fontSize: 17, fontWeight: 700, color: "#fff" }}>
-            Total : {formatFcfa(total)}
+        <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
+          <select value={provenance} onChange={(e) => setProvenance(e.target.value)} style={{ ...inputStyle, flex: 0.7 }}>
+            <option value="">Provenance…</option>
+            {PROVENANCES.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+          <input value={nomClient} onChange={(e) => setNomClient(e.target.value)} placeholder="Nom du client" style={{ ...inputStyle, flex: 1.6 }} />
+        </div>
+
+        {!provenance && <div style={{ fontSize: 12.5, color: "#f59e0b", marginBottom: 10 }}>⚠️ Sélectionnez d&apos;abord la provenance pour continuer.</div>}
+
+        <div style={{ opacity: provenance ? 1 : 0.4, pointerEvents: provenance ? "auto" : "none", transition: "opacity .15s" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 12 }}>
+            <input value={telephoneClient} onChange={(e) => setTelephoneClient(e.target.value)} placeholder="Téléphone" style={inputStyle} />
+            <input value={emailClient} onChange={(e) => setEmailClient(e.target.value)} placeholder="Email" style={inputStyle} />
+            <input value={adresseClient} onChange={(e) => setAdresseClient(e.target.value)} placeholder="Adresse" style={inputStyle} />
           </div>
 
-          {error && (
-            <p style={{ fontSize: 13, color: "#f87171", margin: 0 }} role="alert">
-              {error}
-            </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 130px", gap: 16, marginBottom: 12 }}>
+            <input value={objet} onChange={(e) => setObjet(e.target.value)} placeholder="Objet" style={inputStyle} />
+            <input value={tva} onChange={(e) => setTva(e.target.value)} placeholder="TVA %" type="number" style={inputStyle} />
+            <div style={{ display: "flex" }}>
+              <input
+                value={remise}
+                onChange={(e) => setRemise(e.target.value)}
+                placeholder="Remise"
+                type="number"
+                style={{ ...inputStyle, borderRight: "none", borderRadius: "8px 0 0 8px" }}
+              />
+              <select
+                value={remiseUnite}
+                onChange={(e) => setRemiseUnite(e.target.value as "%" | "F")}
+                style={{ width: 50, flexShrink: 0, background: "#333", color: "#e0e0e0", border: "none", borderRadius: "0 8px 8px 0", fontSize: 13, textAlign: "center" }}
+              >
+                <option value="%">%</option>
+                <option value="F">F</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginTop: 16, marginBottom: 8 }}>Articles</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {lignes.map((l, i) => (
+              <LigneEditorRow
+                key={i}
+                articlesList={articlesList}
+                variantesList={variantesList}
+                ligne={l}
+                onChange={(nl) => setLignes((arr) => arr.map((x, j) => (j === i ? nl : x)))}
+                onRemove={() => setLignes((arr) => arr.filter((_, j) => j !== i))}
+              />
+            ))}
+          </div>
+          <button
+            onClick={() => setLignes((arr) => [...arr, { articleId: 0, varianteId: null, quantite: 1, prixUnitaire: 0 }])}
+            style={{ marginTop: 8, background: "#3b82f6", color: "#fff", border: "none", padding: "10px 26px", borderRadius: 6, fontSize: 14, cursor: "pointer" }}
+          >
+            + Article
+          </button>
+
+          <div style={{ display: "flex", gap: 10, marginTop: 16, alignItems: "center", flexWrap: "wrap" }}>
+            <select value={modeFinalisation} onChange={(e) => setModeFinalisation(e.target.value as "" | "RETRAIT" | "LIVRAISON")} style={{ ...inputStyle, flex: 1, minWidth: 160 }}>
+              <option value="">Retrait en boutique</option>
+              <option value="RETRAIT">Retrait en boutique (préparation avant remise)</option>
+              <option value="LIVRAISON">À livrer</option>
+            </select>
+          </div>
+          {modeFinalisation === "LIVRAISON" && (
+            <div style={{ marginTop: 16, padding: 16, background: "#121212", borderRadius: 8 }}>
+              <input value={adresseLivraison} onChange={(e) => setAdresseLivraison(e.target.value)} placeholder="Adresse de livraison" style={inputStyle} />
+            </div>
           )}
 
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, borderTop: "1px solid #333", paddingTop: 14 }}>
-            <button type="button" onClick={onClose} style={darkButton("#333", "#e0e0e0")}>
-              Annuler
-            </button>
-            <button type="button" disabled={pending} onClick={submit} style={darkButton("#3b82f6")}>
-              {pending ? "Création..." : "Créer l'affaire"}
-            </button>
+          <div style={{ marginTop: 16, marginBottom: 12 }}>
+            <label style={{ display: "block", marginBottom: 4, fontSize: 11, color: "#666" }}>Informations complémentaires</label>
+            <textarea
+              value={infosComplementaires}
+              onChange={(e) => setInfosComplementaires(e.target.value)}
+              placeholder="Précisions à faire apparaître sur le document (optionnel)…"
+              style={{ ...inputStyle, height: 80, resize: "vertical", fontFamily: "inherit" }}
+            />
           </div>
+
+          <div style={{ marginTop: 16, padding: 16, background: "#121212", borderRadius: 8, border: "2px solid #fff" }}>
+            <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+              <input value={montantRecu} onChange={(e) => setMontantRecu(e.target.value)} placeholder="Montant reçu" type="number" style={{ ...inputStyle, flex: 1, background: "#1e1e1e" }} />
+              <select value={modeReglement} onChange={(e) => setModeReglement(e.target.value)} style={{ ...inputStyle, flex: 1, background: "#1e1e1e" }}>
+                <option value="ESPECES">Espèces</option>
+                <option value="MOBILE_MONEY">Mobile Money</option>
+                <option value="VIREMENT">Virement</option>
+                <option value="CARTE">Carte</option>
+              </select>
+              <div style={{ flex: 1, background: "#1e1e1e", border: "1px solid #333", color: solde > 0 ? "#f59e0b" : "#10b981", padding: "12px 14px", borderRadius: 8, fontSize: 15, fontWeight: 700, textAlign: "center" }}>
+                {solde > 0 ? `Solde ${formatFcfa(solde)}` : "Soldé"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 16, textAlign: "right", fontSize: 17, fontWeight: 700, color: "#fff" }}>Total : {formatFcfa(total)}</div>
+
+        {error && (
+          <p style={{ marginTop: 10, fontSize: 13, color: "#f87171" }} role="alert">
+            {error}
+          </p>
+        )}
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16, borderTop: "1px solid #333", paddingTop: 16 }}>
+          <button type="button" onClick={onClose} style={darkButton("#333", "#e0e0e0")}>
+            Annuler
+          </button>
+          <button type="button" disabled={pending || !provenance} onClick={submit} style={darkButton("#3b82f6")}>
+            {pending ? "Création..." : "Créer l'affaire"}
+          </button>
         </div>
       </div>
     </div>
@@ -293,7 +407,6 @@ export function AffairesClient({
   userName,
   roleLibelle,
   modules,
-  clients,
   articles,
   variantes,
   affaires,
@@ -304,7 +417,6 @@ export function AffairesClient({
   userName: string;
   roleLibelle: string;
   modules: ShellModule[];
-  clients: Client[];
   articles: Article[];
   variantes: Variante[];
   affaires: AffaireRow[];
@@ -373,6 +485,18 @@ export function AffairesClient({
     if (res.error) setValidationMsg(res.error);
     else if (res.blocked) setValidationMsg("Stock insuffisant — demande de validation envoyée (Admin/Super Admin, Phase 2).");
     router.refresh();
+  }
+
+  if (drawerOpen) {
+    return (
+      <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Nouvelle affaire" modules={modules}>
+        <NouvelleAffairePage
+          articlesList={articles}
+          variantesList={variantes}
+          onClose={() => setDrawerOpen(false)}
+        />
+      </AppShell>
+    );
   }
 
   return (
@@ -524,18 +648,6 @@ export function AffairesClient({
           )}
         </div>
       </div>
-
-      {drawerOpen && (
-        <NouvelleAffaireDrawer
-          clients={clients}
-          articlesList={articles}
-          variantesList={variantes}
-          onClose={() => {
-            setDrawerOpen(false);
-            router.refresh();
-          }}
-        />
-      )}
     </AppShell>
   );
 }

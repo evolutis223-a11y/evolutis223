@@ -28,7 +28,7 @@ export default async function AffairesPage() {
     );
   }
 
-  const [[user], clientRows, articleRows, varianteRows, affaireRows, ligneRows, reglementRows, demandeRows] =
+  const [[user], articleRows, varianteRows, affaireRows, ligneRows, reglementRows, demandeRows] =
     await Promise.all([
       db
         .select({ nom: utilisateurs.nom, roleLibelle: roles.libelle })
@@ -36,7 +36,6 @@ export default async function AffairesPage() {
         .innerJoin(roles, eq(utilisateurs.roleId, roles.id))
         .where(eq(utilisateurs.id, session.userId))
         .limit(1),
-      db.select().from(clients).orderBy(clients.nom),
       db.select().from(articles).orderBy(articles.nom),
       db.select().from(variantes),
       db
@@ -64,7 +63,6 @@ export default async function AffairesPage() {
       userName={user.nom}
       roleLibelle={user.roleLibelle}
       modules={buildShellModules(session.roleCode)}
-      clients={clientRows}
       articles={articleRows}
       variantes={varianteRows}
       affaires={affaireRows}
