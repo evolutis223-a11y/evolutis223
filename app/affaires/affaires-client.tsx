@@ -34,6 +34,11 @@ type AffaireRow = {
   clientId: number;
   objet: string | null;
   provenance: string | null;
+  clientAdresse: string | null;
+  clientTelephone: string | null;
+  tvaPct: string | null;
+  remiseMontant: string | null;
+  remiseUnite: string | null;
 };
 type LigneRow = typeof lignesAffaire.$inferSelect;
 type ReglementRow = typeof reglements.$inferSelect;
@@ -824,6 +829,28 @@ export function AffairesClient({
 
   const selected = affaires.find((a) => a.id === selectedId) ?? null;
 
+  const statsGlobales = useMemo(() => {
+    let nbSoldees = 0;
+    let nbPartielles = 0;
+    let nbNonSoldees = 0;
+    let totalTTCGlobal = 0;
+    let totalSoldeGlobal = 0;
+    for (const a of affaires) {
+      const ttc = Number(a.montantTtc);
+      totalTTCGlobal += ttc;
+      if (!a.immuable) {
+        nbNonSoldees++;
+        continue;
+      }
+      const solde = soldeDe(a);
+      totalSoldeGlobal += Math.max(0, solde);
+      if (solde <= 0) nbSoldees++;
+      else nbPartielles++;
+    }
+    return { nbAffTotal: affaires.length, nbSoldees, nbPartielles, nbNonSoldees, totalTTCGlobal, totalSoldeGlobal };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [affaires]);
+
   async function handleValider(affaireId: number) {
     setValidating(true);
     setValidationMsg(null);
@@ -925,71 +952,183 @@ export function AffairesClient({
         {/* Détail */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
           {!selected ? (
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#666", fontSize: 13, border: "1px solid #262626", borderRadius: 8 }}>
-              Sélectionne une affaire à gauche.
+            <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 28, flex: 1, overflowY: "auto" }}>
+              <div style={{ fontSize: 13, color: "#888", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 16 }}>
+                État du module — cliquez sur une affaire pour voir son détail
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div style={{ background: "#121212", border: "1px solid #333", borderRadius: 8, padding: 16 }}>
+                  <span style={{ color: "#888", fontSize: 13 }}>Total affaires</span>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: "#3b82f6" }}>{statsGlobales.nbAffTotal}</div>
+                </div>
+                <div style={{ background: "#121212", border: "1px solid #333", borderRadius: 8, padding: 16 }}>
+                  <span style={{ color: "#888", fontSize: 13 }}>Soldées</span>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: "#10b981" }}>{statsGlobales.nbSoldees}</div>
+                </div>
+                <div style={{ background: "#121212", border: "1px solid #333", borderRadius: 8, padding: 16 }}>
+                  <span style={{ color: "#888", fontSize: 13 }}>Partiellement soldées</span>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: "#f59e0b" }}>{statsGlobales.nbPartielles}</div>
+                </div>
+                <div style={{ background: "#121212", border: "1px solid #333", borderRadius: 8, padding: 16 }}>
+                  <span style={{ color: "#888", fontSize: 13 }}>Non soldées</span>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: "#dc2626" }}>{statsGlobales.nbNonSoldees}</div>
+                </div>
+              </div>
+              <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #333" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, padding: "6px 0" }}>
+                  <span>Total TTC (toutes affaires)</span>
+                  <span style={{ color: "#3b82f6", fontWeight: 700 }}>{formatFcfa(statsGlobales.totalTTCGlobal)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, padding: "6px 0" }}>
+                  <span>Solde restant dû (global)</span>
+                  <span style={{ color: "#dc2626", fontWeight: 700 }}>{formatFcfa(statsGlobales.totalSoldeGlobal)}</span>
+                </div>
+              </div>
             </div>
           ) : (
             (() => {
               const bloquee = (demandesByAffaire.get(selected.id) ?? []).length > 0;
               const totalRegle = (reglementsByAffaire.get(selected.id) ?? []).reduce((acc, r) => acc + Number(r.montant), 0);
-              const solde = Number(selected.montantTtc) - totalRegle;
+              const ttc = Number(selected.montantTtc);
+              const solde = ttc - totalRegle;
+              const lignesAff = lignesByAffaire.get(selected.id) ?? [];
+              const sousTotal = lignesAff.reduce((s, l) => s + Number(l.prixUnitaire) * l.quantite, 0);
+              const remiseNum = Number(selected.remiseMontant ?? 0);
+              const remiseValeur = !remiseNum ? 0 : selected.remiseUnite === "%" ? sousTotal * (remiseNum / 100) : remiseNum;
+              const tvaPctNum = Number(selected.tvaPct ?? 0);
+              const apresRemise = Math.max(0, sousTotal - remiseValeur);
+              const tvaValeur = tvaPctNum ? apresRemise * (tvaPctNum / 100) : 0;
               return (
                 <>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12, flexShrink: 0 }}>
-                    <div>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>
-                        {selected.numero} <span style={{ fontSize: 12, fontWeight: 400, color: "#888" }}>({TYPE_LABEL[selected.type] ?? selected.type})</span>
-                      </div>
-                      <div style={{ fontSize: 12, color: "#888" }}>
-                        {selected.clientNom} · {formatDate(selected.dateCreation)}
-                      </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 10, flexShrink: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", whiteSpace: "nowrap" }}>
+                      {selected.numero} <span style={{ fontSize: 12, fontWeight: 400, color: "#888" }}>({TYPE_LABEL[selected.type] ?? selected.type})</span>
                     </div>
                     <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                      {["FACTURE", "DEVIS", "PROFORMA", "BON_COMMANDE"].includes(selected.type) && (
-                        <a
-                          href={`/api/documents/affaire/${selected.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ ...darkButton("#333"), textDecoration: "none", display: "inline-flex", alignItems: "center" }}
-                        >
-                          🖨️ Imprimer
-                        </a>
-                      )}
                       {!selected.immuable && !bloquee && (
                         <button disabled={validating} onClick={() => handleValider(selected.id)} style={darkButton("#dc2626")}>
                           {validating ? "Validation..." : "✅ Valider (contrôle stock)"}
                         </button>
                       )}
+                      {["FACTURE", "DEVIS", "PROFORMA", "BON_COMMANDE"].includes(selected.type) && (
+                        <a
+                          href={`/api/documents/affaire/${selected.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ ...darkButton("#3b82f6"), textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                        >
+                          🖨️ Imprimer
+                        </a>
+                      )}
                     </div>
                   </div>
 
-                  <div style={{ flex: 1, overflowY: "auto", border: "1px solid #262626", borderRadius: 8, padding: 16 }}>
-                    <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
-                      <thead>
-                        <tr style={{ textAlign: "left", color: "#888", fontSize: 11 }}>
-                          <th style={{ paddingBottom: 6, textTransform: "uppercase" }}>Article</th>
-                          <th style={{ paddingBottom: 6, textTransform: "uppercase" }}>Qté</th>
-                          <th style={{ paddingBottom: 6, textTransform: "uppercase" }}>PU</th>
-                          <th style={{ paddingBottom: 6, textTransform: "uppercase", textAlign: "right" }}>Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(lignesByAffaire.get(selected.id) ?? []).map((l) => {
-                          const art = articles.find((x) => x.id === l.articleId);
-                          const vnt = variantes.find((v) => v.id === l.varianteId);
-                          return (
-                            <tr key={l.id} style={{ borderTop: "1px solid #262626" }}>
-                              <td style={{ padding: "7px 0", color: "#e0e0e0" }}>
-                                {art?.nom} {vnt ? `— ${vnt.taille ?? ""} ${vnt.couleur ?? ""}` : ""}
-                              </td>
-                              <td style={{ padding: "7px 0", color: "#ccc" }}>{l.quantite}</td>
-                              <td style={{ padding: "7px 0", color: "#ccc" }}>{formatFcfa(l.prixUnitaire)}</td>
-                              <td style={{ padding: "7px 0", color: "#fff", textAlign: "right", fontWeight: 700 }}>{formatFcfa(Number(l.prixUnitaire) * l.quantite)}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                  <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+                    <div style={{ background: "#fff", color: "#000", borderRadius: 6, padding: 24, fontFamily: "Arial,sans-serif", position: "relative" }}>
+                      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                        <div style={{ flex: 1, minWidth: 0, padding: "4px 8px 4px 0", display: "flex", alignItems: "center" }}>
+                          <img src="/logo.png" alt="EVOLUTIS223" style={{ height: 50, width: 174 }} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0, padding: 4, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <div style={{ textAlign: "center", flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 28, fontWeight: 800 }}>{(TYPE_LABEL[selected.type] ?? selected.type).toUpperCase()}</div>
+                            <div style={{ fontSize: 11, marginTop: 4 }}>
+                              N° {selected.numero} — {formatDate(selected.dateCreation)}
+                            </div>
+                            <div style={{ fontSize: 10.5, fontWeight: 700, marginTop: 4 }}>{selected.immuable ? "VALIDÉE" : "EN COURS"}</div>
+                          </div>
+                          <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(`EVOLUTIS223|${selected.numero}`)}`}
+                            alt="QR"
+                            style={{ width: 48, height: 48, flexShrink: 0 }}
+                          />
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                        <div style={{ flex: 1.2, minWidth: 0, padding: 10, fontSize: 13 }}>
+                          <b>Objet :</b> {selected.objet || "—"}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0, padding: "10px 10px 10px 46px", fontSize: 13 }}>
+                          <b style={{ textDecoration: "underline" }}>DOIT :</b>
+                          <br />
+                          <b>{selected.clientNom}</b>
+                          {selected.clientAdresse && (
+                            <>
+                              <br />
+                              <span style={{ fontSize: 11.5, color: "#555" }}>{selected.clientAdresse}</span>
+                            </>
+                          )}
+                          {selected.clientTelephone && (
+                            <>
+                              <br />
+                              <span style={{ fontSize: 11.5, color: "#555" }}>Tel {selected.clientTelephone}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 10 }}>
+                        <thead>
+                          <tr style={{ background: "#000", color: "#fff" }}>
+                            <th style={{ padding: 6, border: "1px solid #000", textAlign: "left" }}>N°</th>
+                            <th style={{ padding: 6, border: "1px solid #000", textAlign: "left" }}>Désignation</th>
+                            <th style={{ padding: 6, border: "1px solid #000" }}>Qté</th>
+                            <th style={{ padding: 6, border: "1px solid #000" }}>P.U.</th>
+                            <th style={{ padding: 6, border: "1px solid #000" }}>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lignesAff.map((l, i) => {
+                            const art = articles.find((x) => x.id === l.articleId);
+                            const vnt = variantes.find((v) => v.id === l.varianteId);
+                            return (
+                              <tr key={l.id}>
+                                <td style={{ padding: 8, border: "1px solid #000" }}>{i + 1}</td>
+                                <td style={{ padding: 8, border: "1px solid #000" }}>
+                                  {art?.nom} {vnt ? `— ${vnt.taille ?? ""} ${vnt.couleur ?? ""}` : ""}
+                                </td>
+                                <td style={{ padding: 8, border: "1px solid #000", textAlign: "center" }}>{l.quantite}</td>
+                                <td style={{ padding: 8, border: "1px solid #000", textAlign: "right" }}>{formatFcfa(l.prixUnitaire)}</td>
+                                <td style={{ padding: 8, border: "1px solid #000", textAlign: "right" }}>{formatFcfa(Number(l.prixUnitaire) * l.quantite)}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                        <div style={{ flex: 1 }} />
+                        <div style={{ flex: 1, minWidth: 0, fontSize: 13, border: "1px solid #000" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px" }}>
+                            <span>TOTAL HT</span>
+                            <span>{formatFcfa(sousTotal - remiseValeur)}</span>
+                          </div>
+                          {tvaPctNum > 0 && (
+                            <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px" }}>
+                              <span>TVA ({tvaPctNum}%)</span>
+                              <span>{formatFcfa(tvaValeur)}</span>
+                            </div>
+                          )}
+                          <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px", borderTop: "2px solid #000", fontWeight: 800, fontSize: 15 }}>
+                            <span>TOTAL TTC</span>
+                            <span>{formatFcfa(ttc)}</span>
+                          </div>
+                          {totalRegle > 0 && (
+                            <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px", color: "#166534", borderTop: "1px solid #000" }}>
+                              <span>Réglé</span>
+                              <span>{formatFcfa(totalRegle)}</span>
+                            </div>
+                          )}
+                          <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px", color: "#b91c1c", fontWeight: 700, borderTop: "1px solid #000" }}>
+                            <span>SOLDE</span>
+                            <span>{formatFcfa(Math.max(0, solde))}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "center", fontSize: 12, fontStyle: "italic", color: "#333", margin: "6px 0 10px" }}>Merci pour votre confiance.</div>
+                      <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ fontStyle: "italic", fontSize: 15, fontWeight: 700, textDecoration: "underline" }}>Le Client</span>
+                        <span style={{ fontStyle: "italic", fontSize: 15, fontWeight: 700, textDecoration: "underline" }}>Pour EVOLUTIS223</span>
+                      </div>
+                    </div>
 
                     {bloquee && (
                       <p style={{ marginTop: 14, borderLeft: "2px solid #f59e0b", background: "rgba(245,158,11,0.1)", padding: 12, borderRadius: 6, fontSize: 12.5, color: "#fcd34d" }}>
@@ -1001,19 +1140,13 @@ export function AffairesClient({
                       </p>
                     )}
 
-                    {selected.immuable && (
+                    {selected.immuable && solde > 0 && (
                       <div style={{ marginTop: 16, borderTop: "1px solid #262626", paddingTop: 14 }}>
-                        <div style={{ fontSize: 13, color: "#ccc" }}>
-                          Réglé : <span style={{ color: "#fff", fontWeight: 700 }}>{formatFcfa(totalRegle)}</span> — Solde :{" "}
-                          <span style={{ color: solde > 0 ? "#f59e0b" : "#10b981", fontWeight: 700 }}>{formatFcfa(solde)}</span>
-                        </div>
-                        {solde > 0 && <ReglementForm affaireId={selected.id} onDone={() => router.refresh()} />}
+                        <ReglementForm affaireId={selected.id} onDone={() => router.refresh()} />
                       </div>
                     )}
 
-                    {validationMsg && (
-                      <p style={{ marginTop: 12, fontSize: 12.5, color: "#f87171" }}>{validationMsg}</p>
-                    )}
+                    {validationMsg && <p style={{ marginTop: 12, fontSize: 12.5, color: "#f87171" }}>{validationMsg}</p>}
                   </div>
                 </>
               );
