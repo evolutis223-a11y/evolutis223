@@ -31,7 +31,10 @@ export type ModuleName = (typeof ALL_MODULES)[number];
 
 export const ROLE_MODULES: Record<string, readonly ModuleName[]> = {
   SUPER_ADMIN: ALL_MODULES,
-  ADMIN: ALL_MODULES.filter((m) => m !== "Paramètres" && m !== "Frais numériques"),
+  // Décision utilisateur 2026-08-03 : Super Admin et Admin gardent un pouvoir total, absolu et
+  // permanent sur l'ensemble de l'application — le cloisonnement des rôles ne doit jamais
+  // restreindre les administrateurs eux-mêmes.
+  ADMIN: ALL_MODULES,
   MANAGER: [
     "Tableau de bord",
     "Affaires",

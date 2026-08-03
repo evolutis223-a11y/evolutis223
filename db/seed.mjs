@@ -37,6 +37,26 @@ const DEV_USERS = [
   { nom: "Compte de test — Agent marketing", telephone: "+22300000005", pin: "1234", roleCode: "AGENT_MARKETING" },
 ];
 
+// Équipe nominative de la maquette (§6, roster de démonstration du login d'origine) — comptes
+// réels avec téléphone + PIN (pas de sélecteur de profil sans authentification, incompatible
+// avec une application en production sur de vraies données financières). "Marketing"
+// (Kadiatou Traoré) et "Agent marketing" (Ibrahim Coulibaly) partagent AGENT_MARKETING : la
+// matrice de rôles réelle (§6/§7) ne distingue pas responsable/agent terrain pour ce module.
+const EQUIPE_NOMINATIVE = [
+  { nom: "Samba Maïga", telephone: "+22300000010", pin: "1234", roleCode: "SUPER_ADMIN" },
+  { nom: "Mariam Koné", telephone: "+22300000011", pin: "1234", roleCode: "ADMIN" },
+  { nom: "Boubacar Diarra", telephone: "+22300000012", pin: "1234", roleCode: "MANAGER" },
+  { nom: "Fatoumata Coulibaly", telephone: "+22300000013", pin: "1234", roleCode: "COMPTABLE" },
+  { nom: "Fanta Koné", telephone: "+22300000014", pin: "1234", roleCode: "RESP_COMMERCIAL" },
+  { nom: "Kadiatou Traoré", telephone: "+22300000015", pin: "1234", roleCode: "AGENT_MARKETING" },
+  { nom: "Ibrahim Coulibaly", telephone: "+22300000016", pin: "1234", roleCode: "AGENT_MARKETING" },
+  { nom: "Ousmane Keita", telephone: "+22300000017", pin: "1234", roleCode: "COMMERCIAL" },
+  { nom: "Sékou Camara", telephone: "+22300000018", pin: "1234", roleCode: "VENDEUR" },
+  { nom: "Aïcha Sangaré", telephone: "+22300000019", pin: "1234", roleCode: "FREELANCE" },
+  { nom: "Mariam Sangaré", telephone: "+22300000020", pin: "1234", roleCode: "EMPLOYE" },
+  { nom: "Amadou Traoré", telephone: "+22300000021", pin: "1234", roleCode: "SUPPORT" },
+];
+
 async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -58,15 +78,15 @@ async function main() {
   }
   console.log(`${BRANCHES.length} branches seedées.`);
 
-  for (const u of DEV_USERS) {
+  for (const u of [...DEV_USERS, ...EQUIPE_NOMINATIVE]) {
     const pinHash = await bcrypt.hash(u.pin, 10);
     await pool.query(
       `insert into utilisateurs (nom, telephone, pin_hash, role_id, actif)
        select $1, $2, $3, id, true from roles where code = $4
-       on conflict (telephone) do update set pin_hash = excluded.pin_hash`,
+       on conflict (telephone) do update set pin_hash = excluded.pin_hash, nom = excluded.nom, role_id = excluded.role_id`,
       [u.nom, u.telephone, pinHash, u.roleCode]
     );
-    console.log(`Compte de test créé — ${u.telephone} / PIN ${u.pin} (${u.roleCode}, dev uniquement).`);
+    console.log(`Compte créé — ${u.nom} ${u.telephone} / PIN ${u.pin} (${u.roleCode}).`);
   }
 
   // §10bis — Bibliothèque de références du calculateur de marquage, valeurs de la maquette
