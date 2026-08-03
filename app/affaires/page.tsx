@@ -59,6 +59,8 @@ export default async function AffairesPage() {
           dateCreation: affaires.dateCreation,
           clientNom: clients.nom,
           clientId: affaires.clientId,
+          objet: affaires.objet,
+          provenance: affaires.provenance,
         })
         .from(affaires)
         .innerJoin(clients, eq(clients.id, affaires.clientId))

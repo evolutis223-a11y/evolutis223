@@ -118,7 +118,7 @@ export function AppShell({
           <button onClick={() => router.push("/")} title="Tableau de bord" style={{ background: "none", border: "none", color: "#888", fontSize: 19, cursor: "pointer" }}>
             📊
           </button>
-          <button onClick={() => router.push("/affaires")} title="Nouvelle affaire" style={{ background: "none", border: "none", color: "#888", fontSize: 19, cursor: "pointer" }}>
+          <button onClick={() => router.push("/affaires?nouveau=1")} title="Nouvelle affaire" style={{ background: "none", border: "none", color: "#888", fontSize: 19, cursor: "pointer" }}>
             ➕
           </button>
           <button onClick={() => router.push("/rapports")} title="Rapports" style={{ background: "none", border: "1px solid #333", color: "#888", fontSize: 12, padding: "5px 10px", borderRadius: 6, cursor: "pointer" }}>

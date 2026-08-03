@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell, type ShellModule } from "@/components/app-shell";
 import { formatFcfa, formatNombre } from "@/lib/format";
 import type { affaires, articles, demandesValidationStock, lignesAffaire, reglements } from "@/db/schema";
@@ -32,6 +32,8 @@ type AffaireRow = {
   dateCreation: Date;
   clientNom: string;
   clientId: number;
+  objet: string | null;
+  provenance: string | null;
 };
 type LigneRow = typeof lignesAffaire.$inferSelect;
 type ReglementRow = typeof reglements.$inferSelect;
@@ -763,12 +765,15 @@ export function AffairesClient({
   demandesEnAttente: DemandeRow[];
 }) {
   const router = useRouter();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const searchParams = useSearchParams();
+  // Le "+" de la barre du haut (components/app-shell.tsx) pointe vers /affaires?nouveau=1 pour
+  // ouvrir directement le formulaire plutôt que la liste — pas de route dédiée pour ce tiroir.
+  const [drawerOpen, setDrawerOpen] = useState(() => searchParams.get("nouveau") === "1");
   const [selectedId, setSelectedId] = useState<number | null>(affaires[0]?.id ?? null);
   const [validating, setValidating] = useState(false);
   const [validationMsg, setValidationMsg] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<"date" | "numero" | "solde">("date");
+  const [sort, setSort] = useState<"date" | "numero" | "soldee" | "partiel" | "solde">("date");
 
   const lignesByAffaire = useMemo(() => {
     const m = new Map<number, LigneRow[]>();
@@ -804,10 +809,14 @@ export function AffairesClient({
 
   const affairesFiltrees = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let list = affaires.filter((a) => !q || a.numero.toLowerCase().includes(q) || a.clientNom.toLowerCase().includes(q));
+    let list = affaires.filter(
+      (a) => !q || a.numero.toLowerCase().includes(q) || a.clientNom.toLowerCase().includes(q) || (a.objet ?? "").toLowerCase().includes(q)
+    );
     list = [...list];
     if (sort === "numero") list.sort((a, b) => a.numero.localeCompare(b.numero));
     else if (sort === "solde") list.sort((a, b) => soldeDe(b) - soldeDe(a));
+    else if (sort === "soldee") list.sort((a, b) => (b.immuable && soldeDe(b) <= 0 ? 1 : 0) - (a.immuable && soldeDe(a) <= 0 ? 1 : 0));
+    else if (sort === "partiel") list.sort((a, b) => (b.immuable && soldeDe(b) > 0 ? 1 : 0) - (a.immuable && soldeDe(a) > 0 ? 1 : 0));
     else list.sort((a, b) => new Date(b.dateCreation).getTime() - new Date(a.dateCreation).getTime());
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -832,7 +841,10 @@ export function AffairesClient({
           articlesList={articles}
           variantesList={variantes}
           roleCode={roleCode}
-          onClose={() => setDrawerOpen(false)}
+          onClose={() => {
+            setDrawerOpen(false);
+            if (searchParams.get("nouveau") === "1") router.replace("/affaires");
+          }}
         />
       </AppShell>
     );
@@ -850,10 +862,12 @@ export function AffairesClient({
             </button>
           </div>
           <div style={{ display: "flex", gap: 10, marginBottom: 14, flexShrink: 0 }}>
-            <input placeholder="Rechercher (n°, client)..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+            <input placeholder="Rechercher (n°, client, objet)..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
             <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} style={{ ...inputStyle, width: 200, flexShrink: 0 }}>
               <option value="date">Trier : Date</option>
               <option value="numero">Trier : Numéro</option>
+              <option value="soldee">Trier : Soldées d&apos;abord</option>
+              <option value="partiel">Trier : Partiels d&apos;abord</option>
               <option value="solde">Trier : Solde décroissant</option>
             </select>
           </div>
@@ -862,10 +876,12 @@ export function AffairesClient({
             <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
               <thead>
                 <tr>
-                  <th style={{ width: "20%", padding: 10, borderBottom: "1px solid #333", textAlign: "left", color: "#888", fontSize: 11.5, position: "sticky", top: 0, background: "#151515" }}>N°</th>
-                  <th style={{ width: "30%", padding: 10, borderBottom: "1px solid #333", textAlign: "left", color: "#888", fontSize: 11.5, position: "sticky", top: 0, background: "#151515" }}>Client</th>
-                  <th style={{ width: "22%", padding: 10, borderBottom: "1px solid #333", textAlign: "right", color: "#888", fontSize: 11.5, position: "sticky", top: 0, background: "#151515" }}>TTC</th>
-                  <th style={{ width: "28%", padding: 10, borderBottom: "1px solid #333", textAlign: "right", color: "#888", fontSize: 11.5, position: "sticky", top: 0, background: "#151515" }}>Solde</th>
+                  <th style={{ width: "15%", padding: 10, borderBottom: "1px solid #333", textAlign: "left", color: "#888", fontSize: 11.5, position: "sticky", top: 0, background: "#151515" }}>N°</th>
+                  <th style={{ width: "11%", padding: 10, borderBottom: "1px solid #333", textAlign: "left", color: "#888", fontSize: 11.5, position: "sticky", top: 0, background: "#151515" }}>Date</th>
+                  <th style={{ width: "22%", padding: 10, borderBottom: "1px solid #333", textAlign: "left", color: "#888", fontSize: 11.5, position: "sticky", top: 0, background: "#151515" }}>Client</th>
+                  <th style={{ width: "16%", padding: 10, borderBottom: "1px solid #333", textAlign: "left", color: "#888", fontSize: 11.5, position: "sticky", top: 0, background: "#151515" }}>Objet</th>
+                  <th style={{ width: "14%", padding: 10, borderBottom: "1px solid #333", textAlign: "right", color: "#888", fontSize: 11.5, position: "sticky", top: 0, background: "#151515" }}>TTC</th>
+                  <th style={{ width: "22%", padding: 10, borderBottom: "1px solid #333", textAlign: "right", color: "#888", fontSize: 11.5, position: "sticky", top: 0, background: "#151515" }}>Solde</th>
                 </tr>
               </thead>
               <tbody>
@@ -873,6 +889,7 @@ export function AffairesClient({
                   const bloquee = (demandesByAffaire.get(a.id) ?? []).length > 0;
                   const solde = soldeDe(a);
                   const couleur = statutColor(a, bloquee);
+                  const canalIcon = a.provenance && a.provenance !== "Boutique physique" ? "🌐" : "🏬";
                   return (
                     <tr
                       key={a.id}
@@ -880,7 +897,12 @@ export function AffairesClient({
                       style={{ cursor: "pointer", background: selectedId === a.id ? "#263041" : "transparent", borderLeft: `3px solid ${couleur}` }}
                     >
                       <td style={{ padding: 10, borderBottom: "1px solid #262626", fontSize: 12.5, color: "#e0e0e0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.numero}</td>
-                      <td style={{ padding: 10, borderBottom: "1px solid #262626", fontSize: 12.5, color: "#e0e0e0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.clientNom}</td>
+                      <td style={{ padding: 10, borderBottom: "1px solid #262626", fontSize: 12.5, color: "#e0e0e0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{formatDate(a.dateCreation)}</td>
+                      <td style={{ padding: 10, borderBottom: "1px solid #262626", fontSize: 12.5, color: "#e0e0e0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <span style={{ marginRight: 5 }}>{canalIcon}</span>
+                        {a.clientNom}
+                      </td>
+                      <td style={{ padding: 10, borderBottom: "1px solid #262626", fontSize: 12.5, color: "#e0e0e0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.objet || "—"}</td>
                       <td style={{ padding: 10, borderBottom: "1px solid #262626", fontSize: 12.5, color: "#e0e0e0", textAlign: "right" }}>{formatFcfa(a.montantTtc)}</td>
                       <td style={{ padding: 10, borderBottom: "1px solid #262626", fontSize: 12.5, color: couleur, textAlign: "right", fontWeight: 700 }}>
                         {a.immuable && solde > 0 ? formatFcfa(solde) : a.immuable ? "Soldée" : bloquee ? "Bloquée" : "—"}
@@ -890,7 +912,7 @@ export function AffairesClient({
                 })}
                 {affairesFiltrees.length === 0 && (
                   <tr>
-                    <td colSpan={4} style={{ padding: 20, textAlign: "center", color: "#666", fontSize: 13 }}>
+                    <td colSpan={6} style={{ padding: 20, textAlign: "center", color: "#666", fontSize: 13 }}>
                       Aucune affaire.
                     </td>
                   </tr>
