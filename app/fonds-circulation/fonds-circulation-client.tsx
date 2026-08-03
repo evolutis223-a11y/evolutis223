@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import { validerRemise } from "./actions";
 
 interface FondsRow {
@@ -20,7 +21,17 @@ function formatFcfa(v: string | number) {
   return `${Math.round(Number(v)).toLocaleString("fr-FR")} F`;
 }
 
-export function FondsCirculationClient({ fonds: initial }: { fonds: FondsRow[] }) {
+export function FondsCirculationClient({
+  userName,
+  roleLibelle,
+  modules,
+  fonds: initial,
+}: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
+  fonds: FondsRow[];
+}) {
   const router = useRouter();
   const [saisie, setSaisie] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState<number | null>(null);
@@ -40,7 +51,8 @@ export function FondsCirculationClient({ fonds: initial }: { fonds: FondsRow[] }
   }
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Fonds en circulation" modules={modules}>
+    <div className="mx-auto max-w-3xl p-6">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-foreground">Fonds en circulation (§8.2)</h1>
@@ -117,6 +129,7 @@ export function FondsCirculationClient({ fonds: initial }: { fonds: FondsRow[] }
           </div>
         </section>
       )}
-    </main>
+    </div>
+    </AppShell>
   );
 }

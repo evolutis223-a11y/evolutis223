@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import { creerFraisNumerique, basculerStatutFrais, supprimerFraisNumerique, type FraisNumeriqueState } from "./actions";
 
 type Ligne = {
@@ -45,11 +46,17 @@ function fmtDate(d: Date | string) {
 }
 
 export function FraisNumeriquesClient({
+  userName,
+  roleLibelle,
+  modules,
   lignes: initialLignes,
   totalMensuelFcfa,
   totalUniqueFcfa,
   tauxXofParUsd,
 }: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
   lignes: Ligne[];
   totalMensuelFcfa: number;
   totalUniqueFcfa: number;
@@ -110,7 +117,8 @@ export function FraisNumeriquesClient({
   }
 
   return (
-    <main className="mx-auto max-w-4xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Frais numériques" modules={modules}>
+    <div className="mx-auto max-w-4xl p-6">
       <h1 className="text-xl font-semibold text-foreground">Frais numériques — registre des coûts de mise en ligne</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Domaine, hébergement, outils/IA, paiement en ligne... Coûts payés par carte personnelle, séparés de la
@@ -232,6 +240,7 @@ export function FraisNumeriquesClient({
         </Button>
         {erreur && <p className="mt-1 text-xs text-destructive">{erreur}</p>}
       </div>
-    </main>
+    </div>
+    </AppShell>
   );
 }

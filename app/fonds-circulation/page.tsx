@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { affaires, fondsCirculation, utilisateurs } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { buildShellModules } from "@/lib/shell-modules";
+import { chargerUtilisateurAffiche } from "@/lib/session-user";
 import { FondsCirculationClient } from "./fonds-circulation-client";
 
 export default async function FondsCirculationPage() {
@@ -33,5 +35,13 @@ export default async function FondsCirculationPage() {
     .orderBy(desc(fondsCirculation.id))
     .limit(200);
 
-  return <FondsCirculationClient fonds={rows} />;
+  const user = await chargerUtilisateurAffiche(session.userId);
+  return (
+    <FondsCirculationClient
+      userName={user.nom}
+      roleLibelle={user.roleLibelle}
+      modules={buildShellModules(session.roleCode)}
+      fonds={rows}
+    />
+  );
 }
