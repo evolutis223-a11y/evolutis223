@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { affaires, articles, clients, demandesMaquette, demandesValidationStock, utilisateurs, variantes } from "@/db/schema";
 import { getSession } from "@/lib/auth";
+import { buildShellModules } from "@/lib/shell-modules";
+import { chargerUtilisateurAffiche } from "@/lib/session-user";
 import { ValidationsClient } from "./validations-client";
 
 export default async function ValidationsPage() {
@@ -76,5 +78,15 @@ export default async function ValidationsPage() {
     .orderBy(desc(demandesMaquette.dateCreation))
     .limit(100);
 
-  return <ValidationsClient demandes={demandes} proformas={proformas} demandesMaquette={demandesMaquettePubliques} />;
+  const user = await chargerUtilisateurAffiche(session.userId);
+  return (
+    <ValidationsClient
+      userName={user.nom}
+      roleLibelle={user.roleLibelle}
+      modules={buildShellModules(session.roleCode)}
+      demandes={demandes}
+      proformas={proformas}
+      demandesMaquette={demandesMaquettePubliques}
+    />
+  );
 }

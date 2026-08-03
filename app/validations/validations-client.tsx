@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import {
   autoriserDemande,
   listerDemandesEnAttente,
@@ -64,10 +65,16 @@ function beep() {
 }
 
 export function ValidationsClient({
+  userName,
+  roleLibelle,
+  modules,
   demandes: initial,
   proformas,
   demandesMaquette,
 }: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
   demandes: Demande[];
   proformas: Proforma[];
   demandesMaquette: DemandeMaquette[];
@@ -142,7 +149,8 @@ export function ValidationsClient({
   }
 
   return (
-    <main className="min-h-screen p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Tour de contrôle — Validations" modules={modules}>
+    <div className="min-h-screen p-6">
       <div className="mx-auto max-w-3xl space-y-6">
         <header className="flex items-center justify-between">
           <div>
@@ -398,6 +406,7 @@ export function ValidationsClient({
           </section>
         )}
       </div>
-    </main>
+    </div>
+    </AppShell>
   );
 }

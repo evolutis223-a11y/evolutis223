@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { affaires, articles, clients, lignesAffaire, ordresFabrication, utilisateurs } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { buildShellModules } from "@/lib/shell-modules";
+import { chargerUtilisateurAffiche } from "@/lib/session-user";
 import { listerPilotes } from "./actions";
 import { ProductionClient } from "./production-client";
 
@@ -43,5 +45,14 @@ export default async function ProductionPage() {
     listerPilotes(),
   ]);
 
-  return <ProductionClient ofs={ofs} pilotes={pilotes} />;
+  const user = await chargerUtilisateurAffiche(session.userId);
+  return (
+    <ProductionClient
+      userName={user.nom}
+      roleLibelle={user.roleLibelle}
+      modules={buildShellModules(session.roleCode)}
+      ofs={ofs}
+      pilotes={pilotes}
+    />
+  );
 }

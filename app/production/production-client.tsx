@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import { assignerPilote, avancerOf } from "./actions";
 
 interface OfRow {
@@ -50,7 +51,19 @@ function initials(nom: string) {
     .slice(0, 2);
 }
 
-export function ProductionClient({ ofs: initial, pilotes }: { ofs: OfRow[]; pilotes: Pilote[] }) {
+export function ProductionClient({
+  userName,
+  roleLibelle,
+  modules,
+  ofs: initial,
+  pilotes,
+}: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
+  ofs: OfRow[];
+  pilotes: Pilote[];
+}) {
   const router = useRouter();
   const [ofs, setOfs] = useState(initial);
   const [detail, setDetail] = useState<OfRow | null>(null);
@@ -93,7 +106,8 @@ export function ProductionClient({ ofs: initial, pilotes }: { ofs: OfRow[]; pilo
   }
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Production" modules={modules}>
+    <div className="mx-auto max-w-6xl p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Ordres de fabrication — Kanban</h1>
@@ -298,6 +312,7 @@ export function ProductionClient({ ofs: initial, pilotes }: { ofs: OfRow[]; pilo
           </div>
         </div>
       )}
-    </main>
+    </div>
+    </AppShell>
   );
 }
