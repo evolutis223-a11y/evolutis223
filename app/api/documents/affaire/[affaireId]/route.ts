@@ -6,7 +6,7 @@ import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 import { generateAffaireDocumentPdf, type LigneAffaireDocument, type TypeDocumentAffaire } from "@/lib/documents";
 
-const TYPES_IMPRIMABLES: TypeDocumentAffaire[] = ["FACTURE", "DEVIS", "PROFORMA", "BON_COMMANDE"];
+const TYPES_IMPRIMABLES: TypeDocumentAffaire[] = ["FACTURE", "DEVIS", "PROFORMA", "BON_COMMANDE", "TICKET"];
 
 // Génère et sert le PDF Facture/Devis/Proforma/Bon de commande d'une affaire existante (§13).
 // Même limite que le Bon de livraison : pas de persistance dans documentsArchives, génération +
@@ -52,7 +52,7 @@ export async function GET(
   }
   if (!TYPES_IMPRIMABLES.includes(affaire.type as TypeDocumentAffaire)) {
     return NextResponse.json(
-      { error: `Type d'affaire "${affaire.type}" non imprimable comme Facture/Devis/Proforma/Bon de commande.` },
+      { error: `Type d'affaire "${affaire.type}" non imprimable comme Facture/Devis/Proforma/Bon de commande/Reçu.` },
       { status: 400 }
     );
   }

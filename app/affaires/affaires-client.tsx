@@ -53,7 +53,7 @@ const TYPE_LABEL: Record<string, string> = {
   DEVIS: "Devis",
   PROFORMA: "Proforma",
   BON_COMMANDE: "Bon de commande",
-  TICKET: "Ticket",
+  TICKET: "Reçu",
   FACTURE: "Facture",
   AVOIR: "Avoir",
 };
@@ -779,6 +779,7 @@ export function AffairesClient({
   const [validationMsg, setValidationMsg] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<"date" | "numero" | "soldee" | "partiel" | "solde">("date");
+  const [typeFiltre, setTypeFiltre] = useState<string>("");
 
   const lignesByAffaire = useMemo(() => {
     const m = new Map<number, LigneRow[]>();
@@ -815,7 +816,9 @@ export function AffairesClient({
   const affairesFiltrees = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list = affaires.filter(
-      (a) => !q || a.numero.toLowerCase().includes(q) || a.clientNom.toLowerCase().includes(q) || (a.objet ?? "").toLowerCase().includes(q)
+      (a) =>
+        (!q || a.numero.toLowerCase().includes(q) || a.clientNom.toLowerCase().includes(q) || (a.objet ?? "").toLowerCase().includes(q)) &&
+        (!typeFiltre || a.type === typeFiltre)
     );
     list = [...list];
     if (sort === "numero") list.sort((a, b) => a.numero.localeCompare(b.numero));
@@ -825,7 +828,7 @@ export function AffairesClient({
     else list.sort((a, b) => new Date(b.dateCreation).getTime() - new Date(a.dateCreation).getTime());
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [affaires, search, sort]);
+  }, [affaires, search, sort, typeFiltre]);
 
   const selected = affaires.find((a) => a.id === selectedId) ?? null;
 
@@ -847,7 +850,11 @@ export function AffairesClient({
       if (solde <= 0) nbSoldees++;
       else nbPartielles++;
     }
-    return { nbAffTotal: affaires.length, nbSoldees, nbPartielles, nbNonSoldees, totalTTCGlobal, totalSoldeGlobal };
+    const nbDevis = affaires.filter((a) => a.type === "DEVIS").length;
+    const nbProforma = affaires.filter((a) => a.type === "PROFORMA").length;
+    const nbFacture = affaires.filter((a) => a.type === "FACTURE").length;
+    const nbRecu = affaires.filter((a) => a.type === "TICKET").length;
+    return { nbAffTotal: affaires.length, nbSoldees, nbPartielles, nbNonSoldees, totalTTCGlobal, totalSoldeGlobal, nbDevis, nbProforma, nbFacture, nbRecu };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [affaires]);
 
@@ -888,7 +895,7 @@ export function AffairesClient({
               + Nouvelle
             </button>
           </div>
-          <div style={{ display: "flex", gap: 10, marginBottom: 14, flexShrink: 0 }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 10, flexShrink: 0 }}>
             <input placeholder="Rechercher (n°, client, objet)..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
             <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} style={{ ...inputStyle, width: 200, flexShrink: 0 }}>
               <option value="date">Trier : Date</option>
@@ -896,6 +903,17 @@ export function AffairesClient({
               <option value="soldee">Trier : Soldées d&apos;abord</option>
               <option value="partiel">Trier : Partiels d&apos;abord</option>
               <option value="solde">Trier : Solde décroissant</option>
+            </select>
+          </div>
+          <div style={{ display: "flex", gap: 10, marginBottom: 14, flexShrink: 0 }}>
+            <select value={typeFiltre} onChange={(e) => setTypeFiltre(e.target.value)} style={{ ...inputStyle, width: "100%" }}>
+              <option value="">Tous les types de document</option>
+              <option value="DEVIS">Devis</option>
+              <option value="PROFORMA">Proforma</option>
+              <option value="FACTURE">Facture</option>
+              <option value="TICKET">Reçu</option>
+              <option value="BON_COMMANDE">Bon de commande</option>
+              <option value="COMMANDE_ATTENTE">Commande en attente</option>
             </select>
           </div>
 
@@ -952,7 +970,9 @@ export function AffairesClient({
         {/* Détail */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
           {!selected ? (
-            <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 28, flex: 1, overflowY: "auto" }}>
+            <div style={{ display: "flex", flexDirection: "column", minHeight: 0, flex: 1 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 10, flexShrink: 0 }}>Résumé — Affaires</div>
+              <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 28, flex: 1, overflowY: "auto" }}>
               <div style={{ fontSize: 13, color: "#888", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 16 }}>
                 État du module — cliquez sur une affaire pour voir son détail
               </div>
@@ -984,6 +1004,28 @@ export function AffairesClient({
                   <span style={{ color: "#dc2626", fontWeight: 700 }}>{formatFcfa(statsGlobales.totalSoldeGlobal)}</span>
                 </div>
               </div>
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #333" }}>
+                <div style={{ fontSize: 13, color: "#888", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>
+                  Répartition par type de document
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, padding: "4px 0" }}>
+                  <span>Devis</span>
+                  <span>{statsGlobales.nbDevis}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, padding: "4px 0" }}>
+                  <span>Proforma</span>
+                  <span>{statsGlobales.nbProforma}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, padding: "4px 0" }}>
+                  <span>Facture</span>
+                  <span>{statsGlobales.nbFacture}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, padding: "4px 0" }}>
+                  <span>Reçu</span>
+                  <span>{statsGlobales.nbRecu}</span>
+                </div>
+              </div>
+              </div>
             </div>
           ) : (
             (() => {
@@ -998,11 +1040,12 @@ export function AffairesClient({
               const tvaPctNum = Number(selected.tvaPct ?? 0);
               const apresRemise = Math.max(0, sousTotal - remiseValeur);
               const tvaValeur = tvaPctNum ? apresRemise * (tvaPctNum / 100) : 0;
+              const estDocumentReel = ["FACTURE", "DEVIS", "PROFORMA", "BON_COMMANDE", "TICKET"].includes(selected.type);
               return (
                 <>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 10, flexShrink: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", whiteSpace: "nowrap" }}>
-                      {selected.numero} <span style={{ fontSize: 12, fontWeight: 400, color: "#888" }}>({TYPE_LABEL[selected.type] ?? selected.type})</span>
+                      Aperçu {TYPE_LABEL[selected.type] ?? selected.type}
                     </div>
                     <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                       {!selected.immuable && !bloquee && (
@@ -1010,7 +1053,7 @@ export function AffairesClient({
                           {validating ? "Validation..." : "✅ Valider (contrôle stock)"}
                         </button>
                       )}
-                      {["FACTURE", "DEVIS", "PROFORMA", "BON_COMMANDE"].includes(selected.type) && (
+                      {["FACTURE", "DEVIS", "PROFORMA", "BON_COMMANDE", "TICKET"].includes(selected.type) && (
                         <a
                           href={`/api/documents/affaire/${selected.id}`}
                           target="_blank"
@@ -1031,7 +1074,11 @@ export function AffairesClient({
                         </div>
                         <div style={{ flex: 1, minWidth: 0, padding: 4, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                           <div style={{ textAlign: "center", flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 28, fontWeight: 800 }}>{(TYPE_LABEL[selected.type] ?? selected.type).toUpperCase()}</div>
+                            {estDocumentReel ? (
+                              <div style={{ fontSize: 28, fontWeight: 800 }}>{(TYPE_LABEL[selected.type] ?? selected.type).toUpperCase()}</div>
+                            ) : (
+                              <div style={{ fontSize: 15, fontWeight: 700, color: "#555" }}>Commande en attente de traitement</div>
+                            )}
                             <div style={{ fontSize: 11, marginTop: 4 }}>
                               N° {selected.numero} — {formatDate(selected.dateCreation)}
                             </div>

@@ -74,7 +74,7 @@ export interface LigneAffaireDocument {
   total: number;
 }
 
-export type TypeDocumentAffaire = "FACTURE" | "DEVIS" | "PROFORMA" | "BON_COMMANDE";
+export type TypeDocumentAffaire = "FACTURE" | "DEVIS" | "PROFORMA" | "BON_COMMANDE" | "TICKET";
 
 export interface AffaireDocumentData {
   docType: TypeDocumentAffaire;

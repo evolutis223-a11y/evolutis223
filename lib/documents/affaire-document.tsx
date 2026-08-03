@@ -20,6 +20,7 @@ const TITRES: Record<AffaireDocumentData["docType"], string> = {
   DEVIS: "Devis",
   PROFORMA: "Proforma",
   BON_COMMANDE: "Bon de commande",
+  TICKET: "Reçu",
 };
 
 const styles = StyleSheet.create({

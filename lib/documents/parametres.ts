@@ -16,7 +16,8 @@ export type TypeDocument =
   | "COURRIER"
   | "FACTURE"
   | "DEVIS"
-  | "PROFORMA";
+  | "PROFORMA"
+  | "TICKET";
 
 export interface ParametresRecuCaisse {
   afficherMentionsLegales: boolean;
@@ -85,7 +86,7 @@ export async function chargerParametresFichePaie(): Promise<ParametresFichePaie>
 }
 
 export async function chargerParametresAffaireDocument(
-  type: "FACTURE" | "DEVIS" | "PROFORMA" | "BON_COMMANDE"
+  type: "FACTURE" | "DEVIS" | "PROFORMA" | "BON_COMMANDE" | "TICKET"
 ): Promise<ParametresAffaireDocument> {
   const config = await chargerConfig(type);
   return { ...DEFAUTS_AFFAIRE_DOCUMENT, ...config };
