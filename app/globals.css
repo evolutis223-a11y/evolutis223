@@ -33,25 +33,30 @@ body {
     --chart-5: oklch(0.274 0.006 286.033);
     --radius: 0.5rem;
   }
+  /* Thème sombre — mêmes couleurs exactes que design/Application de Gestion
+     EVOLUTIS223.dc.html (2026-08-03) : fond #0a0a0a/#121212, cartes #1e1e1e, bordures #333,
+     accent #3b82f6. Remplace les valeurs shadcn génériques d'origine pour que toutes les pages
+     encore en classes Tailwind (bg-background, border-border, bg-card...) héritent
+     automatiquement du même thème que les écrans reconstruits à la main. */
   .dark {
-    --background: oklch(0.141 0.005 285.823);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.21 0.006 285.885);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.21 0.006 285.885);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.92 0.004 286.32);
-    --primary-foreground: oklch(0.21 0.006 285.885);
-    --secondary: oklch(0.274 0.006 286.033);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.274 0.006 286.033);
-    --muted-foreground: oklch(0.705 0.015 286.067);
-    --accent: oklch(0.274 0.006 286.033);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.552 0.016 285.938);
+    --background: #0a0a0a;
+    --foreground: #f5f5f5;
+    --card: #1e1e1e;
+    --card-foreground: #f5f5f5;
+    --popover: #1e1e1e;
+    --popover-foreground: #f5f5f5;
+    --primary: #3b82f6;
+    --primary-foreground: #ffffff;
+    --secondary: #333333;
+    --secondary-foreground: #e0e0e0;
+    --muted: #1e1e1e;
+    --muted-foreground: #888888;
+    --accent: #333333;
+    --accent-foreground: #ffffff;
+    --destructive: #dc2626;
+    --border: #333333;
+    --input: #333333;
+    --ring: #3b82f6;
     --chart-1: oklch(0.871 0.006 286.286);
     --chart-2: oklch(0.552 0.016 285.938);
     --chart-3: oklch(0.442 0.017 285.786);

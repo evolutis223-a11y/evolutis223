@@ -1,8 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import type { clients } from "@/db/schema";
 import { createClient, type CreateClientState } from "./actions";
 
@@ -10,19 +9,39 @@ type Client = typeof clients.$inferSelect;
 
 const initialState: CreateClientState = { error: null };
 
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  background: "#121212",
+  border: "1px solid #333",
+  color: "#e0e0e0",
+  padding: "10px 12px",
+  borderRadius: 8,
+  fontSize: 14,
+  boxSizing: "border-box",
+};
+function darkButton(bg: string, color = "#fff"): React.CSSProperties {
+  return { background: bg, color, border: "none", padding: "9px 16px", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" };
+}
+
 function TypeBadge({ type }: { type: string }) {
   return type === "ONG_CONTRAT" ? (
-    <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-      ONG / Contrat
-    </span>
+    <span style={{ borderRadius: 999, background: "rgba(59,130,246,0.15)", color: "#60a5fa", padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>ONG / Contrat</span>
   ) : (
-    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground">
-      Boutique
-    </span>
+    <span style={{ borderRadius: 999, background: "#333", color: "#ccc", padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>Boutique</span>
   );
 }
 
-export function ClientsClient({ clients: initialClients }: { clients: Client[] }) {
+export function ClientsClient({
+  userName,
+  roleLibelle,
+  modules,
+  clients: initialClients,
+}: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
+  clients: Client[];
+}) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [type, setType] = useState<"BOUTIQUE" | "ONG_CONTRAT">("BOUTIQUE");
   const [search, setSearch] = useState("");
@@ -45,83 +64,69 @@ export function ClientsClient({ clients: initialClients }: { clients: Client[] }
     : initialClients;
 
   return (
-    <main className="mx-auto max-w-4xl p-6">
-      <div className="flex items-baseline justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Clients</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Boutique (client comptant) ou ONG/Contrat (paiement différé, proforma en amont — §12).
-          </p>
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Clients" modules={modules}>
+      <div style={{ padding: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Clients</div>
+            <div style={{ marginTop: 2, fontSize: 12.5, color: "#888" }}>Boutique (client comptant) ou ONG/Contrat (paiement différé, proforma en amont).</div>
+          </div>
+          <button onClick={() => setDrawerOpen(true)} style={darkButton("#3b82f6")}>
+            + Nouveau client
+          </button>
         </div>
-        <Button onClick={() => setDrawerOpen(true)}>+ Nouveau client</Button>
-      </div>
 
-      <Input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Rechercher par nom ou contact..."
-        className="mt-4 w-64"
-      />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher par nom ou contact..." style={{ ...inputStyle, width: 280, marginBottom: 14 }} />
 
-      <div className="mt-4 overflow-hidden rounded-md border border-border">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-              <th className="px-4 py-3">Nom</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Contact</th>
-              <th className="px-4 py-3">Contrat</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && (
+        <div style={{ border: "1px solid #262626", borderRadius: 8, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                  Aucun client.
-                </td>
+                <th style={{ padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333" }}>Nom</th>
+                <th style={{ padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333" }}>Type</th>
+                <th style={{ padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333" }}>Contact</th>
+                <th style={{ padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333" }}>Contrat</th>
               </tr>
-            )}
-            {filtered.map((c) => (
-              <tr key={c.id} className="border-b border-border last:border-0">
-                <td className="px-4 py-2.5 font-medium text-foreground">{c.nom}</td>
-                <td className="px-4 py-2.5">
-                  <TypeBadge type={c.typeClient} />
-                </td>
-                <td className="px-4 py-2.5 text-muted-foreground">{c.contact ?? "—"}</td>
-                <td className="px-4 py-2.5 text-muted-foreground">
-                  {c.contratRef ? `${c.contratRef} (${c.paiementDiffereJours ?? 0} j.)` : "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={4} style={{ padding: 24, textAlign: "center", color: "#666", fontSize: 13 }}>
+                    Aucun client.
+                  </td>
+                </tr>
+              )}
+              {filtered.map((c) => (
+                <tr key={c.id}>
+                  <td style={{ padding: 10, borderBottom: "1px solid #262626", fontSize: 13, fontWeight: 600, color: "#fff" }}>{c.nom}</td>
+                  <td style={{ padding: 10, borderBottom: "1px solid #262626" }}>
+                    <TypeBadge type={c.typeClient} />
+                  </td>
+                  <td style={{ padding: 10, borderBottom: "1px solid #262626", fontSize: 12.5, color: "#888" }}>{c.contact ?? "—"}</td>
+                  <td style={{ padding: 10, borderBottom: "1px solid #262626", fontSize: 12.5, color: "#888" }}>
+                    {c.contratRef ? `${c.contratRef} (${c.paiementDiffereJours ?? 0} j.)` : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {drawerOpen && (
-        <div
-          className="fixed inset-0 z-30 flex justify-end bg-black/40"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setDrawerOpen(false);
-          }}
-        >
-          <div className="h-full w-full max-w-md overflow-y-auto bg-background p-6 shadow-xl">
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Nouveau client</h2>
-              <button
-                onClick={() => setDrawerOpen(false)}
-                className="text-xl leading-none text-muted-foreground"
-                aria-label="Fermer"
-              >
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "flex-end" }} onClick={(e) => e.target === e.currentTarget && setDrawerOpen(false)}>
+          <div style={{ width: 420, maxWidth: "92vw", height: "100%", overflowY: "auto", background: "#1e1e1e", borderLeft: "1px solid #333", padding: 24, boxSizing: "border-box" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: "#fff", margin: 0 }}>Nouveau client</h2>
+              <button onClick={() => setDrawerOpen(false)} style={{ background: "none", border: "none", color: "#888", fontSize: 20, cursor: "pointer" }}>
                 &times;
               </button>
             </div>
 
-            <form key={formKey} action={action} className="mt-5 space-y-4">
+            <form key={formKey} action={action} style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
-                <label className="mb-2 block text-xs font-semibold uppercase text-muted-foreground">
-                  Type
-                </label>
-                <div className="grid grid-cols-2 gap-2">
+                <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Type</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   {(
                     [
                       { id: "BOUTIQUE" as const, label: "Boutique", desc: "Client comptant, paiement immédiat." },
@@ -131,12 +136,10 @@ export function ClientsClient({ clients: initialClients }: { clients: Client[] }
                     <div
                       key={t.id}
                       onClick={() => setType(t.id)}
-                      className={`cursor-pointer rounded-md border p-2.5 text-xs ${
-                        type === t.id ? "border-primary bg-primary/10" : "border-border bg-background"
-                      }`}
+                      style={{ cursor: "pointer", borderRadius: 8, border: `1px solid ${type === t.id ? "#3b82f6" : "#333"}`, background: type === t.id ? "rgba(59,130,246,0.1)" : "transparent", padding: 10, fontSize: 12 }}
                     >
-                      <div className="font-semibold text-foreground">{t.label}</div>
-                      <div className="mt-0.5 text-muted-foreground">{t.desc}</div>
+                      <div style={{ fontWeight: 700, color: "#fff" }}>{t.label}</div>
+                      <div style={{ marginTop: 2, color: "#888" }}>{t.desc}</div>
                     </div>
                   ))}
                 </div>
@@ -144,54 +147,42 @@ export function ClientsClient({ clients: initialClients }: { clients: Client[] }
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
-                  Nom
-                </label>
-                <Input name="nom" placeholder="Ex. Amadou Traoré / ONG Espoir" required />
+                <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Nom</label>
+                <input name="nom" placeholder="Ex. Amadou Traoré / ONG Espoir" required style={inputStyle} />
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
-                  Contact (téléphone/adresse)
-                </label>
-                <Input name="contact" placeholder="Ex. +223 70 00 00 00" />
+                <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Contact (téléphone/adresse)</label>
+                <input name="contact" placeholder="Ex. +223 70 00 00 00" style={inputStyle} />
               </div>
 
               {type === "ONG_CONTRAT" && (
                 <>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
-                      Référence contrat
-                    </label>
-                    <Input name="contratRef" placeholder="Ex. CT-2026-014" />
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Référence contrat</label>
+                    <input name="contratRef" placeholder="Ex. CT-2026-014" style={inputStyle} />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
-                      Délai de paiement différé (jours)
-                    </label>
-                    <Input name="paiementDiffereJours" type="number" min="0" placeholder="Ex. 30" />
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Délai de paiement différé (jours)</label>
+                    <input name="paiementDiffereJours" type="number" min="0" placeholder="Ex. 30" style={inputStyle} />
                   </div>
                 </>
               )}
 
-              {state.error && (
-                <p className="text-sm text-destructive" role="alert">
-                  {state.error}
-                </p>
-              )}
+              {state.error && <p style={{ fontSize: 12.5, color: "#f87171", margin: 0 }}>{state.error}</p>}
 
-              <div className="flex justify-end gap-2 border-t border-border pt-4">
-                <Button type="button" variant="outline" onClick={() => setDrawerOpen(false)}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, borderTop: "1px solid #333", paddingTop: 14 }}>
+                <button type="button" onClick={() => setDrawerOpen(false)} style={darkButton("#333", "#e0e0e0")}>
                   Annuler
-                </Button>
-                <Button type="submit" disabled={pending}>
+                </button>
+                <button type="submit" disabled={pending} style={darkButton("#3b82f6")}>
                   {pending ? "Création..." : "Créer le client"}
-                </Button>
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </main>
+    </AppShell>
   );
 }
