@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import { creerBonAchat } from "./actions";
 
 type Fournisseur = { id: number; nom: string; contact: string | null; delaiLivraisonJours: number | null; actif: boolean };
@@ -26,11 +27,17 @@ function fmtDate(d: Date | string) {
 }
 
 export function AchatsClient({
+  userName,
+  roleLibelle,
+  modules,
   fournisseurs,
   lots,
   bons: initialBons,
   totalAchatsMois,
 }: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
   fournisseurs: Fournisseur[];
   lots: Lot[];
   bons: Bon[];
@@ -65,7 +72,8 @@ export function AchatsClient({
   }
 
   return (
-    <main className="mx-auto max-w-4xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Achats" modules={modules}>
+    <div className="mx-auto max-w-4xl p-6">
       <h1 className="text-xl font-semibold text-foreground">Achats (§7)</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Vue consolidée des approvisionnements (Stock) et des sorties de caisse Achat marchandise (Trésorerie) — pas de
@@ -158,6 +166,7 @@ export function AchatsClient({
           avant que ce montant impacte la caisse.
         </p>
       </div>
-    </main>
+    </div>
+    </AppShell>
   );
 }

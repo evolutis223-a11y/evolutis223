@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { buildShellModules } from "@/lib/shell-modules";
+import { chargerUtilisateurAffiche } from "@/lib/session-user";
 import { chargerDonneesDepenses } from "./actions";
 import { DepensesClient } from "./depenses-client";
 
@@ -14,6 +16,6 @@ export default async function DepensesPage() {
       </main>
     );
   }
-  const donnees = await chargerDonneesDepenses();
-  return <DepensesClient {...donnees} />;
+  const [donnees, user] = await Promise.all([chargerDonneesDepenses(), chargerUtilisateurAffiche(session.userId)]);
+  return <DepensesClient {...donnees} userName={user.nom} roleLibelle={user.roleLibelle} modules={buildShellModules(session.roleCode)} />;
 }

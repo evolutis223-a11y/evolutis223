@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import { creerDepense } from "./actions";
 
 type Bon = { id: number; montant: number; motif: string; dateCreation: Date | string; valide: boolean };
@@ -16,7 +17,19 @@ function fmtDate(d: Date | string) {
   return new Date(d).toLocaleDateString("fr-FR");
 }
 
-export function DepensesClient({ bons: initialBons, totalMois }: { bons: Bon[]; totalMois: number }) {
+export function DepensesClient({
+  userName,
+  roleLibelle,
+  modules,
+  bons: initialBons,
+  totalMois,
+}: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
+  bons: Bon[];
+  totalMois: number;
+}) {
   const [bons, setBons] = useState(initialBons);
   const [montant, setMontant] = useState("");
   const [motif, setMotif] = useState("");
@@ -46,7 +59,8 @@ export function DepensesClient({ bons: initialBons, totalMois }: { bons: Bon[]; 
   }
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Dépenses" modules={modules}>
+    <div className="mx-auto max-w-3xl p-6">
       <h1 className="text-xl font-semibold text-foreground">Dépenses &amp; Charges (§7)</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Loyer, courant, transport, imprévus — mêmes sorties de caisse que /tresorerie (catégorie Charge générale),
@@ -106,6 +120,7 @@ export function DepensesClient({ bons: initialBons, totalMois }: { bons: Bon[]; 
           avant que ce montant impacte la caisse.
         </p>
       </div>
-    </main>
+    </div>
+    </AppShell>
   );
 }
