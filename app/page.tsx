@@ -5,7 +5,8 @@ import { db } from "@/db";
 import { utilisateurs, roles, affaires, clients, articles, vStockVariante, personnel, reglements, bonsDecaissement } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess, type ModuleName } from "@/lib/permissions";
-import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AppShell } from "@/components/app-shell";
+import { buildShellModules } from "@/lib/shell-modules";
 
 function fmt(n: number) {
   return `${Math.round(n).toLocaleString("fr-FR")} F`;
@@ -30,30 +31,7 @@ export default async function DashboardPage() {
   const peutRH = hasModuleAccess(user.roleCode, "RH");
   const estAdminOuSuper = user.roleCode === "ADMIN" || user.roleCode === "SUPER_ADMIN";
 
-  // Barre de modules — ordre et icônes copiés de design/Application de Gestion EVOLUTIS223.dc.html
-  // (lignes ~9144-9177). Seuls les modules qui ont une vraie page construite apparaissent : pas de
-  // lien vers un écran qui n'existe pas (Règlements/Documents/Paramètres dédiés — pas encore construits).
-  const barreModules: (ShellModule | false)[] = [
-    estAdminOuSuper && { key: "superadmin", label: "Tour de contrôle", href: "/validations" },
-    { key: "dashboard", label: "Tableau de bord", href: "/" },
-    peutAffaires && { key: "affaires", label: "Affaires", href: "/affaires" },
-    peutClients && { key: "clients", label: "Clients", href: "/clients" },
-    hasModuleAccess(user.roleCode, "Catalogue") && { key: "catalogue", label: "Catalogue", href: "/catalogue" },
-    hasModuleAccess(user.roleCode, "Nos produits") && { key: "produits", label: "Nos produits", href: "/boutique" },
-    hasModuleAccess(user.roleCode, "Marketing") && { key: "marketing", label: "Marketing", href: "/marketing" },
-    hasModuleAccess(user.roleCode, "R&D") && { key: "rd", label: "R&D", href: "/rd-calculateurs" },
-    peutStocks && { key: "stock", label: "Stocks", href: "/stocks" },
-    hasModuleAccess(user.roleCode, "Commandes") && { key: "livraisons", label: "Commandes", href: "/commandes" },
-    peutRH && { key: "rh", label: "RH", href: "/rh" },
-    hasModuleAccess(user.roleCode, "Commercial") && { key: "commercial", label: "Commercial", href: "/commercial" },
-    hasModuleAccess(user.roleCode, "Fournisseurs") && { key: "fournisseurs", label: "Fournisseurs", href: "/fournisseurs" },
-    hasModuleAccess(user.roleCode, "Achats") && { key: "achats", label: "Achats", href: "/achats" },
-    hasModuleAccess(user.roleCode, "Dépenses") && { key: "depenses", label: "Dépenses", href: "/depenses" },
-    hasModuleAccess(user.roleCode, "Charges") && { key: "charges", label: "Charges", href: "/charges" },
-    hasModuleAccess(user.roleCode, "Trésorerie") && { key: "tresorerie", label: "Trésorerie", href: "/tresorerie" },
-    hasModuleAccess(user.roleCode, "Rapports") && { key: "rapports", label: "Rapports", href: "/rapports" },
-  ];
-  const modules = barreModules.filter(Boolean) as ShellModule[];
+  const modules = buildShellModules(user.roleCode);
 
   const [affairesAgg] = await db
     .select({

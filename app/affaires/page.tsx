@@ -2,6 +2,8 @@ import { desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import {
+  utilisateurs,
+  roles,
   affaires,
   articles,
   clients,
@@ -12,6 +14,7 @@ import {
 } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { buildShellModules } from "@/lib/shell-modules";
 import { AffairesClient } from "./affaires-client";
 
 export default async function AffairesPage() {
@@ -25,8 +28,14 @@ export default async function AffairesPage() {
     );
   }
 
-  const [clientRows, articleRows, varianteRows, affaireRows, ligneRows, reglementRows, demandeRows] =
+  const [[user], clientRows, articleRows, varianteRows, affaireRows, ligneRows, reglementRows, demandeRows] =
     await Promise.all([
+      db
+        .select({ nom: utilisateurs.nom, roleLibelle: roles.libelle })
+        .from(utilisateurs)
+        .innerJoin(roles, eq(utilisateurs.roleId, roles.id))
+        .where(eq(utilisateurs.id, session.userId))
+        .limit(1),
       db.select().from(clients).orderBy(clients.nom),
       db.select().from(articles).orderBy(articles.nom),
       db.select().from(variantes),
@@ -52,6 +61,9 @@ export default async function AffairesPage() {
 
   return (
     <AffairesClient
+      userName={user.nom}
+      roleLibelle={user.roleLibelle}
+      modules={buildShellModules(session.roleCode)}
       clients={clientRows}
       articles={articleRows}
       variantes={varianteRows}
