@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { affaires, articles, clients, variantes } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { buildShellModules } from "@/lib/shell-modules";
+import { chargerUtilisateurAffiche } from "@/lib/session-user";
 import { CommercialClient } from "./commercial-client";
 
 export default async function CommercialPage() {
@@ -35,5 +37,15 @@ export default async function CommercialPage() {
       .orderBy(desc(affaires.id)),
   ]);
 
-  return <CommercialClient articles={articleRows} variantes={varianteRows} proformas={mesProformas} />;
+  const user = await chargerUtilisateurAffiche(session.userId);
+  return (
+    <CommercialClient
+      userName={user.nom}
+      roleLibelle={user.roleLibelle}
+      modules={buildShellModules(session.roleCode)}
+      articles={articleRows}
+      variantes={varianteRows}
+      proformas={mesProformas}
+    />
+  );
 }

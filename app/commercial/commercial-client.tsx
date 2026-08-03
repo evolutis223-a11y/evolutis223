@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import type { articles, variantes } from "@/db/schema";
 import { LigneEditorRow } from "../affaires/affaires-client";
 import type { LigneInput } from "../affaires/actions";
@@ -37,10 +38,16 @@ const STATUT_CLASS: Record<string, string> = {
 };
 
 export function CommercialClient({
+  userName,
+  roleLibelle,
+  modules,
   articles,
   variantes,
   proformas,
 }: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
   articles: Article[];
   variantes: Variante[];
   proformas: ProformaRow[];
@@ -79,7 +86,8 @@ export function CommercialClient({
   }
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Commercial" modules={modules}>
+    <div className="mx-auto max-w-3xl p-6">
       <div className="flex items-baseline justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Commercial — Proformas (§12)</h1>
@@ -191,6 +199,7 @@ export function CommercialClient({
           </div>
         </div>
       )}
-    </main>
+    </div>
+    </AppShell>
   );
 }

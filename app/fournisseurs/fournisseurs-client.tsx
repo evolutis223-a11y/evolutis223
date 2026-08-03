@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import type { fournisseurs } from "@/db/schema";
 import { createFournisseur, toggleFournisseurActif, type CreateFournisseurState } from "./actions";
 
@@ -55,16 +56,23 @@ function CreateFournisseurForm({ onDone }: { onDone: () => void }) {
 }
 
 export function FournisseursClient({
+  userName,
+  roleLibelle,
+  modules,
   fournisseurs: initialFournisseurs,
   nbLotsParFournisseur,
 }: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
   fournisseurs: Fournisseur[];
   nbLotsParFournisseur: Record<number, number>;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Fournisseurs" modules={modules}>
+    <div className="mx-auto max-w-3xl p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Fournisseurs</h1>
@@ -128,6 +136,7 @@ export function FournisseursClient({
           </div>
         </div>
       )}
-    </main>
+    </div>
+    </AppShell>
   );
 }

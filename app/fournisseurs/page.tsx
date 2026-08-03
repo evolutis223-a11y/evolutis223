@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { fournisseurs, lots } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { buildShellModules } from "@/lib/shell-modules";
+import { chargerUtilisateurAffiche } from "@/lib/session-user";
 import { FournisseursClient } from "./fournisseurs-client";
 
 export default async function FournisseursPage() {
@@ -30,5 +32,14 @@ export default async function FournisseursPage() {
     lotCounts.filter((r) => r.fournisseurId !== null).map((r) => [r.fournisseurId as number, Number(r.total)])
   );
 
-  return <FournisseursClient fournisseurs={rows} nbLotsParFournisseur={nbLotsParFournisseur} />;
+  const user = await chargerUtilisateurAffiche(session.userId);
+  return (
+    <FournisseursClient
+      userName={user.nom}
+      roleLibelle={user.roleLibelle}
+      modules={buildShellModules(session.roleCode)}
+      fournisseurs={rows}
+      nbLotsParFournisseur={nbLotsParFournisseur}
+    />
+  );
 }
