@@ -2,9 +2,9 @@
 
 const NOMBRE_FR = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
 
-/** Formate un montant en Francs CFA, ex 12500 -> "12 500 F". */
+/** Formate un montant en Francs CFA, ex 12500 -> "12 500 FCFA". */
 export function formatFcfa(montant: number): string {
-  return `${NOMBRE_FR.format(Math.round(montant))} F`;
+  return `${NOMBRE_FR.format(Math.round(montant))} FCFA`;
 }
 
 /** Formate une date en "JJ/MM/AAAA HH:mm" (fuseau local du serveur). */

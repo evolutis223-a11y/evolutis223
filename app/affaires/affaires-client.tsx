@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { formatFcfa } from "@/lib/format";
 import type { affaires, articles, demandesValidationStock, lignesAffaire, reglements } from "@/db/schema";
 import {
   ajouterReglement,
@@ -36,9 +37,6 @@ type LigneRow = typeof lignesAffaire.$inferSelect;
 type ReglementRow = typeof reglements.$inferSelect;
 type DemandeRow = typeof demandesValidationStock.$inferSelect;
 
-function formatFcfa(v: string | number) {
-  return `${Math.round(Number(v)).toLocaleString("fr-FR")} F`;
-}
 function formatDate(d: Date | string) {
   return new Date(d).toLocaleDateString("fr-FR");
 }
@@ -262,7 +260,6 @@ function NouvelleAffairePage({
   const [delaiNombre, setDelaiNombre] = useState("");
   const [delaiUnite, setDelaiUnite] = useState("Jour");
   const [dateLivraison, setDateLivraison] = useState("");
-  const [infosComplementaires, setInfosComplementaires] = useState("");
   const [montantRecu, setMontantRecu] = useState("");
   const [modeReglement, setModeReglement] = useState("ESPECES");
   const [error, setError] = useState<string | null>(null);
@@ -290,7 +287,6 @@ function NouvelleAffairePage({
       setLignes(d.lignes ?? [{ articleId: 0, varianteId: null, quantite: 1, prixUnitaire: 0 }]);
       setModeFinalisation(d.modeFinalisation ?? "");
       setAdresseLivraison(d.adresseLivraison ?? "");
-      setInfosComplementaires(d.infosComplementaires ?? "");
       setDraftMsg("Brouillon restauré.");
     } catch {
       // brouillon corrompu — ignoré silencieusement, pas bloquant pour l'écran.
@@ -301,7 +297,7 @@ function NouvelleAffairePage({
   function sauvegarderBrouillon() {
     const d = {
       provenance, docType, nomClient, telephoneClient, emailClient, adresseClient, objet, tva, remise, remiseUnite,
-      lignes, modeFinalisation, adresseLivraison, infosComplementaires,
+      lignes, modeFinalisation, adresseLivraison,
     };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
     setDraftMsg(`Brouillon enregistré — ${new Date().toLocaleTimeString("fr-FR")}`);
@@ -314,7 +310,17 @@ function NouvelleAffairePage({
   // ci-dessous, pas incluse dans le calcul, pour ne pas afficher un aperçu qui ment sur le vrai total.
   const total = Math.max(0, brut - remiseValeur);
   const tvaValeur = total * ((Number(tva) || 0) / 100);
-  const solde = total - (Number(montantRecu) || 0);
+  const montantRecuNum = Number(montantRecu) || 0;
+  // Écart signé, pas juste "solde" : positif = surplus (client a trop payé), négatif = déficit.
+  const ecart = montantRecuNum - total;
+  const badgeSolde =
+    montantRecuNum <= 0
+      ? { texte: "Reliquat / Reste", couleur: "#666", italique: true }
+      : ecart > 0
+        ? { texte: `Reliquat : +${formatFcfa(ecart)}`, couleur: "#10b981", italique: false }
+        : ecart < 0
+          ? { texte: `Reste à payer : ${formatFcfa(-ecart)}`, couleur: "#dc2626", italique: false }
+          : { texte: "Soldé", couleur: "#10b981", italique: false };
 
   const lignesApercu = lignes
     .filter((l) => l.articleId)
@@ -345,7 +351,6 @@ function NouvelleAffairePage({
     setDelaiNombre("");
     setDelaiUnite("Jour");
     setDateLivraison("");
-    setInfosComplementaires("");
     setMontantRecu("");
     setError(null);
     setDraftMsg(null);
@@ -366,7 +371,6 @@ function NouvelleAffairePage({
       tvaPct: tva ? Number(tva) : null,
       remiseMontant: remise ? Number(remise) : null,
       remiseUnite: remise ? remiseUnite : null,
-      infosComplementaires: infosComplementaires.trim() || null,
       docType,
     };
     const res = await creerAffaireDepuisFormulaire(
@@ -397,8 +401,8 @@ function NouvelleAffairePage({
   }
 
   return (
-    <div style={{ padding: 20, display: "flex", gap: 20 }}>
-      <div style={{ flex: 1, minWidth: 0, background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 24 }}>
+    <div style={{ padding: 16, display: "flex", gap: 16, maxWidth: 1400, margin: "0 auto" }}>
+      <div style={{ flex: 1, minWidth: 0, background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 18 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>+ Nouvelle affaire</div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -517,18 +521,8 @@ function NouvelleAffairePage({
             </div>
           )}
 
-          <div style={{ marginTop: 16, marginBottom: 12 }}>
-            <label style={{ display: "block", marginBottom: 4, fontSize: 11, color: "#666" }}>Informations complémentaires</label>
-            <textarea
-              value={infosComplementaires}
-              onChange={(e) => setInfosComplementaires(e.target.value)}
-              placeholder="Précisions à faire apparaître sur le document (optionnel)…"
-              style={{ ...inputStyle, height: 80, resize: "vertical", fontFamily: "inherit" }}
-            />
-          </div>
-
-          <div style={{ marginTop: 16, padding: 16, background: "#121212", borderRadius: 8, border: "2px solid #fff" }}>
-            <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+          <div style={{ marginTop: 14, padding: 12, background: "#121212", borderRadius: 8, border: "2px solid #fff" }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               <input value={montantRecu} onChange={(e) => setMontantRecu(e.target.value)} placeholder="Montant reçu" type="number" style={{ ...inputStyle, flex: 1, background: "#1e1e1e" }} />
               <select value={modeReglement} onChange={(e) => setModeReglement(e.target.value)} style={{ ...inputStyle, flex: 1, background: "#1e1e1e" }}>
                 <option value="ESPECES">Espèces</option>
@@ -541,22 +535,25 @@ function NouvelleAffairePage({
                   flex: 1,
                   background: "#1e1e1e",
                   border: "1px solid #333",
-                  color: Number(montantRecu) <= 0 ? "#666" : solde > 0 ? "#f59e0b" : "#10b981",
+                  color: badgeSolde.couleur,
                   padding: "12px 14px",
                   borderRadius: 8,
-                  fontSize: 15,
-                  fontWeight: Number(montantRecu) <= 0 ? 400 : 700,
+                  fontSize: 14,
+                  fontWeight: badgeSolde.italique ? 400 : 700,
                   textAlign: "center",
-                  fontStyle: Number(montantRecu) <= 0 ? "italic" : "normal",
+                  fontStyle: badgeSolde.italique ? "italic" : "normal",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
                 }}
               >
-                {Number(montantRecu) <= 0 ? "Reliquat / Reste" : solde > 0 ? `Solde ${formatFcfa(solde)}` : "Soldé"}
+                {badgeSolde.texte}
               </div>
             </div>
           </div>
         </div>
 
-        <div style={{ marginTop: 16, textAlign: "right", fontSize: 17, fontWeight: 700, color: "#fff" }}>Total : {formatFcfa(total)}</div>
+        <div style={{ marginTop: 12, textAlign: "right", fontSize: 17, fontWeight: 700, color: "#fff" }}>Total : {formatFcfa(total)}</div>
 
         {error && (
           <p style={{ marginTop: 10, fontSize: 13, color: "#f87171" }} role="alert">
@@ -567,7 +564,7 @@ function NouvelleAffairePage({
           <p style={{ marginTop: 10, fontSize: 12.5, color: "#34d399" }}>{draftMsg}</p>
         )}
 
-        <div style={{ display: "flex", gap: 8, marginTop: 24 }}>
+        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
           <button type="button" disabled={pending || !provenance} onClick={submit} style={{ flex: 1, minWidth: 0, background: "#10b981", color: "#fff", border: "none", padding: "11px 8px", borderRadius: 6, fontSize: 15, cursor: "pointer" }}>
             {pending ? "..." : "💾 Enregistrer"}
           </button>
@@ -584,7 +581,7 @@ function NouvelleAffairePage({
           mise en page imprimable — voir design/Application de Gestion EVOLUTIS223.dc.html, bloc
           "Aperçu" de l'écran isNouveau). */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ flex: 1, background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 24, position: "sticky", top: 0 }}>
+        <div style={{ flex: 1, background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 18, position: "sticky", top: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>Aperçu</div>
             <button onClick={() => window.print()} style={{ background: "none", border: "none", color: "#888", fontSize: 18, cursor: "pointer" }}>
@@ -621,31 +618,23 @@ function NouvelleAffairePage({
           </div>
 
           <div style={{ borderTop: "2px solid #3a3a3a", marginTop: 6 }} />
-          <div style={{ fontSize: 22, fontWeight: 700, color: "#3b82f6", marginTop: 10 }}>
-            Total HT : {formatFcfa(brut)}
-            <span style={{ fontSize: 13, fontWeight: 400, marginLeft: 4 }}>FCFA</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", margin: "6px 0", fontSize: 15, color: "#ccc" }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#3b82f6", marginTop: 8 }}>Total HT : {formatFcfa(brut)}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", margin: "6px 0", fontSize: 14, color: "#ccc" }}>
             <span>TVA ({tva || 0}%) : {tvaValeur > 0 ? formatFcfa(tvaValeur) : "—"}</span>
             <span>Remise : {remiseValeur > 0 ? formatFcfa(remiseValeur) : "—"}</span>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: "#10b981", marginTop: 6 }}>
-            Total TTC : {formatFcfa(total)}
-            <span style={{ fontSize: 14, fontWeight: 400, marginLeft: 4 }}>FCFA</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, flexWrap: "wrap", gap: "6px 12px" }}>
-            <span style={{ fontSize: 15, color: "#ccc", whiteSpace: "nowrap" }}>
-              <b style={{ fontWeight: 700, color: "#e0e0e0" }}>Montant reçu : {Number(montantRecu) > 0 ? formatFcfa(Number(montantRecu)) : "—"}</b>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "#10b981", marginTop: 4 }}>Total TTC : {formatFcfa(total)}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, flexWrap: "wrap", gap: "6px 12px" }}>
+            <span style={{ fontSize: 14, color: "#ccc", whiteSpace: "nowrap" }}>
+              <b style={{ fontWeight: 700, color: "#e0e0e0" }}>Montant reçu : {montantRecuNum > 0 ? formatFcfa(montantRecuNum) : "—"}</b>
             </span>
-            {Number(montantRecu) > 0 && (
-              <span style={{ fontSize: 15, fontWeight: 700, color: solde > 0 ? "#f59e0b" : "#10b981", whiteSpace: "nowrap" }}>
-                {solde > 0 ? "Solde" : "Soldé"} : {formatFcfa(Math.max(0, solde))}
-              </span>
+            {montantRecuNum > 0 && (
+              <span style={{ fontSize: 14, fontWeight: 700, color: badgeSolde.couleur, whiteSpace: "nowrap" }}>{badgeSolde.texte}</span>
             )}
           </div>
 
-          {(provenance || modeFinalisation || adresseLivraison || infosComplementaires) && (
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #333", fontSize: 13, color: "#ccc" }}>
+          {(provenance || modeFinalisation || adresseLivraison) && (
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #333", fontSize: 13, color: "#ccc" }}>
               {provenance && (
                 <div style={{ marginBottom: 4 }}>
                   📍 Provenance : <b style={{ color: "#e0e0e0" }}>{provenance}</b>
@@ -654,10 +643,7 @@ function NouvelleAffairePage({
               {modeFinalisation && (
                 <div style={{ marginBottom: 4 }}>🚚 {modeFinalisation === "LIVRAISON" ? "À livrer" : "Retrait en boutique"}</div>
               )}
-              {modeFinalisation === "LIVRAISON" && adresseLivraison && (
-                <div style={{ marginBottom: 4 }}>🏠 Adresse : {adresseLivraison}</div>
-              )}
-              {infosComplementaires && <div>📝 {infosComplementaires}</div>}
+              {modeFinalisation === "LIVRAISON" && adresseLivraison && <div>🏠 Adresse : {adresseLivraison}</div>}
             </div>
           )}
         </div>
