@@ -583,11 +583,23 @@ export function AffairesClient({
                         {selected.clientNom} · {formatDate(selected.dateCreation)}
                       </div>
                     </div>
-                    {!selected.immuable && !bloquee && (
-                      <button disabled={validating} onClick={() => handleValider(selected.id)} style={darkButton("#dc2626")}>
-                        {validating ? "Validation..." : "✅ Valider (contrôle stock)"}
-                      </button>
-                    )}
+                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                      {["FACTURE", "DEVIS", "PROFORMA", "BON_COMMANDE"].includes(selected.type) && (
+                        <a
+                          href={`/api/documents/affaire/${selected.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ ...darkButton("#333"), textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                        >
+                          🖨️ Imprimer
+                        </a>
+                      )}
+                      {!selected.immuable && !bloquee && (
+                        <button disabled={validating} onClick={() => handleValider(selected.id)} style={darkButton("#dc2626")}>
+                          {validating ? "Validation..." : "✅ Valider (contrôle stock)"}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div style={{ flex: 1, overflowY: "auto", border: "1px solid #262626", borderRadius: 8, padding: 16 }}>

@@ -7,7 +7,16 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { parametresDocuments } from "@/db/schema";
 
-export type TypeDocument = "RECU_CAISSE" | "BON_LIVRAISON" | "BON_COMMANDE" | "FICHE_PAIE" | "ORDRE_MISSION" | "COURRIER";
+export type TypeDocument =
+  | "RECU_CAISSE"
+  | "BON_LIVRAISON"
+  | "BON_COMMANDE"
+  | "FICHE_PAIE"
+  | "ORDRE_MISSION"
+  | "COURRIER"
+  | "FACTURE"
+  | "DEVIS"
+  | "PROFORMA";
 
 export interface ParametresRecuCaisse {
   afficherMentionsLegales: boolean;
@@ -39,6 +48,18 @@ export const DEFAUTS_FICHE_PAIE: ParametresFichePaie = {
   labelSignataire: "L'employé(e)",
 };
 
+export interface ParametresAffaireDocument {
+  afficherMentionsLegales: boolean;
+  labelSignataireDroite: string;
+  mentionValidite: string;
+}
+
+export const DEFAUTS_AFFAIRE_DOCUMENT: ParametresAffaireDocument = {
+  afficherMentionsLegales: true,
+  labelSignataireDroite: "EVOLUTIS223",
+  mentionValidite: "Valable 30 jours",
+};
+
 async function chargerConfig(type: TypeDocument): Promise<Record<string, unknown> | null> {
   const [row] = await db
     .select({ config: parametresDocuments.config })
@@ -61,6 +82,13 @@ export async function chargerParametresBonLivraison(): Promise<ParametresBonLivr
 export async function chargerParametresFichePaie(): Promise<ParametresFichePaie> {
   const config = await chargerConfig("FICHE_PAIE");
   return { ...DEFAUTS_FICHE_PAIE, ...config };
+}
+
+export async function chargerParametresAffaireDocument(
+  type: "FACTURE" | "DEVIS" | "PROFORMA" | "BON_COMMANDE"
+): Promise<ParametresAffaireDocument> {
+  const config = await chargerConfig(type);
+  return { ...DEFAUTS_AFFAIRE_DOCUMENT, ...config };
 }
 
 export async function enregistrerParametresDocument(

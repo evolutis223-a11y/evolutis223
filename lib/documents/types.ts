@@ -67,6 +67,35 @@ export interface FichePaieData {
   netAPayer: number;
 }
 
+export interface LigneAffaireDocument {
+  designation: string;
+  quantite: number;
+  prixUnitaire: number;
+  total: number;
+}
+
+export type TypeDocumentAffaire = "FACTURE" | "DEVIS" | "PROFORMA" | "BON_COMMANDE";
+
+export interface AffaireDocumentData {
+  docType: TypeDocumentAffaire;
+  /** Numéro affiché — reprend directement le numéro de l'affaire (§8.1), pas d'espace de
+   * numérotation séparé pour ces documents (à la différence de BL-/REC- qui préfixent). */
+  numero: string;
+  dateEmission?: Date;
+  objet?: string;
+  clientNom: string;
+  clientContact?: string;
+  clientAdresse?: string;
+  lignes: LigneAffaireDocument[];
+  tvaPct?: number;
+  remiseMontant?: number;
+  remiseUnite?: "%" | "F";
+  montantTtc: number;
+  montantRecu?: number;
+  infosComplementaires?: string;
+  qrPayload?: string;
+}
+
 export interface BonLivraisonData {
   /** Numéro du bon lui-même, ex "BL-26-0001" (§13 — espace de numérotation propre au document imprimé,
    * distinct du numéro de l'affaire qu'il documente). */

@@ -7,6 +7,7 @@
 export { generateRecuCaissePdf, RecuCaisseDocument } from "./recu-caisse";
 export { generateBonLivraisonPdf, BonLivraisonDocument } from "./bon-livraison";
 export { generateFichePaiePdf, FichePaieDocument } from "./fiche-paie";
+export { generateAffaireDocumentPdf, AffaireDocumentDocument } from "./affaire-document";
 export { ENTREPRISE, MENTIONS_LEGALES_TEXTE } from "./legal-mentions";
 export { sha256Hex } from "./hash";
 export { formatFcfa, formatDateHeure } from "./format";
@@ -14,14 +15,17 @@ export {
   chargerParametresRecuCaisse,
   chargerParametresBonLivraison,
   chargerParametresFichePaie,
+  chargerParametresAffaireDocument,
   enregistrerParametresDocument,
   DEFAUTS_RECU_CAISSE,
   DEFAUTS_BON_LIVRAISON,
   DEFAUTS_FICHE_PAIE,
+  DEFAUTS_AFFAIRE_DOCUMENT,
   type TypeDocument,
   type ParametresRecuCaisse,
   type ParametresBonLivraison,
   type ParametresFichePaie,
+  type ParametresAffaireDocument,
 } from "./parametres";
 export type {
   RecuCaisseData,
@@ -32,4 +36,7 @@ export type {
   FichePaieData,
   RubriquePaie,
   DocumentGenere,
+  AffaireDocumentData,
+  LigneAffaireDocument,
+  TypeDocumentAffaire,
 } from "./types";
