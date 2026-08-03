@@ -7,10 +7,12 @@ import {
   createArticle,
   definirCategorieMarquage,
   definirPrixRevient,
+  definirPrixRevientCalcule,
   toggleNecessiteAssemblage,
   togglePublieBoutique,
   type CreateArticleState,
 } from "./actions";
+import { calculerPrixRevient, type CompositionCout } from "@/lib/calculateurs/coutRevient";
 import { FAMILLES, FamilleIcon, familleMeta, type FamilleId } from "./familles";
 
 type Article = typeof articles.$inferSelect;
@@ -49,6 +51,84 @@ function Thumb({ article, size }: { article: Article; size: number }) {
 
 const initialCreateState: CreateArticleState = { error: null };
 
+const emptyComposition: CompositionCout = { matieres: [], mo: [], frais: [], margePct: 0 };
+
+function CoutCalculatorModal({
+  initial,
+  onSync,
+  onClose,
+}: {
+  initial: CompositionCout | null;
+  onSync: (composition: CompositionCout, prixRevient: number) => void;
+  onClose: () => void;
+}) {
+  const [matieres, setMatieres] = useState(initial?.matieres.length ? initial.matieres : [{ nom: "", qte: 0, cout: 0 }]);
+  const [mo, setMo] = useState(initial?.mo.length ? initial.mo : [{ nom: "", heures: 0, taux: 0, forfait: 0 }]);
+  const [frais, setFrais] = useState(initial?.frais.length ? initial.frais : [{ nom: "", montant: 0 }]);
+  const [margePct, setMargePct] = useState(initial?.margePct ?? 0);
+
+  const composition: CompositionCout = { matieres, mo, frais, margePct };
+  const prixRevient = calculerPrixRevient(composition);
+
+  const rowStyle: React.CSSProperties = { display: "flex", gap: 8, marginBottom: 8 };
+  const smallInput = (w: number): React.CSSProperties => ({ ...inputStyle, width: w, padding: "9px 10px", fontSize: 13 });
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ background: "#151515", border: "1px solid #333", borderRadius: 10, width: "min(560px,94vw)", maxHeight: "88vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #333", flexShrink: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", textTransform: "uppercase" }}>Calculateur de coût de revient</div>
+          <button onClick={onClose} style={darkButton("#333")}>✕ Fermer</button>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
+          <div style={{ fontSize: 12, color: "#888", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 8px" }}>Matières premières</div>
+          {matieres.map((m, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="Libellé matière" value={m.nom} onChange={(e) => setMatieres((r) => r.map((x, j) => (j === i ? { ...x, nom: e.target.value } : x)))} style={{ ...inputStyle, flex: 1, minWidth: 0 }} />
+              <input placeholder="Qté" type="number" value={m.qte || ""} onChange={(e) => setMatieres((r) => r.map((x, j) => (j === i ? { ...x, qte: Number(e.target.value) } : x)))} style={smallInput(70)} />
+              <input placeholder="Coût unit." type="number" value={m.cout || ""} onChange={(e) => setMatieres((r) => r.map((x, j) => (j === i ? { ...x, cout: Number(e.target.value) } : x)))} style={smallInput(100)} />
+              <button onClick={() => setMatieres((r) => r.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: 15 }}>🗑️</button>
+            </div>
+          ))}
+          <button onClick={() => setMatieres((r) => [...r, { nom: "", qte: 0, cout: 0 }])} style={{ background: "none", border: "1px dashed #3b82f6", color: "#3b82f6", padding: 8, width: "100%", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 700, textTransform: "uppercase", marginBottom: 16 }}>+ Ajouter une matière</button>
+
+          <div style={{ fontSize: 12, color: "#888", textTransform: "uppercase", letterSpacing: "0.05em", margin: "14px 0 8px" }}>Main-d&apos;œuvre (MO)</div>
+          {mo.map((m, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="Opération / Poste" value={m.nom} onChange={(e) => setMo((r) => r.map((x, j) => (j === i ? { ...x, nom: e.target.value } : x)))} style={{ ...inputStyle, flex: 1, minWidth: 0 }} />
+              <input placeholder="Heures" type="number" value={m.heures || ""} onChange={(e) => setMo((r) => r.map((x, j) => (j === i ? { ...x, heures: Number(e.target.value) } : x)))} style={smallInput(70)} />
+              <input placeholder="Taux/h" type="number" value={m.taux || ""} onChange={(e) => setMo((r) => r.map((x, j) => (j === i ? { ...x, taux: Number(e.target.value) } : x)))} style={smallInput(80)} />
+              <input placeholder="Forfait" type="number" value={m.forfait || ""} onChange={(e) => setMo((r) => r.map((x, j) => (j === i ? { ...x, forfait: Number(e.target.value) } : x)))} style={smallInput(80)} />
+              <button onClick={() => setMo((r) => r.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: 15 }}>🗑️</button>
+            </div>
+          ))}
+          <button onClick={() => setMo((r) => [...r, { nom: "", heures: 0, taux: 0, forfait: 0 }])} style={{ background: "none", border: "1px dashed #3b82f6", color: "#3b82f6", padding: 8, width: "100%", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 700, textTransform: "uppercase", marginBottom: 16 }}>+ Ajouter de la main-d&apos;œuvre</button>
+
+          <div style={{ fontSize: 12, color: "#888", textTransform: "uppercase", letterSpacing: "0.05em", margin: "14px 0 8px" }}>Autres frais</div>
+          {frais.map((f, i) => (
+            <div key={i} style={rowStyle}>
+              <input placeholder="Libellé du frais" value={f.nom} onChange={(e) => setFrais((r) => r.map((x, j) => (j === i ? { ...x, nom: e.target.value } : x)))} style={{ ...inputStyle, flex: 1, minWidth: 0 }} />
+              <input placeholder="Montant" type="number" value={f.montant || ""} onChange={(e) => setFrais((r) => r.map((x, j) => (j === i ? { ...x, montant: Number(e.target.value) } : x)))} style={smallInput(120)} />
+              <button onClick={() => setFrais((r) => r.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: 15 }}>🗑️</button>
+            </div>
+          ))}
+          <button onClick={() => setFrais((r) => [...r, { nom: "", montant: 0 }])} style={{ background: "none", border: "1px dashed #3b82f6", color: "#3b82f6", padding: 8, width: "100%", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 700, textTransform: "uppercase", marginBottom: 16 }}>+ Ajouter des frais</button>
+
+          <div style={{ fontSize: 12, color: "#888", textTransform: "uppercase", letterSpacing: "0.05em", margin: "14px 0 8px" }}>Configuration de marge</div>
+          <label style={{ display: "block", fontSize: 11, color: "#888", textTransform: "uppercase", marginBottom: 4 }}>Marge souhaitée (%)</label>
+          <input type="number" value={margePct || ""} onChange={(e) => setMargePct(Number(e.target.value))} style={{ ...inputStyle, marginBottom: 16 }} />
+
+          <div style={{ padding: 12, background: "#121212", borderRadius: 6, borderLeft: "4px solid #f59e0b", marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", fontWeight: 700 }}>Prix de revient calculé (marge incluse) :</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#f59e0b" }}>{formatFcfa(prixRevient)}</div>
+          </div>
+          <button onClick={() => onSync(composition, prixRevient)} style={{ background: "#3b82f6", color: "#fff", border: "none", padding: 14, width: "100%", borderRadius: 6, fontWeight: 700, cursor: "pointer", textTransform: "uppercase" }}>Synchroniser ➜</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CatalogueClient({
   userName,
   roleLibelle,
@@ -70,6 +150,8 @@ export function CatalogueClient({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerFamille, setDrawerFamille] = useState<FamilleId | null>(null);
   const [codeSuffix, setCodeSuffix] = useState("");
+  const [calcOpenFor, setCalcOpenFor] = useState<"detail" | "new" | null>(null);
+  const [newPrixRevientDraft, setNewPrixRevientDraft] = useState("");
   const [createState, createAction, pending] = useActionState(createArticle, initialCreateState);
   const [formKey, setFormKey] = useState(0);
   const wasPending = useRef(false);
@@ -82,6 +164,7 @@ export function CatalogueClient({
       setFormKey((k) => k + 1);
       setDrawerFamille(null);
       setCodeSuffix("");
+      setNewPrixRevientDraft("");
     }
     wasPending.current = pending;
   }, [pending, createState.error]);
@@ -281,8 +364,12 @@ export function CatalogueClient({
                 )}
                 {(detailArticle.famille === "C" || detailArticle.famille === "D") && (
                   <div style={{ marginTop: 12 }}>
-                    <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Prix de revient</label>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Prix de revient</label>
+                      <button onClick={() => setCalcOpenFor("detail")} style={{ background: "none", border: "none", color: "#3b82f6", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>🧮 Calculateur</button>
+                    </div>
                     <input
+                      key={detailArticle.pmp}
                       type="number"
                       min="0"
                       step="1"
@@ -295,6 +382,9 @@ export function CatalogueClient({
                       }}
                       style={inputStyle}
                     />
+                    {Boolean(detailArticle.compositionCout) && (
+                      <div style={{ marginTop: 8, fontSize: 11, color: "#666" }}>📊 Détail issu du calculateur — marge {(detailArticle.compositionCout as CompositionCout).margePct}%</div>
+                    )}
                   </div>
                 )}
               </div>
@@ -360,8 +450,20 @@ export function CatalogueClient({
                   </div>
                   {(drawerFamille === "C" || drawerFamille === "D") && (
                     <div>
-                      <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Prix de revient (optionnel)</label>
-                      <input name="prixRevient" type="number" min="0" step="1" placeholder="Ex. 5000" style={inputStyle} />
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Prix de revient (optionnel)</label>
+                        <button type="button" onClick={() => setCalcOpenFor("new")} style={{ background: "none", border: "none", color: "#3b82f6", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>🧮 Calculateur</button>
+                      </div>
+                      <input
+                        name="prixRevient"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="Ex. 5000"
+                        value={newPrixRevientDraft}
+                        onChange={(e) => setNewPrixRevientDraft(e.target.value)}
+                        style={inputStyle}
+                      />
                     </div>
                   )}
                   <div>
@@ -410,6 +512,28 @@ export function CatalogueClient({
             </form>
           </div>
         </div>
+      )}
+
+      {calcOpenFor === "detail" && detailArticle && (
+        <CoutCalculatorModal
+          initial={(detailArticle.compositionCout as CompositionCout | null) ?? emptyComposition}
+          onClose={() => setCalcOpenFor(null)}
+          onSync={async (composition, prixRevient) => {
+            await definirPrixRevientCalcule(detailArticle.id, composition);
+            setDetailArticle({ ...detailArticle, pmp: prixRevient.toFixed(2), compositionCout: composition });
+            setCalcOpenFor(null);
+          }}
+        />
+      )}
+      {calcOpenFor === "new" && (
+        <CoutCalculatorModal
+          initial={emptyComposition}
+          onClose={() => setCalcOpenFor(null)}
+          onSync={(_composition, prixRevient) => {
+            setNewPrixRevientDraft(String(Math.round(prixRevient)));
+            setCalcOpenFor(null);
+          }}
+        />
       )}
     </AppShell>
   );

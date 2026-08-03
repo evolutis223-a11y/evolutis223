@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { articles } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { calculerPrixRevient, type CompositionCout } from "@/lib/calculateurs/coutRevient";
 
 export interface CreateArticleState {
   error: string | null;
@@ -99,6 +100,23 @@ export async function definirPrixRevient(articleId: number, prixRevient: number)
   if (!Number.isFinite(prixRevient) || prixRevient < 0) throw new Error("Prix de revient invalide.");
   await db.update(articles).set({ pmp: prixRevient.toFixed(2) }).where(eq(articles.id, articleId));
   revalidatePath("/catalogue");
+}
+
+// Calculateur de coût de revient (matières + main-d'œuvre + autres frais + marge) — remplace la
+// simple saisie manuelle de pmp par un vrai détail traçable, figé sur l'article pour audit.
+export async function definirPrixRevientCalcule(articleId: number, composition: CompositionCout) {
+  const session = await getSession();
+  if (!session || !hasModuleAccess(session.roleCode, "Catalogue")) {
+    throw new Error("Accès refusé.");
+  }
+  const prixRevient = calculerPrixRevient(composition);
+  if (!Number.isFinite(prixRevient) || prixRevient < 0) throw new Error("Composition invalide.");
+  await db
+    .update(articles)
+    .set({ pmp: prixRevient.toFixed(2), compositionCout: composition })
+    .where(eq(articles.id, articleId));
+  revalidatePath("/catalogue");
+  return prixRevient;
 }
 
 export async function togglePublieBoutique(articleId: number, next: boolean) {

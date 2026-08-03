@@ -1,0 +1,1 @@
+ALTER TABLE "articles" ADD COLUMN "composition_cout" jsonb;

@@ -99,6 +99,11 @@ export const articles = pgTable(
     // mode tissu — ex. casquette). 'ENSEMBLE' = éligible au toggle "Ensemble complet" (haut+bas).
     // 'TISSU' = mode Zones spécifiques / Toute la surface à la place de l'ensemble.
     categorieMarquage: varchar("categorie_marquage", { length: 20 }),
+    // AJOUT 2026-08-03 : détail figé du calculateur de coût de revient (matières, main-d'œuvre,
+    // autres frais, marge) — conservé pour transparence/audit. NULL si pmp a été saisi
+    // directement sans passer par le calculateur. Jamais recalculé automatiquement : pmp reste la
+    // seule valeur qui compte, ce champ n'est qu'un historique de comment on y est arrivé.
+    compositionCout: jsonb("composition_cout"),
   },
   (table) => [
     check("articles_famille_check", sql`${table.famille} in ('A','B','C','D','E')`),
