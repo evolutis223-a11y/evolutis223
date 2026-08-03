@@ -75,7 +75,20 @@ export interface DetailsAffaireInput {
   remiseMontant?: number | null;
   remiseUnite?: "%" | "F" | null;
   infosComplementaires?: string | null;
+  // §8.1 + maquette (écran isNouveau, sélecteur docType) — type réel du document choisi par
+  // l'auteur (Devis/Facture/Proforma/Reçu→Ticket). Défaut "COMMANDE_ATTENTE" pour les chemins qui
+  // n'exposent pas ce choix (configurateur public, boutique, maquette). Le contrôle de réserve
+  // stock (validerAffaire, §9) ne dépend jamais de ce champ — même filet de sécurité pour tous.
+  docType?: "COMMANDE_ATTENTE" | "DEVIS" | "FACTURE" | "PROFORMA" | "TICKET";
 }
+
+const PREFIXE_PAR_TYPE: Record<string, string> = {
+  COMMANDE_ATTENTE: "CDE",
+  DEVIS: "DEV",
+  FACTURE: "FACT",
+  PROFORMA: "PRO",
+  TICKET: "TIC",
+};
 
 export async function creerAffaireInterne(
   auteurId: number,
@@ -96,14 +109,15 @@ export async function creerAffaireInterne(
     const remiseValeur =
       details.remiseUnite === "%" ? montantBrut * ((details.remiseMontant ?? 0) / 100) : details.remiseMontant ?? 0;
     const montantTtc = Math.max(0, montantBrut - remiseValeur);
-    const numero = await genererNumero("CDE");
+    const docType = details.docType ?? "COMMANDE_ATTENTE";
+    const numero = await genererNumero(PREFIXE_PAR_TYPE[docType]);
 
     const affaireId = await db.transaction(async (tx) => {
       const [affaire] = await tx
         .insert(affaires)
         .values({
           numero,
-          type: "COMMANDE_ATTENTE",
+          type: docType,
           statut: "EN_ATTENTE",
           modeFinalisation,
           clientId,

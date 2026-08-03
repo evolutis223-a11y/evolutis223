@@ -133,17 +133,43 @@ export function LigneEditorRow({
 
 const PROVENANCES = ["Boutique physique", "Boutique en ligne", "WhatsApp", "TikTok", "Facebook"];
 
+const DOCTYPE_OPTIONS_PAR_ROLE: Record<string, { value: "DEVIS" | "FACTURE" | "PROFORMA" | "TICKET"; label: string }[]> = {
+  SUPER_ADMIN: [
+    { value: "DEVIS", label: "Devis" },
+    { value: "FACTURE", label: "Facture" },
+    { value: "PROFORMA", label: "Proforma" },
+    { value: "TICKET", label: "Reçu" },
+  ],
+  ADMIN: [
+    { value: "DEVIS", label: "Devis" },
+    { value: "FACTURE", label: "Facture" },
+    { value: "PROFORMA", label: "Proforma" },
+    { value: "TICKET", label: "Reçu" },
+  ],
+  FREELANCE: [{ value: "PROFORMA", label: "Proforma" }],
+};
+const DOCTYPE_OPTIONS_DEFAUT: { value: "DEVIS" | "FACTURE" | "PROFORMA" | "TICKET"; label: string }[] = [
+  { value: "FACTURE", label: "Facture" },
+  { value: "PROFORMA", label: "Proforma" },
+  { value: "TICKET", label: "Reçu" },
+];
+const DOCTYPE_LABEL: Record<string, string> = { DEVIS: "Devis", FACTURE: "Facture", PROFORMA: "Proforma", TICKET: "Reçu" };
+
 function NouvelleAffairePage({
   articlesList,
   variantesList,
+  roleCode,
   onClose,
 }: {
   articlesList: Article[];
   variantesList: Variante[];
+  roleCode: string;
   onClose: () => void;
 }) {
   const router = useRouter();
+  const docTypeOptions = DOCTYPE_OPTIONS_PAR_ROLE[roleCode] ?? DOCTYPE_OPTIONS_DEFAUT;
   const [provenance, setProvenance] = useState("");
+  const [docType, setDocType] = useState<"DEVIS" | "FACTURE" | "PROFORMA" | "TICKET">(docTypeOptions[0].value);
   const [nomClient, setNomClient] = useState("");
   const [telephoneClient, setTelephoneClient] = useState("");
   const [emailClient, setEmailClient] = useState("");
@@ -215,6 +241,7 @@ function NouvelleAffairePage({
       remiseMontant: remise ? Number(remise) : null,
       remiseUnite: remise ? remiseUnite : null,
       infosComplementaires: infosComplementaires.trim() || null,
+      docType,
     };
     const res = await creerAffaireDepuisFormulaire(
       nomClient.trim(),
@@ -263,6 +290,13 @@ function NouvelleAffairePage({
             {PROVENANCES.map((p) => (
               <option key={p} value={p}>
                 {p}
+              </option>
+            ))}
+          </select>
+          <select value={docType} onChange={(e) => setDocType(e.target.value as typeof docType)} style={{ ...inputStyle, flex: 0.7 }}>
+            {docTypeOptions.map((d) => (
+              <option key={d.value} value={d.value}>
+                {d.label}
               </option>
             ))}
           </select>
@@ -377,123 +411,86 @@ function NouvelleAffairePage({
         </div>
       </div>
 
-      {/* Aperçu instantané — reflète en direct ce que sera le document, même formule que le PDF réel */}
+      {/* Aperçu instantané — même thème sombre que le reste de l'appli (forme basique, avant
+          mise en page imprimable — voir design/Application de Gestion EVOLUTIS223.dc.html, bloc
+          "Aperçu" de l'écran isNouveau). */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ background: "#fff", color: "#000", borderRadius: 8, padding: 28, fontFamily: "Helvetica, Arial, sans-serif", fontSize: 12.5, position: "sticky", top: 0 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #000", paddingBottom: 10, marginBottom: 14 }}>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>EVOLUTIS223</div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 15, fontWeight: 700 }}>Commande</div>
-              <div style={{ fontSize: 10, color: "#444" }}>N° à venir — {new Date().toLocaleDateString("fr-FR")}</div>
-            </div>
+        <div style={{ flex: 1, background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 24, position: "sticky", top: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>Aperçu</div>
+            <button onClick={() => window.print()} style={{ background: "none", border: "none", color: "#888", fontSize: 18, cursor: "pointer" }}>
+              🖨️
+            </button>
           </div>
 
-          <div style={{ display: "flex", gap: 20, marginBottom: 12 }}>
-            <div style={{ flex: 1 }}>
-              {objet && (
-                <div style={{ marginBottom: 3 }}>
-                  <b>Objet : </b>
-                  {objet}
+          <div style={{ fontSize: 16, color: "#fff" }}>
+            <b>{DOCTYPE_LABEL[docType]}</b> - {nomClient || "Client"}
+          </div>
+          {objet && <div style={{ color: "#888", fontSize: 14, marginTop: 2 }}>Objet : {objet}</div>}
+
+          <div style={{ borderTop: "1px solid #333", margin: "10px 0" }} />
+
+          <div style={{ display: "grid", gridTemplateColumns: "1.6fr 50px 100px 110px", gap: 8, fontSize: 13, color: "#888", textTransform: "uppercase", paddingBottom: 6, fontWeight: 700 }}>
+            <span>Article</span>
+            <span style={{ textAlign: "center" }}>Qté</span>
+            <span style={{ textAlign: "center" }}>Montant</span>
+            <span style={{ textAlign: "center" }}>Total</span>
+          </div>
+          <div style={{ borderTop: "1px solid #333" }}>
+            {lignesApercu.length === 0 ? (
+              <div style={{ padding: "10px 0", color: "#666", fontSize: 13 }}>Ajoutez des articles pour voir l&apos;aperçu.</div>
+            ) : (
+              lignesApercu.map((l, i) => (
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "1.6fr 50px 100px 110px", gap: 8, fontSize: 14, padding: "8px 0", borderBottom: "1px solid #262626", alignItems: "center" }}>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#e0e0e0" }}>{l.designation}</span>
+                  <span style={{ textAlign: "center", color: "#e0e0e0" }}>{l.quantite}</span>
+                  <span style={{ textAlign: "center", color: "#e0e0e0" }}>{formatFcfa(l.prixUnitaire)}</span>
+                  <span style={{ textAlign: "center", whiteSpace: "nowrap", color: "#e0e0e0" }}>{formatFcfa(l.total)}</span>
                 </div>
-              )}
-              {provenance && (
-                <div>
-                  <b>Provenance : </b>
-                  {provenance}
-                </div>
-              )}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ marginBottom: 3 }}>
-                <b>Client : </b>
-                {nomClient || "—"}
-              </div>
-              {telephoneClient && <div style={{ marginBottom: 3 }}>Contact : {telephoneClient}</div>}
-              {adresseClient && <div>Adresse : {adresseClient}</div>}
-            </div>
+              ))
+            )}
           </div>
 
-          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12 }}>
-            <thead>
-              <tr style={{ background: "#000" }}>
-                <th style={{ color: "#fff", textAlign: "left", padding: 5, fontSize: 11 }}>Désignation</th>
-                <th style={{ color: "#fff", textAlign: "center", padding: 5, fontSize: 11 }}>Qté</th>
-                <th style={{ color: "#fff", textAlign: "right", padding: 5, fontSize: 11 }}>Prix unitaire</th>
-                <th style={{ color: "#fff", textAlign: "right", padding: 5, fontSize: 11 }}>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lignesApercu.length === 0 ? (
-                <tr>
-                  <td colSpan={4} style={{ padding: 10, textAlign: "center", color: "#999", borderBottom: "1px solid #ddd" }}>
-                    Ajoutez des articles pour voir l&apos;aperçu.
-                  </td>
-                </tr>
-              ) : (
-                lignesApercu.map((l, i) => (
-                  <tr key={i} style={{ borderBottom: "1px solid #ddd" }}>
-                    <td style={{ padding: 6 }}>{l.designation}</td>
-                    <td style={{ padding: 6, textAlign: "center" }}>{l.quantite}</td>
-                    <td style={{ padding: 6, textAlign: "right" }}>{formatFcfa(l.prixUnitaire)}</td>
-                    <td style={{ padding: 6, textAlign: "right" }}>{formatFcfa(l.total)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-
-          <div style={{ marginLeft: "auto", width: 240 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
-              <span>Sous-total</span>
-              <span>{formatFcfa(brut)}</span>
-            </div>
-            {remiseValeur > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
-                <span>Remise</span>
-                <span>-{formatFcfa(remiseValeur)}</span>
-              </div>
-            )}
-            {tvaValeur > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
-                <span>TVA ({tva}%)</span>
-                <span>{formatFcfa(tvaValeur)}</span>
-              </div>
-            )}
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderTop: "1px solid #000", marginTop: 2, fontWeight: 700, fontSize: 14 }}>
-              <span>Total TTC</span>
-              <span>{formatFcfa(total)}</span>
-            </div>
+          <div style={{ borderTop: "2px solid #3a3a3a", marginTop: 6 }} />
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#3b82f6", marginTop: 10 }}>
+            Total HT : {formatFcfa(brut)}
+            <span style={{ fontSize: 13, fontWeight: 400, marginLeft: 4 }}>FCFA</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", margin: "6px 0", fontSize: 15, color: "#ccc" }}>
+            <span>TVA ({tva || 0}%) : {tvaValeur > 0 ? formatFcfa(tvaValeur) : "—"}</span>
+            <span>Remise : {remiseValeur > 0 ? formatFcfa(remiseValeur) : "—"}</span>
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: "#10b981", marginTop: 6 }}>
+            Total TTC : {formatFcfa(total)}
+            <span style={{ fontSize: 14, fontWeight: 400, marginLeft: 4 }}>FCFA</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, flexWrap: "wrap", gap: "6px 12px" }}>
+            <span style={{ fontSize: 15, color: "#ccc", whiteSpace: "nowrap" }}>
+              <b style={{ fontWeight: 700, color: "#e0e0e0" }}>Montant reçu : {Number(montantRecu) > 0 ? formatFcfa(Number(montantRecu)) : "—"}</b>
+            </span>
             {Number(montantRecu) > 0 && (
-              <>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
-                  <span>Montant reçu</span>
-                  <span>{formatFcfa(Number(montantRecu))}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
-                  <span>Solde</span>
-                  <span>{formatFcfa(Math.max(0, solde))}</span>
-                </div>
-              </>
+              <span style={{ fontSize: 15, fontWeight: 700, color: solde > 0 ? "#f59e0b" : "#10b981", whiteSpace: "nowrap" }}>
+                {solde > 0 ? "Solde" : "Soldé"} : {formatFcfa(Math.max(0, solde))}
+              </span>
             )}
           </div>
 
-          {infosComplementaires && (
-            <div style={{ marginTop: 16, fontSize: 11.5 }}>
-              <b>Informations complémentaires : </b>
-              {infosComplementaires}
+          {(provenance || modeFinalisation || adresseLivraison || infosComplementaires) && (
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #333", fontSize: 13, color: "#ccc" }}>
+              {provenance && (
+                <div style={{ marginBottom: 4 }}>
+                  📍 Provenance : <b style={{ color: "#e0e0e0" }}>{provenance}</b>
+                </div>
+              )}
+              {modeFinalisation && (
+                <div style={{ marginBottom: 4 }}>🚚 {modeFinalisation === "LIVRAISON" ? "À livrer" : "Retrait en boutique"}</div>
+              )}
+              {modeFinalisation === "LIVRAISON" && adresseLivraison && (
+                <div style={{ marginBottom: 4 }}>🏠 Adresse : {adresseLivraison}</div>
+              )}
+              {infosComplementaires && <div>📝 {infosComplementaires}</div>}
             </div>
           )}
-
-          <div style={{ marginTop: 30, display: "flex", justifyContent: "space-between" }}>
-            <div>
-              <div style={{ fontStyle: "italic", textDecoration: "underline", fontSize: 11 }}>Le Client</div>
-              <div style={{ marginTop: 30, borderTop: "1px solid #000", width: 140 }} />
-            </div>
-            <div>
-              <div style={{ fontStyle: "italic", textDecoration: "underline", fontSize: 11 }}>EVOLUTIS223</div>
-              <div style={{ marginTop: 30, borderTop: "1px solid #000", width: 140 }} />
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -543,6 +540,7 @@ function statutColor(a: AffaireRow, bloquee: boolean) {
 export function AffairesClient({
   userName,
   roleLibelle,
+  roleCode,
   modules,
   articles,
   variantes,
@@ -553,6 +551,7 @@ export function AffairesClient({
 }: {
   userName: string;
   roleLibelle: string;
+  roleCode: string;
   modules: ShellModule[];
   articles: Article[];
   variantes: Variante[];
@@ -630,6 +629,7 @@ export function AffairesClient({
         <NouvelleAffairePage
           articlesList={articles}
           variantesList={variantes}
+          roleCode={roleCode}
           onClose={() => setDrawerOpen(false)}
         />
       </AppShell>

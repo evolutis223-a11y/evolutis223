@@ -62,6 +62,7 @@ export default async function AffairesPage() {
     <AffairesClient
       userName={user.nom}
       roleLibelle={user.roleLibelle}
+      roleCode={session.roleCode}
       modules={buildShellModules(session.roleCode)}
       articles={articleRows}
       variantes={varianteRows}
