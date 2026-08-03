@@ -6,6 +6,7 @@ import { db } from "@/db";
 import {
   affaires,
   articles,
+  clients,
   demandesValidationStock,
   lignesAffaire,
   livraisons,
@@ -67,12 +68,22 @@ export interface LigneInput {
 // création publique via le configurateur (§3.3/§10, compte technique — voir app/configurateur/actions.ts).
 // N'effectue aucun contrôle d'accès ni de session : les appelants sont responsables de vérifier
 // qui a le droit d'appeler avec quel auteurId avant d'y arriver.
+export interface DetailsAffaireInput {
+  provenance?: string | null;
+  objet?: string | null;
+  tvaPct?: number | null;
+  remiseMontant?: number | null;
+  remiseUnite?: "%" | "F" | null;
+  infosComplementaires?: string | null;
+}
+
 export async function creerAffaireInterne(
   auteurId: number,
   clientId: number,
   lignes: LigneInput[],
   modeFinalisation: "RETRAIT" | "LIVRAISON" | null = null,
-  adresseLivraison: string | null = null
+  adresseLivraison: string | null = null,
+  details: DetailsAffaireInput = {}
 ): Promise<{ affaireId?: number; error?: string }> {
   try {
     if (!clientId) return { error: "Client requis." };
@@ -81,7 +92,10 @@ export async function creerAffaireInterne(
       return { error: "Adresse de livraison requise." };
     }
 
-    const montantTtc = lignes.reduce((acc, l) => acc + l.quantite * l.prixUnitaire, 0);
+    const montantBrut = lignes.reduce((acc, l) => acc + l.quantite * l.prixUnitaire, 0);
+    const remiseValeur =
+      details.remiseUnite === "%" ? montantBrut * ((details.remiseMontant ?? 0) / 100) : details.remiseMontant ?? 0;
+    const montantTtc = Math.max(0, montantBrut - remiseValeur);
     const numero = await genererNumero("CDE");
 
     const affaireId = await db.transaction(async (tx) => {
@@ -95,6 +109,12 @@ export async function creerAffaireInterne(
           clientId,
           montantTtc: montantTtc.toFixed(2),
           auteurId,
+          provenance: details.provenance || null,
+          objet: details.objet || null,
+          tvaPct: details.tvaPct != null ? details.tvaPct.toFixed(2) : null,
+          remiseMontant: details.remiseMontant != null ? details.remiseMontant.toFixed(2) : null,
+          remiseUnite: details.remiseUnite || null,
+          infosComplementaires: details.infosComplementaires || null,
         })
         .returning();
 
@@ -133,11 +153,58 @@ export async function creerAffaire(
   clientId: number,
   lignes: LigneInput[],
   modeFinalisation: "RETRAIT" | "LIVRAISON" | null = null,
-  adresseLivraison: string | null = null
+  adresseLivraison: string | null = null,
+  details: DetailsAffaireInput = {}
 ): Promise<{ affaireId?: number; error?: string }> {
   try {
     const session = await requireAffairesAccess();
-    return creerAffaireInterne(session.userId, clientId, lignes, modeFinalisation, adresseLivraison);
+    return creerAffaireInterne(session.userId, clientId, lignes, modeFinalisation, adresseLivraison, details);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur inconnue." };
+  }
+}
+
+// Formulaire "Nouvelle affaire" complet (design/Application de Gestion EVOLUTIS223.dc.html,
+// écran isNouveau) — le client est saisi en texte libre (nom + téléphone), retrouvé ou créé par
+// numéro de téléphone (même clé que /vente-comptoir et /configurateur, cf. clients.contact).
+export async function creerAffaireDepuisFormulaire(
+  nomClient: string,
+  telephoneClient: string,
+  emailClient: string | null,
+  adresseClient: string | null,
+  lignes: LigneInput[],
+  modeFinalisation: "RETRAIT" | "LIVRAISON" | null,
+  adresseLivraison: string | null,
+  details: DetailsAffaireInput
+): Promise<{ affaireId?: number; error?: string }> {
+  try {
+    const session = await requireAffairesAccess();
+    if (!nomClient.trim()) return { error: "Nom du client requis." };
+    if (!telephoneClient.trim()) return { error: "Téléphone du client requis." };
+
+    let clientId: number;
+    const [existant] = await db.select({ id: clients.id }).from(clients).where(eq(clients.contact, telephoneClient.trim())).limit(1);
+    if (existant) {
+      clientId = existant.id;
+      await db
+        .update(clients)
+        .set({ nom: nomClient.trim(), email: emailClient?.trim() || null, adresse: adresseClient?.trim() || null })
+        .where(eq(clients.id, clientId));
+    } else {
+      const [nouveau] = await db
+        .insert(clients)
+        .values({
+          typeClient: "BOUTIQUE",
+          nom: nomClient.trim(),
+          contact: telephoneClient.trim(),
+          email: emailClient?.trim() || null,
+          adresse: adresseClient?.trim() || null,
+        })
+        .returning();
+      clientId = nouveau.id;
+    }
+
+    return creerAffaireInterne(session.userId, clientId, lignes, modeFinalisation, adresseLivraison, details);
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Erreur inconnue." };
   }

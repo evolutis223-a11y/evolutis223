@@ -50,7 +50,9 @@ export const clients = pgTable(
     id: serial("id").primaryKey(),
     typeClient: varchar("type_client", { length: 20 }).notNull(),
     nom: varchar("nom", { length: 150 }).notNull(),
-    contact: varchar("contact", { length: 150 }),
+    contact: varchar("contact", { length: 150 }), // téléphone — clé de recherche find-or-create
+    email: varchar("email", { length: 150 }),
+    adresse: varchar("adresse", { length: 250 }),
     contratRef: varchar("contrat_ref", { length: 60 }),
     paiementDiffereJours: integer("paiement_differe_jours"),
   },
@@ -276,6 +278,15 @@ export const affaires = pgTable(
       .notNull()
       .references(() => utilisateurs.id),
     immuable: boolean("immuable").notNull().default(false),
+    // Champs du formulaire "Nouvelle affaire" de la maquette (design/Application de Gestion
+    // EVOLUTIS223.dc.html, écran isNouveau) — ajoutés 2026-08-03, tous facultatifs pour ne rien
+    // casser sur les affaires déjà existantes.
+    provenance: varchar("provenance", { length: 30 }),
+    objet: varchar("objet", { length: 200 }),
+    tvaPct: numeric("tva_pct", { precision: 5, scale: 2 }),
+    remiseMontant: numeric("remise_montant", { precision: 12, scale: 2 }),
+    remiseUnite: varchar("remise_unite", { length: 4 }),
+    infosComplementaires: text("infos_complementaires"),
   },
   (table) => [
     check(
@@ -290,6 +301,8 @@ export const affaires = pgTable(
       "affaires_mode_finalisation_check",
       sql`${table.modeFinalisation} is null or ${table.modeFinalisation} in ('RETRAIT','LIVRAISON')`
     ),
+    check("affaires_remise_unite_check", sql`${table.remiseUnite} is null or ${table.remiseUnite} in ('%','F')`),
+    check("affaires_provenance_check", sql`${table.provenance} is null or ${table.provenance} in ('Boutique physique','Boutique en ligne','WhatsApp','TikTok','Facebook')`),
   ]
 );
 

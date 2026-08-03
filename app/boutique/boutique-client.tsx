@@ -36,20 +36,20 @@ function prixApresPromo(prixVente: number, promo: PromotionActive | undefined) {
 function StockPill({ dispo, label }: { dispo: number | null; label?: string }) {
   if (dispo === null) {
     return (
-      <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground">
+      <span style={{ borderRadius: 999, background: "#333", color: "#ccc", padding: "2px 10px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>
         {label ?? "Sur devis"}
       </span>
     );
   }
   if (dispo <= 0) {
     return (
-      <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+      <span style={{ borderRadius: 999, background: "rgba(220,38,38,0.15)", color: "#f87171", padding: "2px 10px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>
         Rupture
       </span>
     );
   }
   return (
-    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+    <span style={{ borderRadius: 999, background: "rgba(16,185,129,0.15)", color: "#34d399", padding: "2px 10px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>
       En stock
     </span>
   );
@@ -88,8 +88,8 @@ function ProductCard({
   const photo = selected?.photoUrl || article.photoUrl;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-      <div className={`flex aspect-square items-center justify-center ${meta.tileClass}`}>
+    <div style={{ overflow: "hidden", borderRadius: 12, border: "1px solid #333", background: "#1e1e1e" }}>
+      <div className={`flex aspect-square items-center justify-center ${meta.tileClass}`} style={{ filter: "saturate(0.85) brightness(0.9)" }}>
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photo} alt={article.nom} className="h-full w-full object-cover" />
@@ -97,45 +97,47 @@ function ProductCard({
           <FamilleIcon id={article.famille as FamilleId} className="h-1/3 w-1/3" />
         )}
       </div>
-      <div className="p-3.5">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold leading-snug text-card-foreground">{article.nom}</h3>
+      <div style={{ padding: 14 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+          <h3 style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.3, color: "#fff", margin: 0 }}>{article.nom}</h3>
           <StockPill dispo={dispo} />
         </div>
-        {brancheNom && <div className="mt-0.5 text-xs text-muted-foreground">{brancheNom}</div>}
+        {brancheNom && <div style={{ marginTop: 2, fontSize: 11.5, color: "#888" }}>{brancheNom}</div>}
         {promo ? (
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-base font-semibold tabular-nums text-primary">
+          <div style={{ marginTop: 8, display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#3b82f6" }}>
               {formatFcfa(prixApresPromo(Number(article.prixVente), promo))}
             </span>
-            <span className="text-xs tabular-nums text-muted-foreground line-through">{formatFcfa(article.prixVente)}</span>
-            <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+            <span style={{ fontSize: 11.5, color: "#666", textDecoration: "line-through" }}>{formatFcfa(article.prixVente)}</span>
+            <span style={{ borderRadius: 999, background: "rgba(59,130,246,0.15)", padding: "2px 6px", fontSize: 10, fontWeight: 700, color: "#60a5fa" }}>
               {promo.type === "POURCENTAGE" ? `-${promo.valeur}%` : `-${formatFcfa(promo.valeur)}`}
             </span>
           </div>
         ) : (
-          <div className="mt-2 text-base font-semibold tabular-nums text-foreground">
-            {formatFcfa(article.prixVente)}
-          </div>
+          <div style={{ marginTop: 8, fontSize: 15, fontWeight: 700, color: "#fff" }}>{formatFcfa(article.prixVente)}</div>
         )}
 
         {article.famille === "A" && variantesArticle.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 6 }}>
             {variantesArticle.map((v) => {
               const rupture = (v.stockDetail ?? 0) <= 0;
               const label = [v.taille, v.couleur].filter(Boolean).join(" ") || "Défaut";
+              const active = v.id === selectedVarianteId;
               return (
                 <button
                   key={v.id}
                   onClick={() => !rupture && setSelectedVarianteId(v.id)}
                   disabled={rupture}
-                  className={`rounded-md border px-2 py-1 text-xs ${
-                    v.id === selectedVarianteId
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : rupture
-                        ? "cursor-not-allowed border-border text-muted-foreground/50 line-through"
-                        : "border-border text-foreground"
-                  }`}
+                  style={{
+                    borderRadius: 6,
+                    border: `1px solid ${active ? "#3b82f6" : "#333"}`,
+                    padding: "4px 8px",
+                    fontSize: 11.5,
+                    background: active ? "#3b82f6" : "transparent",
+                    color: active ? "#fff" : rupture ? "#555" : "#e0e0e0",
+                    textDecoration: rupture ? "line-through" : "none",
+                    cursor: rupture ? "not-allowed" : "pointer",
+                  }}
                 >
                   {label}
                 </button>
@@ -185,67 +187,78 @@ export function BoutiqueClient({
   );
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
-      {banniere.active && banniere.message && (
-        <div className="mb-4 rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-semibold text-primary-foreground">
-          {banniere.message}
-        </div>
-      )}
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">EVOLUTIS223 — Nos produits</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Boutique en ligne — disponibilité indicative, sujette à confirmation à la commande.
-        </p>
-      </header>
+    <main style={{ minHeight: "100vh", background: "#0a0a0a", fontFamily: "system-ui,-apple-system,'Segoe UI',sans-serif" }}>
+      <div style={{ maxWidth: 1040, margin: "0 auto", padding: "28px 20px 60px" }}>
+        {banniere.active && banniere.message && (
+          <div style={{ marginBottom: 16, borderRadius: 8, background: "#3b82f6", padding: "10px 16px", textAlign: "center", fontSize: 13, fontWeight: 700, color: "#fff" }}>
+            {banniere.message}
+          </div>
+        )}
+        <header style={{ marginBottom: 22 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: 0 }}>EVOLUTIS223 — Nos produits</h1>
+          <p style={{ marginTop: 4, fontSize: 13, color: "#888" }}>
+            Boutique en ligne — disponibilité indicative, sujette à confirmation à la commande.
+          </p>
+        </header>
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setActiveFamille("TOUS")}
-          className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
-            activeFamille === "TOUS"
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-background text-muted-foreground"
-          }`}
-        >
-          Tous ({initialArticles.length})
-        </button>
-        {FAMILLES.map((f) => {
-          const n = initialArticles.filter((a) => a.famille === f.id).length;
-          if (n === 0) return null;
-          return (
-            <button
-              key={f.id}
-              onClick={() => setActiveFamille(f.id)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                activeFamille === f.id
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground"
-              }`}
-            >
-              {f.short} ({n})
-            </button>
-          );
-        })}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <button
+            onClick={() => setActiveFamille("TOUS")}
+            style={{
+              borderRadius: 999,
+              border: `1px solid ${activeFamille === "TOUS" ? "#3b82f6" : "#333"}`,
+              padding: "6px 14px",
+              fontSize: 12,
+              fontWeight: 700,
+              background: activeFamille === "TOUS" ? "#3b82f6" : "transparent",
+              color: activeFamille === "TOUS" ? "#fff" : "#888",
+              cursor: "pointer",
+            }}
+          >
+            Tous ({initialArticles.length})
+          </button>
+          {FAMILLES.map((f) => {
+            const n = initialArticles.filter((a) => a.famille === f.id).length;
+            if (n === 0) return null;
+            const active = activeFamille === f.id;
+            return (
+              <button
+                key={f.id}
+                onClick={() => setActiveFamille(f.id)}
+                style={{
+                  borderRadius: 999,
+                  border: `1px solid ${active ? "#3b82f6" : "#333"}`,
+                  padding: "6px 14px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  background: active ? "#3b82f6" : "transparent",
+                  color: active ? "#fff" : "#888",
+                  cursor: "pointer",
+                }}
+              >
+                {f.short} ({n})
+              </button>
+            );
+          })}
+        </div>
+
+        {filtered.length === 0 ? (
+          <p style={{ marginTop: 40, textAlign: "center", fontSize: 13, color: "#666" }}>Aucun produit publié pour l&apos;instant.</p>
+        ) : (
+          <div style={{ marginTop: 24, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 16 }}>
+            {filtered.map((a) => (
+              <ProductCard
+                key={a.id}
+                article={a}
+                variantesArticle={variantesByArticle.get(a.id) ?? []}
+                kitStock={kitStockByArticle.get(a.id)}
+                brancheNom={brancheNom(a.brancheId)}
+                promo={promoByArticle.get(a.id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
-
-      {filtered.length === 0 ? (
-        <p className="mt-10 text-center text-sm text-muted-foreground">
-          Aucun produit publié pour l&apos;instant.
-        </p>
-      ) : (
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-          {filtered.map((a) => (
-            <ProductCard
-              key={a.id}
-              article={a}
-              variantesArticle={variantesByArticle.get(a.id) ?? []}
-              kitStock={kitStockByArticle.get(a.id)}
-              brancheNom={brancheNom(a.brancheId)}
-              promo={promoByArticle.get(a.id)}
-            />
-          ))}
-        </div>
-      )}
     </main>
   );
 }
