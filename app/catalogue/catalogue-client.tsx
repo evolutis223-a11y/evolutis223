@@ -188,210 +188,216 @@ export function CatalogueClient({
 
   return (
     <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Catalogue" modules={modules}>
-      <div style={{ padding: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Catalogue</div>
-          {isSuperAdmin && (
-            <button onClick={() => setDrawerOpen(true)} style={darkButton("#3b82f6")}>
-              + Nouvel article
-            </button>
-          )}
-        </div>
-
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          <input placeholder="Rechercher (code, nom...)" value={search} onChange={(e) => setSearch(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
-          <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} style={{ ...inputStyle, width: 200 }}>
-            <option value="">Tri par défaut</option>
-            <option value="prixDesc">Prix : le plus élevé</option>
-            <option value="prixAsc">Prix : le plus bas</option>
-          </select>
-        </div>
-
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-          {[{ id: "TOUS" as const, short: "Tous" }, ...FAMILLES].map((f) => {
-            const active = activeFamille === f.id;
-            return (
-              <button
-                key={f.id}
-                onClick={() => setActiveFamille(f.id)}
-                style={{
-                  borderRadius: 999,
-                  border: `1px solid ${active ? "#3b82f6" : "#333"}`,
-                  padding: "6px 14px",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  background: active ? "#3b82f6" : "transparent",
-                  color: active ? "#fff" : "#888",
-                  cursor: "pointer",
-                }}
-              >
-                {counts[f.id] ?? 0} {f.short}
+      <div style={{ display: "flex", gap: 20, padding: 20, height: "calc(100vh - 118px)", boxSizing: "border-box" }}>
+        {/* Liste */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexShrink: 0 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Catalogue</div>
+            {isSuperAdmin && (
+              <button onClick={() => setDrawerOpen(true)} style={darkButton("#3b82f6")}>
+                + Nouvel article
               </button>
-            );
-          })}
-        </div>
+            )}
+          </div>
 
-        <div style={{ border: "1px solid #262626", borderRadius: 8, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
-            <thead>
-              <tr>
-                <th style={{ width: "12%", padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333" }}>Code</th>
-                <th style={{ width: "38%", padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333" }}>Article</th>
-                <th style={{ width: "16%", padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333" }}>Catégorie</th>
-                <th style={{ width: "16%", padding: 10, textAlign: "right", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333" }}>Prix de vente</th>
-                <th style={{ width: "18%", padding: 10, textAlign: "right", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333" }}>Famille / Publié</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "#666", fontSize: 13 }}>
-                    {search.trim() ? "Aucun article ne correspond à cette recherche." : "Aucun article dans cette famille."}
-                  </td>
-                </tr>
-              )}
-              {filtered.map((a) => (
-                <tr
-                  key={a.id}
-                  onClick={() => setDetailArticle(a)}
-                  style={{ cursor: "pointer", borderLeft: `3px solid ${a.publieBoutique ? "#10b981" : "#333"}` }}
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexShrink: 0 }}>
+            <input placeholder="Rechercher (code, nom...)" value={search} onChange={(e) => setSearch(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+            <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} style={{ ...inputStyle, width: 200, flexShrink: 0 }}>
+              <option value="">Tri par défaut</option>
+              <option value="prixDesc">Prix : le plus élevé</option>
+              <option value="prixAsc">Prix : le plus bas</option>
+            </select>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, flexShrink: 0 }}>
+            {[{ id: "TOUS" as const, short: "Tous" }, ...FAMILLES].map((f) => {
+              const active = activeFamille === f.id;
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setActiveFamille(f.id)}
+                  style={{
+                    borderRadius: 999,
+                    border: `1px solid ${active ? "#3b82f6" : "#333"}`,
+                    padding: "6px 14px",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    background: active ? "#3b82f6" : "transparent",
+                    color: active ? "#fff" : "#888",
+                    cursor: "pointer",
+                  }}
                 >
-                  <td style={{ padding: 10, borderBottom: "1px solid #262626", color: "#888", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.code}</td>
-                  <td style={{ padding: 10, borderBottom: "1px solid #262626" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <Thumb article={a} size={34} />
-                      <span style={{ fontSize: 13, color: "#fff", fontWeight: 600 }}>{a.nom}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: 10, borderBottom: "1px solid #262626", color: "#888", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {brancheNom(a.brancheId) ?? "—"}
-                  </td>
-                  <td style={{ padding: 10, borderBottom: "1px solid #262626", textAlign: "right", fontSize: 13, fontWeight: 700, color: "#f59e0b" }}>{formatFcfa(a.prixVente)}</td>
-                  <td style={{ padding: 10, borderBottom: "1px solid #262626", textAlign: "right" }}>
-                    <div style={{ fontSize: 11, color: "#888" }}>{familleMeta(a.famille).short}</div>
-                    <div style={{ fontSize: 11, color: a.publieBoutique ? "#34d399" : "#666" }}>{a.publieBoutique ? "Publié" : "Non publié"}</div>
-                  </td>
+                  {counts[f.id] ?? 0} {f.short}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", minHeight: 0, border: "1px solid #262626", borderRadius: 8 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+              <thead>
+                <tr>
+                  <th style={{ width: "12%", padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333", position: "sticky", top: 0, background: "#151515" }}>Code</th>
+                  <th style={{ width: "38%", padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333", position: "sticky", top: 0, background: "#151515" }}>Article</th>
+                  <th style={{ width: "16%", padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333", position: "sticky", top: 0, background: "#151515" }}>Catégorie</th>
+                  <th style={{ width: "16%", padding: 10, textAlign: "right", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333", position: "sticky", top: 0, background: "#151515" }}>Prix de vente</th>
+                  <th style={{ width: "18%", padding: 10, textAlign: "right", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333", position: "sticky", top: 0, background: "#151515" }}>Famille / Publié</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {detailArticle && (
-        <div
-          style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}
-          onClick={(e) => e.target === e.currentTarget && setDetailArticle(null)}
-        >
-          <div style={{ width: 620, maxWidth: "92vw", maxHeight: "88vh", overflowY: "auto", background: "#1e1e1e", border: "1px solid #333", borderRadius: 10 }}>
-            <div style={{ display: "flex", justifyContent: "flex-end", padding: 10 }}>
-              <button onClick={() => setDetailArticle(null)} style={{ background: "none", border: "none", color: "#888", fontSize: 20, cursor: "pointer" }}>
-                &times;
-              </button>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: 20, padding: "0 24px 24px" }}>
-              <div style={{ height: 180, borderRadius: 8, overflow: "hidden" }}>
-                <Thumb article={detailArticle} size={200} />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: "#888", fontFamily: "monospace" }}>{detailArticle.code}</div>
-                <h2 style={{ marginTop: 4, fontSize: 17, fontWeight: 700, color: "#fff" }}>{detailArticle.nom}</h2>
-                <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ borderRadius: 999, background: "#333", color: "#ccc", padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>{familleMeta(detailArticle.famille).short}</span>
-                  {brancheNom(detailArticle.brancheId) && <span style={{ fontSize: 12, color: "#888" }}>{brancheNom(detailArticle.brancheId)}</span>}
-                  <span style={{ fontSize: 16, fontWeight: 700, color: "#f59e0b" }}>{formatFcfa(detailArticle.prixVente)}</span>
-                </div>
-                <div style={{ marginTop: 14, borderLeft: "2px solid #3b82f6", background: "#151515", padding: 12, borderRadius: 6, fontSize: 12.5, color: "#aaa" }}>
-                  {detailArticle.famille === "E"
-                    ? "Recette du kit à définir dans Stocks (§8.3) — le stock est calculé automatiquement depuis les composants."
-                    : detailArticle.famille === "C" || detailArticle.famille === "D"
-                      ? familleMeta(detailArticle.famille).guidance
-                      : "Stock — variantes, approvisionnement et lots se renseignent dans Stocks."}
-                </div>
-                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
-                  <button
-                    onClick={() => {
-                      const next = !detailArticle.publieBoutique;
-                      togglePublieBoutique(detailArticle.id, next);
-                      setDetailArticle({ ...detailArticle, publieBoutique: next });
-                    }}
-                    style={{
-                      position: "relative",
-                      width: 36,
-                      height: 20,
-                      borderRadius: 999,
-                      border: "none",
-                      cursor: "pointer",
-                      background: detailArticle.publieBoutique ? "#10b981" : "#333",
-                    }}
+              </thead>
+              <tbody>
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "#666", fontSize: 13 }}>
+                      {search.trim() ? "Aucun article ne correspond à cette recherche." : "Aucun article dans cette famille."}
+                    </td>
+                  </tr>
+                )}
+                {filtered.map((a) => (
+                  <tr
+                    key={a.id}
+                    onClick={() => setDetailArticle(a)}
+                    style={{ cursor: "pointer", background: detailArticle?.id === a.id ? "#263041" : "transparent", borderLeft: `3px solid ${a.publieBoutique ? "#10b981" : "#333"}` }}
                   >
-                    <span style={{ position: "absolute", top: 2, left: detailArticle.publieBoutique ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
-                  </button>
-                  <span style={{ fontSize: 12, color: "#888" }}>{detailArticle.publieBoutique ? "Publié sur la boutique" : "Non publié"}</span>
-                </div>
-
-                {detailArticle.famille === "E" && (
-                  <label style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#e0e0e0" }}>
-                    <input
-                      type="checkbox"
-                      checked={detailArticle.necessiteAssemblage}
-                      onChange={(e) => {
-                        const next = e.target.checked;
-                        toggleNecessiteAssemblage(detailArticle.id, next);
-                        setDetailArticle({ ...detailArticle, necessiteAssemblage: next });
-                      }}
-                    />
-                    Nécessite assemblage — déclenche un Ordre de Fabrication à la vente
-                  </label>
-                )}
-                {detailArticle.famille === "A" && (
-                  <div style={{ marginTop: 12 }}>
-                    <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Type de marquage</label>
-                    <select
-                      value={detailArticle.categorieMarquage ?? ""}
-                      onChange={(e) => {
-                        const next = (e.target.value || null) as "ENSEMBLE" | "TISSU" | null;
-                        definirCategorieMarquage(detailArticle.id, next);
-                        setDetailArticle({ ...detailArticle, categorieMarquage: next });
-                      }}
-                      style={inputStyle}
-                    >
-                      <option value="">Non concerné</option>
-                      <option value="ENSEMBLE">Ensemble (bascule haut + bas)</option>
-                      <option value="TISSU">Tissu (zones ou toute la surface)</option>
-                    </select>
-                  </div>
-                )}
-                {(detailArticle.famille === "C" || detailArticle.famille === "D") && (
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-                      <label style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Prix de revient</label>
-                      <button onClick={() => setCalcOpenFor("detail")} style={{ background: "none", border: "none", color: "#3b82f6", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>🧮 Calculateur</button>
-                    </div>
-                    <input
-                      key={detailArticle.pmp}
-                      type="number"
-                      min="0"
-                      step="1"
-                      defaultValue={detailArticle.pmp}
-                      onBlur={(e) => {
-                        const next = Number(e.target.value);
-                        if (!Number.isFinite(next) || next < 0) return;
-                        definirPrixRevient(detailArticle.id, next);
-                        setDetailArticle({ ...detailArticle, pmp: next.toFixed(2) });
-                      }}
-                      style={inputStyle}
-                    />
-                    {Boolean(detailArticle.compositionCout) && (
-                      <div style={{ marginTop: 8, fontSize: 11, color: "#666" }}>📊 Détail issu du calculateur — marge {(detailArticle.compositionCout as CompositionCout).margePct}%</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+                    <td style={{ padding: 10, borderBottom: "1px solid #262626", color: "#888", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.code}</td>
+                    <td style={{ padding: 10, borderBottom: "1px solid #262626" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Thumb article={a} size={34} />
+                        <span style={{ fontSize: 13, color: "#fff", fontWeight: 600 }}>{a.nom}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: 10, borderBottom: "1px solid #262626", color: "#888", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {brancheNom(a.brancheId) ?? "—"}
+                    </td>
+                    <td style={{ padding: 10, borderBottom: "1px solid #262626", textAlign: "right", fontSize: 13, fontWeight: 700, color: "#f59e0b" }}>{formatFcfa(a.prixVente)}</td>
+                    <td style={{ padding: 10, borderBottom: "1px solid #262626", textAlign: "right" }}>
+                      <div style={{ fontSize: 11, color: "#888" }}>{familleMeta(a.famille).short}</div>
+                      <div style={{ fontSize: 11, color: a.publieBoutique ? "#34d399" : "#666" }}>{a.publieBoutique ? "Publié" : "Non publié"}</div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
+
+        {/* Détail — même patron que /affaires : liste à gauche, aperçu permanent à droite */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          {!detailArticle ? (
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#666", fontSize: 13, border: "1px solid #262626", borderRadius: 8 }}>
+              Sélectionne un article à gauche.
+            </div>
+          ) : (
+            <div style={{ flex: 1, overflowY: "auto", border: "1px solid #262626", borderRadius: 8, padding: 20 }}>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button onClick={() => setDetailArticle(null)} style={{ background: "none", border: "none", color: "#888", fontSize: 18, cursor: "pointer" }}>
+                  &times;
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                <div style={{ width: 90, height: 90, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+                  <Thumb article={detailArticle} size={90} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, color: "#888", fontFamily: "monospace" }}>{detailArticle.code}</div>
+                  <h2 style={{ marginTop: 4, fontSize: 17, fontWeight: 700, color: "#fff" }}>{detailArticle.nom}</h2>
+                  <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                    <span style={{ borderRadius: 999, background: "#333", color: "#ccc", padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>{familleMeta(detailArticle.famille).short}</span>
+                    {brancheNom(detailArticle.brancheId) && <span style={{ fontSize: 12, color: "#888" }}>{brancheNom(detailArticle.brancheId)}</span>}
+                    <span style={{ fontSize: 16, fontWeight: 700, color: "#f59e0b" }}>{formatFcfa(detailArticle.prixVente)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 14, borderLeft: "2px solid #3b82f6", background: "#151515", padding: 12, borderRadius: 6, fontSize: 12.5, color: "#aaa" }}>
+                {detailArticle.famille === "E"
+                  ? "Recette du kit à définir dans Stocks (§8.3) — le stock est calculé automatiquement depuis les composants."
+                  : detailArticle.famille === "C" || detailArticle.famille === "D"
+                    ? familleMeta(detailArticle.famille).guidance
+                    : "Stock — variantes, approvisionnement et lots se renseignent dans Stocks."}
+              </div>
+              <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                <button
+                  onClick={() => {
+                    const next = !detailArticle.publieBoutique;
+                    togglePublieBoutique(detailArticle.id, next);
+                    setDetailArticle({ ...detailArticle, publieBoutique: next });
+                  }}
+                  style={{
+                    position: "relative",
+                    width: 36,
+                    height: 20,
+                    borderRadius: 999,
+                    border: "none",
+                    cursor: "pointer",
+                    background: detailArticle.publieBoutique ? "#10b981" : "#333",
+                  }}
+                >
+                  <span style={{ position: "absolute", top: 2, left: detailArticle.publieBoutique ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
+                </button>
+                <span style={{ fontSize: 12, color: "#888" }}>{detailArticle.publieBoutique ? "Publié sur la boutique" : "Non publié"}</span>
+              </div>
+
+              {detailArticle.famille === "E" && (
+                <label style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#e0e0e0" }}>
+                  <input
+                    type="checkbox"
+                    checked={detailArticle.necessiteAssemblage}
+                    onChange={(e) => {
+                      const next = e.target.checked;
+                      toggleNecessiteAssemblage(detailArticle.id, next);
+                      setDetailArticle({ ...detailArticle, necessiteAssemblage: next });
+                    }}
+                  />
+                  Nécessite assemblage — déclenche un Ordre de Fabrication à la vente
+                </label>
+              )}
+              {detailArticle.famille === "A" && (
+                <div style={{ marginTop: 12 }}>
+                  <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Type de marquage</label>
+                  <select
+                    value={detailArticle.categorieMarquage ?? ""}
+                    onChange={(e) => {
+                      const next = (e.target.value || null) as "ENSEMBLE" | "TISSU" | null;
+                      definirCategorieMarquage(detailArticle.id, next);
+                      setDetailArticle({ ...detailArticle, categorieMarquage: next });
+                    }}
+                    style={inputStyle}
+                  >
+                    <option value="">Non concerné</option>
+                    <option value="ENSEMBLE">Ensemble (bascule haut + bas)</option>
+                    <option value="TISSU">Tissu (zones ou toute la surface)</option>
+                  </select>
+                </div>
+              )}
+              {(detailArticle.famille === "C" || detailArticle.famille === "D") && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Prix de revient</label>
+                    <button onClick={() => setCalcOpenFor("detail")} style={{ background: "none", border: "none", color: "#3b82f6", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>🧮 Calculateur</button>
+                  </div>
+                  <input
+                    key={detailArticle.pmp}
+                    type="number"
+                    min="0"
+                    step="1"
+                    defaultValue={detailArticle.pmp}
+                    onBlur={(e) => {
+                      const next = Number(e.target.value);
+                      if (!Number.isFinite(next) || next < 0) return;
+                      definirPrixRevient(detailArticle.id, next);
+                      setDetailArticle({ ...detailArticle, pmp: next.toFixed(2) });
+                    }}
+                    style={inputStyle}
+                  />
+                  {Boolean(detailArticle.compositionCout) && (
+                    <div style={{ marginTop: 8, fontSize: 11, color: "#666" }}>📊 Détail issu du calculateur — marge {(detailArticle.compositionCout as CompositionCout).margePct}%</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
       {drawerOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "flex-end" }} onClick={(e) => e.target === e.currentTarget && setDrawerOpen(false)}>
