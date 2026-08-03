@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { BannerSvg, miniPlateMarkup, tiledBandMarkup } from "@/lib/maquette/svg";
-import { soumettreDemande, uploadLogoAction, type DemandeMaquettePayload } from "./actions";
+import { soumettreDemande, uploadImageReferenceAction, uploadLogoAction, type DemandeMaquettePayload } from "./actions";
 
 type Donnees = {
   modeles: { id: number; blobUrl: string; tag: string | null }[];
@@ -18,6 +18,7 @@ interface WizardData {
   intent: "maquette" | "pagne" | null;
   depart: "images" | "bibliotheque" | "guide" | null;
   modelesChoisis: number[];
+  imagesReferences: string[];
   elements: Element[];
   explication: string;
   nbElements: number | null;
@@ -54,6 +55,7 @@ export function MaquetteClient({ donnees, forfaits }: { donnees: Donnees; forfai
     intent: null,
     depart: null,
     modelesChoisis: [],
+    imagesReferences: [],
     elements: [],
     explication: "",
     nbElements: null,
@@ -89,6 +91,22 @@ export function MaquetteClient({ donnees, forfaits }: { donnees: Donnees; forfai
     }
   }
 
+  async function handleReferenceFiles(files: FileList | null) {
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      const fd = new FormData();
+      fd.set("file", file);
+      const res = await uploadImageReferenceAction({ error: null }, fd);
+      if (res.url) {
+        setData((d) => ({ ...d, imagesReferences: [...d.imagesReferences, res.url!] }));
+      }
+    }
+  }
+
+  function removeReferenceImage(url: string) {
+    setData((d) => ({ ...d, imagesReferences: d.imagesReferences.filter((u) => u !== url) }));
+  }
+
   async function handleSubmit() {
     setPending(true);
     setErreur(null);
@@ -101,6 +119,7 @@ export function MaquetteClient({ donnees, forfaits }: { donnees: Donnees; forfai
       details: {
         depart: data.depart,
         modelesChoisis: data.modelesChoisis,
+        imagesReferences: data.imagesReferences,
         elements: data.elements,
         nbElements: data.nbElements,
         disposition: data.nbElements ? dispositions[data.nbElements]?.positions ?? [] : [],
@@ -145,7 +164,7 @@ export function MaquetteClient({ donnees, forfaits }: { donnees: Donnees; forfai
                 onClose={() => setPreviewSeed(null)}
               />
             ) : (
-              <DepartScreen data={data} set={set} donnees={donnees} onPreview={setPreviewSeed} onBack={() => go(-1)} onNext={() => go(1)} />
+              <DepartScreen data={data} set={set} donnees={donnees} onPreview={setPreviewSeed} onFiles={handleReferenceFiles} onRemoveFile={removeReferenceImage} onBack={() => go(-1)} onNext={() => go(1)} />
             ))}
           {step === "explication" && (
             <ExplicationScreen data={data} setData={setData} onFiles={handleLogoFiles} onBack={() => go(-1)} onNext={() => go(1)} />
@@ -261,11 +280,13 @@ function ChoiceCard({ selected, onClick, title, desc, disabled }: { selected?: b
 }
 
 function DepartScreen({
-  data, set, donnees, onPreview, onBack, onNext,
+  data, set, donnees, onPreview, onFiles, onRemoveFile, onBack, onNext,
 }: {
   data: WizardData; set: <K extends keyof WizardData>(k: K, v: WizardData[K]) => void; donnees: Donnees;
-  onPreview: (seed: number) => void; onBack: () => void; onNext: () => void;
+  onPreview: (seed: number) => void; onFiles: (files: FileList | null) => void; onRemoveFile: (url: string) => void;
+  onBack: () => void; onNext: () => void;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const canNext = !!data.depart && (data.depart !== "bibliotheque" || data.modelesChoisis.length > 0);
   return (
     <div className="flex flex-1 flex-col p-5">
@@ -280,8 +301,40 @@ function DepartScreen({
         <ChoiceCard selected={data.depart === "guide"} onClick={() => set("depart", "guide")} title="Pas d'idée précise, guidez-moi" />
       </div>
       {data.depart === "images" && (
-        <div className="mt-2.5 rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-5 text-center text-xs text-neutral-500">
-          Glissez vos images ici (à venir)
+        <div className="mt-2.5">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              onFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="cursor-pointer rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-5 text-center text-xs text-neutral-500"
+          >
+            📎 Touchez pour ajouter vos images ou références
+          </div>
+          {data.imagesReferences.length > 0 && (
+            <div className="mt-2.5 flex flex-wrap gap-2.5">
+              {data.imagesReferences.map((url) => (
+                <div key={url} className="relative h-[58px] w-[58px]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="h-full w-full rounded-[10px] border-2 border-neutral-200 object-cover" />
+                  <span
+                    onClick={() => onRemoveFile(url)}
+                    className="absolute -right-1.5 -top-1.5 flex h-[19px] w-[19px] cursor-pointer items-center justify-center rounded-full border-[1.5px] border-white bg-black text-xs text-white"
+                  >
+                    ×
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {data.depart === "bibliotheque" && (

@@ -25,6 +25,17 @@ interface Proforma {
   auteurNom: string;
   dateCreation: Date;
 }
+interface DemandeMaquetteDetails {
+  depart: string | null;
+  modelesChoisis: number[];
+  imagesReferences?: string[];
+  elements: { type: "logo" | "texte"; src?: string; content?: string }[];
+  couleurType: string | null;
+  couleurs: string[];
+  explication: string;
+  livraisonMode: string | null;
+  impressionVoulue: boolean;
+}
 interface DemandeMaquette {
   id: number;
   numero: string;
@@ -35,6 +46,66 @@ interface DemandeMaquette {
   forfaitNom: string | null;
   forfaitPrix: string | null;
   dateCreation: Date;
+  details: unknown;
+}
+
+const COULEUR_TYPE_LABEL: Record<string, string> = { choisir: "Palette proposée", libre: "Couleurs libres" };
+const LIVRAISON_LABEL: Record<string, string> = { email: "Par email", whatsapp: "Par WhatsApp", telecharger: "À télécharger" };
+
+function DemandeMaquetteDetail({ details }: { details: unknown }) {
+  const d = details as DemandeMaquetteDetails | null;
+  if (!d) return <p className="mt-2 text-xs text-muted-foreground">Aucun détail enregistré.</p>;
+  const hasElements = d.elements?.length > 0;
+  const hasImages = (d.imagesReferences?.length ?? 0) > 0;
+  return (
+    <div className="mt-2 rounded-md border border-dashed border-border bg-muted/30 p-3 text-xs">
+      {d.explication && (
+        <p className="text-card-foreground">
+          <span className="font-medium text-muted-foreground">Explication du client : </span>
+          {d.explication}
+        </p>
+      )}
+      {hasImages && (
+        <div className="mt-2">
+          <div className="font-medium text-muted-foreground">Images de référence envoyées :</div>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {d.imagesReferences!.map((url) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={url} src={url} alt="" className="h-14 w-14 rounded-md border border-border object-cover" />
+            ))}
+          </div>
+        </div>
+      )}
+      {hasElements && (
+        <div className="mt-2">
+          <div className="font-medium text-muted-foreground">Logos / textes fournis :</div>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {d.elements.map((el, i) =>
+              el.type === "logo" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={i} src={el.src} alt="" className="h-14 w-14 rounded-md border border-border object-cover" />
+              ) : (
+                <span key={i} className="rounded-md border border-border bg-card px-2 py-1 text-card-foreground">
+                  ✎ {el.content || "(texte vide)"}
+                </span>
+              )
+            )}
+          </div>
+        </div>
+      )}
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
+        {d.couleurType && (
+          <span>
+            Couleurs : {COULEUR_TYPE_LABEL[d.couleurType] ?? d.couleurType}
+            {d.couleurs?.length ? ` — ${d.couleurs.join(", ")}` : ""}
+          </span>
+        )}
+        {d.livraisonMode && <span>Livraison : {LIVRAISON_LABEL[d.livraisonMode] ?? d.livraisonMode}</span>}
+        {d.impressionVoulue && <span>Impression souhaitée</span>}
+        {d.modelesChoisis?.length > 0 && <span>{d.modelesChoisis.length} modèle(s) de bibliothèque choisi(s)</span>}
+      </div>
+    </div>
+  );
 }
 
 function formatFcfa(v: string | number) {
@@ -88,6 +159,7 @@ export function ValidationsClient({
   const proformasHistorique = proformas.filter((p) => p.statut !== "EN_ATTENTE").slice(0, 30);
   const maquetteEnAttente = demandesMaquette.filter((d) => d.statut === "EN_ATTENTE");
   const maquetteHistorique = demandesMaquette.filter((d) => d.statut !== "EN_ATTENTE").slice(0, 30);
+  const [maquetteOuverte, setMaquetteOuverte] = useState<number | null>(null);
 
   const [alerteActive, setAlerteActive] = useState(false);
   const [pauseJusqua, setPauseJusqua] = useState<number | null>(null);
@@ -343,7 +415,15 @@ export function ValidationsClient({
                   >
                     Refuser
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setMaquetteOuverte(maquetteOuverte === d.id ? null : d.id)}
+                  >
+                    {maquetteOuverte === d.id ? "Masquer les détails" : "Voir les détails"}
+                  </Button>
                 </div>
+                {maquetteOuverte === d.id && <DemandeMaquetteDetail details={d.details} />}
               </div>
             ))
           )}

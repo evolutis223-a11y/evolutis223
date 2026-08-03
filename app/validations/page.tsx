@@ -72,6 +72,7 @@ export default async function ValidationsPage() {
       forfaitNom: articles.nom,
       forfaitPrix: articles.prixVente,
       dateCreation: demandesMaquette.dateCreation,
+      details: demandesMaquette.details,
     })
     .from(demandesMaquette)
     .leftJoin(articles, eq(articles.id, demandesMaquette.forfaitArticleId))

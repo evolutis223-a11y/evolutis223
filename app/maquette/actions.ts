@@ -55,6 +55,20 @@ export async function uploadLogoAction(_prev: UploadState, formData: FormData): 
   }
 }
 
+// Étape "J'ai des images ou références" (§10ter) — le client envoie ses propres photos
+// d'inspiration pour orienter le designer. Distinct de uploadLogoAction (logo à intégrer sur le
+// pagne) : ce sont des références visuelles, jointes brutes à la demande.
+export async function uploadImageReferenceAction(_prev: UploadState, formData: FormData): Promise<UploadState> {
+  try {
+    const file = formData.get("file") as File | null;
+    if (!file || file.size === 0) return { error: "Aucun fichier." };
+    const { url } = await uploadFichier(file, "maquette-references");
+    return { error: null, url };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur d'envoi." };
+  }
+}
+
 async function genererNumeroMaquette(): Promise<string> {
   const annee = new Date().getFullYear().toString().slice(-2);
   const rows = await db
@@ -74,6 +88,7 @@ export interface DemandeMaquettePayload {
   details: {
     depart: string | null;
     modelesChoisis: number[];
+    imagesReferences: string[];
     elements: { type: "logo" | "texte"; src?: string; content?: string }[];
     nbElements: number | string | null;
     disposition: [number, number][];
