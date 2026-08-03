@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import type { bonsDecaissement, cloturesCaisse, utilisateurs } from "@/db/schema";
 import {
   cloturerCaisse,
@@ -240,6 +241,9 @@ function ClotureForm({ soldeTheorique, onDone }: { soldeTheorique: number; onDon
 }
 
 export function TresorerieClient({
+  userName,
+  roleLibelle,
+  modules,
   bons,
   clotures,
   utilisateurs,
@@ -249,6 +253,9 @@ export function TresorerieClient({
   currentUserId,
   isAdmin,
 }: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
   bons: Bon[];
   clotures: Cloture[];
   utilisateurs: Utilisateur[];
@@ -262,7 +269,8 @@ export function TresorerieClient({
   const nomAuteur = (id: number) => utilisateurs.find((u) => u.id === id)?.nom ?? "—";
 
   return (
-    <main className="mx-auto max-w-4xl space-y-8 p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Trésorerie" modules={modules}>
+    <div className="mx-auto max-w-4xl space-y-8 p-6">
       <div>
         <h1 className="text-xl font-semibold text-foreground">Trésorerie</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -353,6 +361,7 @@ export function TresorerieClient({
           </table>
         </div>
       </section>
-    </main>
+    </div>
+    </AppShell>
   );
 }

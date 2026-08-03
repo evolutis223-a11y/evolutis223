@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import { chargerRapportFinance, chargerRapportRh, type Frequence, type RapportFinance, type RapportRh } from "./actions";
 
 function fmt(n: number) {
@@ -24,7 +25,19 @@ const INCIDENT_TYPE_LABELS: Record<string, string> = {
   AUTRE: "Autre",
 };
 
-export function RapportsClient({ initialFinance, initialRh }: { initialFinance: RapportFinance; initialRh: RapportRh }) {
+export function RapportsClient({
+  userName,
+  roleLibelle,
+  modules,
+  initialFinance,
+  initialRh,
+}: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
+  initialFinance: RapportFinance;
+  initialRh: RapportRh;
+}) {
   const [dimension, setDimension] = useState<"finance" | "rh" | "incidents" | "previsions">("finance");
   const [frequence, setFrequence] = useState<Frequence>("MOIS");
   const [finance, setFinance] = useState(initialFinance);
@@ -41,7 +54,8 @@ export function RapportsClient({ initialFinance, initialRh }: { initialFinance: 
   }
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Rapports" modules={modules}>
+    <div className="mx-auto max-w-3xl p-6">
       <h1 className="text-xl font-semibold text-foreground">Rapports (§7)</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Toujours recalculé depuis les données réelles — jamais saisi à la main.
@@ -141,7 +155,8 @@ export function RapportsClient({ initialFinance, initialRh }: { initialFinance: 
           </div>
         )}
       </div>
-    </main>
+    </div>
+    </AppShell>
   );
 }
 
