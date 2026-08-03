@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import { ajouterModele, basculerVerrouillage, definirParametresParcours, retirerModele } from "../maquette/actions";
 
 type Donnees = {
@@ -11,7 +12,17 @@ type Donnees = {
   badgeTaille: number;
 };
 
-export function MaquetteAdminClient({ donnees: initial }: { donnees: Donnees }) {
+export function MaquetteAdminClient({
+  userName,
+  roleLibelle,
+  modules,
+  donnees: initial,
+}: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
+  donnees: Donnees;
+}) {
   const [tab, setTab] = useState<"bibliotheque" | "logos" | "guide">("bibliotheque");
   const [donnees, setDonnees] = useState(initial);
   const [uploading, setUploading] = useState(false);
@@ -46,7 +57,8 @@ export function MaquetteAdminClient({ donnees: initial }: { donnees: Donnees }) 
   }
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Maquette — Paramètres" modules={modules}>
+    <div className="mx-auto max-w-3xl p-6">
       <h1 className="text-xl font-semibold text-foreground">Paramètres — Parcours maquette (§10ter)</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Bibliothèque de modèles, disposition des logos, guide technique — invisible du côté client public.
@@ -145,7 +157,8 @@ export function MaquetteAdminClient({ donnees: initial }: { donnees: Donnees }) 
           </div>
         )}
       </div>
-    </main>
+    </div>
+    </AppShell>
   );
 }
 

@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { buildShellModules } from "@/lib/shell-modules";
+import { chargerUtilisateurAffiche } from "@/lib/session-user";
 import { chargerDonneesConfigurateur } from "../configurateur/actions";
 import { ConfigurateurAdminClient } from "./configurateur-admin-client";
 
@@ -16,9 +18,12 @@ export default async function ConfigurateurAdminPage() {
       </main>
     );
   }
-  const donnees = await chargerDonneesConfigurateur();
+  const [donnees, user] = await Promise.all([chargerDonneesConfigurateur(), chargerUtilisateurAffiche(session.userId)]);
   return (
     <ConfigurateurAdminClient
+      userName={user.nom}
+      roleLibelle={user.roleLibelle}
+      modules={buildShellModules(session.roleCode)}
       modeles={donnees.modeles}
       finitions={donnees.finitions}
       articles={donnees.articles.map((a) => ({ id: a.id, nom: a.nom, code: a.code }))}

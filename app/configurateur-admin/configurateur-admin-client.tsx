@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import {
   ajouterFinition,
   ajouterModeleConfigurateur,
@@ -17,10 +18,16 @@ function fmt(n: number) {
 }
 
 export function ConfigurateurAdminClient({
+  userName,
+  roleLibelle,
+  modules,
   modeles: initialModeles,
   finitions: initialFinitions,
   articles,
 }: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
   modeles: Modele[];
   finitions: Finition[];
   articles: ArticleOpt[];
@@ -96,7 +103,8 @@ export function ConfigurateurAdminClient({
   }
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Configurateur — Paramètres" modules={modules}>
+    <div className="mx-auto max-w-3xl p-6">
       <h1 className="text-xl font-semibold text-foreground">Paramètres — Configurateur (§3.3/§10)</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Galerie de modèles chemin court et finitions du chemin long — invisible du côté client public.
@@ -174,6 +182,7 @@ export function ConfigurateurAdminClient({
           </div>
         )}
       </div>
-    </main>
+    </div>
+    </AppShell>
   );
 }
