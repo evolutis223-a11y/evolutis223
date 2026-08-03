@@ -280,6 +280,17 @@ export async function retirerModeleConfigurateur(id: number) {
   revalidatePath("/configurateur-admin");
 }
 
+// Les zones de logo prédéfinies (chemin court) étaient figées à une seule zone codée en dur à la
+// création du modèle (§10) — l'Admin n'avait aucun moyen réel de les modifier. Remplace ce
+// placeholder par une vraie édition (ajout/suppression/technique) par modèle.
+export async function definirZonesModele(modeleId: number, zones: { id: string; label: string; technique: string }[]) {
+  await requireAdmin();
+  if (zones.length === 0) throw new Error("Un modèle doit garder au moins une zone de logo.");
+  await db.update(modelesConfigurateur).set({ zones }).where(eq(modelesConfigurateur.id, modeleId));
+  revalidatePath("/configurateur-admin");
+  revalidatePath("/configurateur");
+}
+
 export interface FinitionState {
   error: string | null;
 }

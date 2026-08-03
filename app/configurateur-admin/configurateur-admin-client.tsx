@@ -5,13 +5,24 @@ import { AppShell, type ShellModule } from "@/components/app-shell";
 import {
   ajouterFinition,
   ajouterModeleConfigurateur,
+  definirZonesModele,
   retirerFinition,
   retirerModeleConfigurateur,
 } from "../configurateur/actions";
 
-type Modele = { id: number; nom: string; articleId: number; photoUrl: string; prixDepart: number };
+type Zone = { id: string; label: string; technique: string };
+type Modele = { id: number; nom: string; articleId: number; photoUrl: string; prixDepart: number; zones: Zone[] };
 type Finition = { id: number; nom: string; montant: number };
 type ArticleOpt = { id: number; nom: string; code: string };
+
+const TECHNIQUES = [
+  { value: "SERIGRAPHIE", label: "Sérigraphie" },
+  { value: "DTF", label: "DTF" },
+  { value: "SUBLIMATION", label: "Sublimation" },
+  { value: "FLOCAGE", label: "Flocage" },
+  { value: "BRODERIE", label: "Broderie" },
+];
+let zoneIdCounter = 1;
 
 function fmt(n: number) {
   return `${Math.round(n).toLocaleString("fr-FR")} F`;
@@ -47,6 +58,48 @@ export function ConfigurateurAdminClient({
   const [montantFinition, setMontantFinition] = useState("");
   const [erreurFinition, setErreurFinition] = useState<string | null>(null);
 
+  const [zonesModeleId, setZonesModeleId] = useState<number | null>(null);
+  const [zonesEdit, setZonesEdit] = useState<Zone[]>([]);
+  const [nouvelleZoneLabel, setNouvelleZoneLabel] = useState("");
+  const [nouvelleZoneTechnique, setNouvelleZoneTechnique] = useState("DTF");
+  const [erreurZones, setErreurZones] = useState<string | null>(null);
+  const [savingZones, setSavingZones] = useState(false);
+
+  function openZonesEditor(m: Modele) {
+    setZonesModeleId(m.id);
+    setZonesEdit(m.zones.map((z) => ({ ...z })));
+    setErreurZones(null);
+  }
+
+  function addZoneEdit() {
+    if (!nouvelleZoneLabel.trim()) return;
+    setZonesEdit((z) => [...z, { id: `z-new-${zoneIdCounter++}`, label: nouvelleZoneLabel.trim(), technique: nouvelleZoneTechnique }]);
+    setNouvelleZoneLabel("");
+  }
+
+  function removeZoneEdit(id: string) {
+    setZonesEdit((z) => z.filter((x) => x.id !== id));
+  }
+
+  async function saveZonesEdit() {
+    if (zonesModeleId === null) return;
+    if (zonesEdit.length === 0) {
+      setErreurZones("Au moins une zone est requise.");
+      return;
+    }
+    setSavingZones(true);
+    setErreurZones(null);
+    try {
+      await definirZonesModele(zonesModeleId, zonesEdit);
+      setModeles((ms) => ms.map((m) => (m.id === zonesModeleId ? { ...m, zones: zonesEdit } : m)));
+      setZonesModeleId(null);
+    } catch (err) {
+      setErreurZones(err instanceof Error ? err.message : "Erreur.");
+    } finally {
+      setSavingZones(false);
+    }
+  }
+
   async function handleAddModele(file: File | null) {
     if (!file || !nomModele.trim() || !articleId || !prixDepart) {
       setErreurModele("Nom, article, prix et photo requis.");
@@ -65,7 +118,10 @@ export function ConfigurateurAdminClient({
       setErreurModele(res.error);
       return;
     }
-    setModeles((m) => [...m, { id: Date.now(), nom: nomModele.trim(), articleId: Number(articleId), photoUrl: res.url!, prixDepart: Number(prixDepart) }]);
+    setModeles((m) => [
+      ...m,
+      { id: Date.now(), nom: nomModele.trim(), articleId: Number(articleId), photoUrl: res.url!, prixDepart: Number(prixDepart), zones: [{ id: "z1", label: "Logo poitrine", technique: "DTF" }] },
+    ]);
     setNomModele("");
     setArticleId("");
     setPrixDepart("");
@@ -139,6 +195,12 @@ export function ConfigurateurAdminClient({
                     ×
                   </button>
                   <div className="mt-1 text-center text-[10px] text-muted-foreground">{m.nom} — {fmt(m.prixDepart)}</div>
+                  <button
+                    onClick={() => openZonesEditor(m)}
+                    className="mt-1 w-full rounded-md border border-border bg-card py-1 text-[10px] font-semibold text-primary"
+                  >
+                    {m.zones.length} zone{m.zones.length > 1 ? "s" : ""} — Éditer
+                  </button>
                 </div>
               ))}
               {modeles.length === 0 && <p className="col-span-full text-sm text-muted-foreground">Aucun modèle pour l&apos;instant.</p>}
@@ -183,6 +245,66 @@ export function ConfigurateurAdminClient({
         )}
       </div>
     </div>
+
+    {zonesModeleId !== null && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+        onClick={(e) => e.target === e.currentTarget && setZonesModeleId(null)}
+      >
+        <div className="w-[min(480px,92vw)] rounded-lg border border-border bg-card p-5">
+          <div className="flex items-center justify-between border-b border-border pb-3">
+            <h2 className="text-sm font-bold uppercase text-foreground">Zones de logo — {modeles.find((m) => m.id === zonesModeleId)?.nom}</h2>
+            <button onClick={() => setZonesModeleId(null)} className="text-lg text-muted-foreground">&times;</button>
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Chaque zone correspond à un emplacement de logo proposé au client sur le chemin court (ex. « Logo poitrine », « Logo manche »).
+          </p>
+          <div className="mt-3 flex flex-col gap-2">
+            {zonesEdit.map((z) => (
+              <div key={z.id} className="flex items-center gap-2 rounded-md border border-border bg-background p-2">
+                <input
+                  value={z.label}
+                  onChange={(e) => setZonesEdit((zs) => zs.map((x) => (x.id === z.id ? { ...x, label: e.target.value } : x)))}
+                  className="h-8 flex-1 rounded-md border border-input bg-card px-2 text-sm"
+                />
+                <select
+                  value={z.technique}
+                  onChange={(e) => setZonesEdit((zs) => zs.map((x) => (x.id === z.id ? { ...x, technique: e.target.value } : x)))}
+                  className="h-8 rounded-md border border-input bg-card px-1 text-xs"
+                >
+                  {TECHNIQUES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+                <button onClick={() => removeZoneEdit(z.id)} className="text-xs text-destructive">Retirer</button>
+              </div>
+            ))}
+            {zonesEdit.length === 0 && <p className="text-sm text-muted-foreground">Aucune zone — le client ne pourra pas envoyer de logo.</p>}
+          </div>
+          <div className="mt-3 flex items-center gap-2 rounded-md border border-dashed border-border p-2">
+            <input
+              value={nouvelleZoneLabel}
+              onChange={(e) => setNouvelleZoneLabel(e.target.value)}
+              placeholder="Nouvelle zone (ex. Logo manche)"
+              className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-sm"
+            />
+            <select value={nouvelleZoneTechnique} onChange={(e) => setNouvelleZoneTechnique(e.target.value)} className="h-8 rounded-md border border-input bg-background px-1 text-xs">
+              {TECHNIQUES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+            <button onClick={addZoneEdit} className="rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground">+ Ajouter</button>
+          </div>
+          {erreurZones && <p className="mt-2 text-xs text-destructive">{erreurZones}</p>}
+          <div className="mt-4 flex justify-end gap-2 border-t border-border pt-3">
+            <button onClick={() => setZonesModeleId(null)} className="rounded-md border border-border px-3 py-2 text-xs font-semibold text-foreground">Annuler</button>
+            <button onClick={saveZonesEdit} disabled={savingZones} className="rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground">
+              {savingZones ? "..." : "Enregistrer"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </AppShell>
   );
 }
