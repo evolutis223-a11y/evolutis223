@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { affaires, clients, fondsCirculation, livraisons, reglements } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { buildShellModules } from "@/lib/shell-modules";
+import { chargerUtilisateurAffiche } from "@/lib/session-user";
 import { listerLivreurs } from "./actions";
 import { CommandesClient } from "./commandes-client";
 
@@ -51,8 +53,13 @@ export default async function CommandesPage() {
       .where(and(eq(fondsCirculation.livreurId, session.userId), eq(fondsCirculation.statut, "EN_CIRCULATION")));
   }
 
+  const user = await chargerUtilisateurAffiche(session.userId);
+
   return (
     <CommandesClient
+      userName={user.nom}
+      roleLibelle={user.roleLibelle}
+      modules={buildShellModules(session.roleCode)}
       affaires={affaireRows}
       livraisons={livraisonRows}
       livreurs={livreurRows}

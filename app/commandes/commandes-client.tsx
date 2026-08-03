@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import type { affaires, livraisons } from "@/db/schema";
 import { assignerLivreur, avancerLivraison } from "./actions";
 import { marquerRetiree } from "../affaires/actions";
@@ -40,12 +41,18 @@ const AFFAIRE_STATUT_LABEL: Record<string, string> = {
 };
 
 export function CommandesClient({
+  userName,
+  roleLibelle,
+  modules,
   affaires,
   livraisons,
   livreurs,
   soldeParAffaire,
   mesFondsEnCirculation,
 }: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
   affaires: AffaireRow[];
   livraisons: Livraison[];
   livreurs: Livreur[];
@@ -88,7 +95,8 @@ export function CommandesClient({
   }
 
   return (
-    <main className="mx-auto max-w-4xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Commandes" modules={modules}>
+    <div className="mx-auto max-w-4xl p-6">
       <h1 className="text-xl font-semibold text-foreground">Commandes</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Ombrelle sur les Affaires avec mode de finalisation (§8.1) — Retrait en boutique ou Livraison.
@@ -217,6 +225,7 @@ export function CommandesClient({
           );
         })}
       </div>
-    </main>
+    </div>
+    </AppShell>
   );
 }

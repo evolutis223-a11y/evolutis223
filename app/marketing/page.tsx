@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { buildShellModules } from "@/lib/shell-modules";
+import { chargerUtilisateurAffiche } from "@/lib/session-user";
 import { chargerDonneesMarketing } from "./actions";
 import { MarketingClient } from "./marketing-client";
 
@@ -14,6 +16,6 @@ export default async function MarketingPage() {
       </main>
     );
   }
-  const donnees = await chargerDonneesMarketing();
-  return <MarketingClient {...donnees} />;
+  const [donnees, user] = await Promise.all([chargerDonneesMarketing(), chargerUtilisateurAffiche(session.userId)]);
+  return <MarketingClient {...donnees} userName={user.nom} roleLibelle={user.roleLibelle} modules={buildShellModules(session.roleCode)} />;
 }

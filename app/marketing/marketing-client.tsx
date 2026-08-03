@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import { ajouterPromotion, definirBanniere, retirerPromotion } from "./actions";
 
 type Promotion = {
@@ -31,11 +32,17 @@ function ajourdhui() {
 }
 
 export function MarketingClient({
+  userName,
+  roleLibelle,
+  modules,
   promotions: initialPromotions,
   articles,
   messageBanniere: initialMessage,
   banniereActive: initialActive,
 }: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
   promotions: Promotion[];
   articles: ArticleOpt[];
   messageBanniere: string;
@@ -45,7 +52,8 @@ export function MarketingClient({
   const [promotions, setPromotions] = useState(initialPromotions);
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Marketing" modules={modules}>
+    <div className="mx-auto max-w-3xl p-6">
       <h1 className="text-xl font-semibold text-foreground">Marketing (§7)</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Promotions sur les prix affichés en boutique et bannière d&apos;annonce — le prix réel du Catalogue n&apos;est jamais
@@ -70,7 +78,8 @@ export function MarketingClient({
         )}
         {tab === "banniere" && <BanniereTab initialMessage={initialMessage} initialActive={initialActive} />}
       </div>
-    </main>
+    </div>
+    </AppShell>
   );
 }
 
