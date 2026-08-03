@@ -1,8 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import type { articles, branches } from "@/db/schema";
 import {
   createArticle,
@@ -21,47 +20,61 @@ function formatFcfa(value: string | number): string {
   return `${Math.round(Number(value)).toLocaleString("fr-FR")} F`;
 }
 
-function Thumb({ article, className }: { article: Article; className?: string }) {
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  background: "#121212",
+  border: "1px solid #333",
+  color: "#e0e0e0",
+  padding: "10px 12px",
+  borderRadius: 8,
+  fontSize: 14,
+  boxSizing: "border-box",
+};
+function darkButton(bg: string, color = "#fff"): React.CSSProperties {
+  return { background: bg, color, border: "none", padding: "9px 16px", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" };
+}
+
+function Thumb({ article, size }: { article: Article; size: number }) {
   const meta = familleMeta(article.famille);
   if (article.photoUrl) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={article.photoUrl} alt={article.nom} className={`object-cover ${className ?? ""}`} />;
+    return <img src={article.photoUrl} alt={article.nom} style={{ width: size, height: size, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} />;
   }
   return (
-    <div className={`flex items-center justify-center ${meta.tileClass} ${className ?? ""}`}>
+    <div className={meta.tileClass} style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, flexShrink: 0, filter: "saturate(0.7) brightness(0.85)" }}>
       <FamilleIcon id={article.famille as FamilleId} className="h-1/2 w-1/2" />
     </div>
-  );
-}
-
-function FamilleBadge({ famille }: { famille: string }) {
-  const meta = familleMeta(famille);
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${meta.badgeClass}`}>
-      {meta.short}
-    </span>
   );
 }
 
 const initialCreateState: CreateArticleState = { error: null };
 
 export function CatalogueClient({
+  userName,
+  roleLibelle,
+  modules,
   articles: initialArticles,
   branches,
+  isSuperAdmin,
 }: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
   articles: Article[];
   branches: Branche[];
+  isSuperAdmin: boolean;
 }) {
   const brancheNom = (id: number | null) => branches.find((b) => b.id === id)?.nom ?? null;
   const [activeFamille, setActiveFamille] = useState<FamilleId | "TOUS">("TOUS");
   const [detailArticle, setDetailArticle] = useState<Article | null>(null);
-  const [hover, setHover] = useState<{ article: Article; top: number; left: number } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerFamille, setDrawerFamille] = useState<FamilleId | null>(null);
   const [codeSuffix, setCodeSuffix] = useState("");
   const [createState, createAction, pending] = useActionState(createArticle, initialCreateState);
   const [formKey, setFormKey] = useState(0);
   const wasPending = useRef(false);
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"" | "prixDesc" | "prixAsc">("");
 
   useEffect(() => {
     if (wasPending.current && !pending && !createState.error) {
@@ -73,19 +86,16 @@ export function CatalogueClient({
     wasPending.current = pending;
   }, [pending, createState.error]);
 
-  const [search, setSearch] = useState("");
-
   const filtered = useMemo(() => {
-    const byFamille =
-      activeFamille === "TOUS"
-        ? initialArticles
-        : initialArticles.filter((a) => a.famille === activeFamille);
+    let list =
+      activeFamille === "TOUS" ? initialArticles : initialArticles.filter((a) => a.famille === activeFamille);
     const q = search.trim().toLowerCase();
-    if (!q) return byFamille;
-    return byFamille.filter(
-      (a) => a.code.toLowerCase().includes(q) || a.nom.toLowerCase().includes(q)
-    );
-  }, [initialArticles, activeFamille, search]);
+    if (q) list = list.filter((a) => a.code.toLowerCase().includes(q) || a.nom.toLowerCase().includes(q));
+    list = [...list];
+    if (sort === "prixDesc") list.sort((a, b) => Number(b.prixVente) - Number(a.prixVente));
+    else if (sort === "prixAsc") list.sort((a, b) => Number(a.prixVente) - Number(b.prixVente));
+    return list;
+  }, [initialArticles, activeFamille, search, sort]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { TOUS: initialArticles.length };
@@ -93,194 +103,152 @@ export function CatalogueClient({
     return c;
   }, [initialArticles]);
 
-  function handleRowEnter(e: React.MouseEvent<HTMLDivElement>, article: Article) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    let left = rect.right + 14;
-    if (left + 240 > window.innerWidth - 12) left = rect.left - 254;
-    setHover({ article, top: Math.max(12, rect.top), left: Math.max(12, left) });
-  }
-
   return (
-    <main className="mx-auto max-w-5xl p-6">
-      <div className="flex items-baseline justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Catalogue</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Chaque article appartient à une seule famille (§5) — elle détermine comment son stock
-            est renseigné, jamais comment il est affiché ici.
-          </p>
-        </div>
-        <Button onClick={() => setDrawerOpen(true)}>+ Nouvel article</Button>
-      </div>
-
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          {[{ id: "TOUS" as const, short: "Tous" }, ...FAMILLES].map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setActiveFamille(f.id)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                activeFamille === f.id
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground"
-              }`}
-            >
-              {counts[f.id] ?? 0} {f.short}
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Catalogue" modules={modules}>
+      <div style={{ padding: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Catalogue</div>
+          {isSuperAdmin && (
+            <button onClick={() => setDrawerOpen(true)} style={darkButton("#3b82f6")}>
+              + Nouvel article
             </button>
-          ))}
+          )}
         </div>
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher par code ou nom..."
-          className="w-56"
-        />
-      </div>
 
-      <p className="mt-3 text-xs text-muted-foreground">
-        Survolez une ligne pour un aperçu rapide, cliquez pour la fiche complète.
-      </p>
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <input placeholder="Rechercher (code, nom...)" value={search} onChange={(e) => setSearch(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+          <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} style={{ ...inputStyle, width: 200 }}>
+            <option value="">Tri par défaut</option>
+            <option value="prixDesc">Prix : le plus élevé</option>
+            <option value="prixAsc">Prix : le plus bas</option>
+          </select>
+        </div>
 
-      <div className="mt-2 overflow-x-auto rounded-md border border-border">
-        <table className="w-full min-w-[720px] border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-              <th className="px-4 py-3">Article</th>
-              <th className="px-4 py-3">Famille</th>
-              <th className="px-4 py-3">Prix de vente</th>
-              <th className="px-4 py-3">Publié en ligne</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                  {search.trim() ? "Aucun article ne correspond à cette recherche." : "Aucun article dans cette famille."}
-                </td>
-              </tr>
-            )}
-            {filtered.map((a) => (
-              <tr
-                key={a.id}
-                className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/40"
-                onClick={() => setDetailArticle(a)}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+          {[{ id: "TOUS" as const, short: "Tous" }, ...FAMILLES].map((f) => {
+            const active = activeFamille === f.id;
+            return (
+              <button
+                key={f.id}
+                onClick={() => setActiveFamille(f.id)}
+                style={{
+                  borderRadius: 999,
+                  border: `1px solid ${active ? "#3b82f6" : "#333"}`,
+                  padding: "6px 14px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  background: active ? "#3b82f6" : "transparent",
+                  color: active ? "#fff" : "#888",
+                  cursor: "pointer",
+                }}
               >
-                <td className="px-4 py-2.5">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="h-11 w-11 flex-none overflow-hidden rounded-md border border-border"
-                      onMouseEnter={(e) => handleRowEnter(e, a)}
-                      onMouseLeave={() => setHover(null)}
-                    >
-                      <Thumb article={a} className="h-full w-full" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-foreground">{a.nom}</div>
-                      <div className="font-mono text-xs text-muted-foreground">{a.code}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-2.5">
-                  <div className="flex flex-col gap-1">
-                    <FamilleBadge famille={a.famille} />
-                    {brancheNom(a.brancheId) && (
-                      <span className="text-[11px] text-muted-foreground">{brancheNom(a.brancheId)}</span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-2.5 text-base font-semibold tabular-nums text-amber-700 dark:text-amber-400">
-                  {formatFcfa(a.prixVente)}
-                </td>
-                <td className="px-4 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        togglePublieBoutique(a.id, !a.publieBoutique);
-                      }}
-                      role="switch"
-                      aria-checked={a.publieBoutique}
-                      className="inline-flex h-5 w-9 flex-none items-center rounded-full transition-colors"
-                      style={{
-                        backgroundColor: a.publieBoutique ? "#10b981" : "var(--border)",
-                      }}
-                    >
-                      <span
-                        className="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform"
-                        style={{ transform: a.publieBoutique ? "translateX(18px)" : "translateX(2px)" }}
-                      />
-                    </button>
-                    <span className="text-xs text-muted-foreground">
-                      {a.publieBoutique ? "Publié" : "Non publié"}
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {hover && (
-        <div
-          className="fixed z-20 w-60 rounded-md border border-border bg-popover p-3 shadow-lg"
-          style={{ top: hover.top, left: hover.left }}
-        >
-          <div className="mb-2 h-28 w-full overflow-hidden rounded-sm border border-border">
-            <Thumb article={hover.article} className="h-full w-full" />
-          </div>
-          <div className="text-sm font-semibold text-foreground">{hover.article.nom}</div>
-          <div className="text-sm font-medium tabular-nums text-foreground">
-            {formatFcfa(hover.article.prixVente)}
-          </div>
-          <div className="mt-1 text-xs font-medium text-primary">Cliquer pour la fiche complète →</div>
+                {counts[f.id] ?? 0} {f.short}
+              </button>
+            );
+          })}
         </div>
-      )}
+
+        <div style={{ border: "1px solid #262626", borderRadius: 8, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+            <thead>
+              <tr>
+                <th style={{ width: "12%", padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333" }}>Code</th>
+                <th style={{ width: "38%", padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333" }}>Article</th>
+                <th style={{ width: "16%", padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333" }}>Catégorie</th>
+                <th style={{ width: "16%", padding: 10, textAlign: "right", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333" }}>Prix de vente</th>
+                <th style={{ width: "18%", padding: 10, textAlign: "right", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333" }}>Famille / Publié</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "#666", fontSize: 13 }}>
+                    {search.trim() ? "Aucun article ne correspond à cette recherche." : "Aucun article dans cette famille."}
+                  </td>
+                </tr>
+              )}
+              {filtered.map((a) => (
+                <tr
+                  key={a.id}
+                  onClick={() => setDetailArticle(a)}
+                  style={{ cursor: "pointer", borderLeft: `3px solid ${a.publieBoutique ? "#10b981" : "#333"}` }}
+                >
+                  <td style={{ padding: 10, borderBottom: "1px solid #262626", color: "#888", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.code}</td>
+                  <td style={{ padding: 10, borderBottom: "1px solid #262626" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Thumb article={a} size={34} />
+                      <span style={{ fontSize: 13, color: "#fff", fontWeight: 600 }}>{a.nom}</span>
+                    </div>
+                  </td>
+                  <td style={{ padding: 10, borderBottom: "1px solid #262626", color: "#888", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {brancheNom(a.brancheId) ?? "—"}
+                  </td>
+                  <td style={{ padding: 10, borderBottom: "1px solid #262626", textAlign: "right", fontSize: 13, fontWeight: 700, color: "#f59e0b" }}>{formatFcfa(a.prixVente)}</td>
+                  <td style={{ padding: 10, borderBottom: "1px solid #262626", textAlign: "right" }}>
+                    <div style={{ fontSize: 11, color: "#888" }}>{familleMeta(a.famille).short}</div>
+                    <div style={{ fontSize: 11, color: a.publieBoutique ? "#34d399" : "#666" }}>{a.publieBoutique ? "Publié" : "Non publié"}</div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {detailArticle && (
         <div
-          className="fixed inset-0 z-30 flex items-center justify-center bg-black/45 p-6"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setDetailArticle(null);
-          }}
+          style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={(e) => e.target === e.currentTarget && setDetailArticle(null)}
         >
-          <div className="w-full max-w-2xl rounded-xl bg-background shadow-xl">
-            <div className="flex justify-end p-3">
-              <button
-                onClick={() => setDetailArticle(null)}
-                className="text-xl leading-none text-muted-foreground"
-                aria-label="Fermer"
-              >
+          <div style={{ width: 620, maxWidth: "92vw", maxHeight: "88vh", overflowY: "auto", background: "#1e1e1e", border: "1px solid #333", borderRadius: 10 }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", padding: 10 }}>
+              <button onClick={() => setDetailArticle(null)} style={{ background: "none", border: "none", color: "#888", fontSize: 20, cursor: "pointer" }}>
                 &times;
               </button>
             </div>
-            <div className="grid gap-6 px-6 pb-6 sm:grid-cols-[220px_1fr]">
-              <div className="h-48 overflow-hidden rounded-md border border-border">
-                <Thumb article={detailArticle} className="h-full w-full" />
+            <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: 20, padding: "0 24px 24px" }}>
+              <div style={{ height: 180, borderRadius: 8, overflow: "hidden" }}>
+                <Thumb article={detailArticle} size={200} />
               </div>
               <div>
-                <div className="font-mono text-xs text-muted-foreground">{detailArticle.code}</div>
-                <h2 className="mt-1 text-lg font-semibold text-foreground">{detailArticle.nom}</h2>
-                <div className="mt-2 flex items-center gap-3">
-                  <FamilleBadge famille={detailArticle.famille} />
-                  {brancheNom(detailArticle.brancheId) && (
-                    <span className="text-xs text-muted-foreground">
-                      {brancheNom(detailArticle.brancheId)}
-                    </span>
-                  )}
-                  <span className="text-lg font-semibold tabular-nums text-foreground">
-                    {formatFcfa(detailArticle.prixVente)}
-                  </span>
+                <div style={{ fontSize: 11, color: "#888", fontFamily: "monospace" }}>{detailArticle.code}</div>
+                <h2 style={{ marginTop: 4, fontSize: 17, fontWeight: 700, color: "#fff" }}>{detailArticle.nom}</h2>
+                <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ borderRadius: 999, background: "#333", color: "#ccc", padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>{familleMeta(detailArticle.famille).short}</span>
+                  {brancheNom(detailArticle.brancheId) && <span style={{ fontSize: 12, color: "#888" }}>{brancheNom(detailArticle.brancheId)}</span>}
+                  <span style={{ fontSize: 16, fontWeight: 700, color: "#f59e0b" }}>{formatFcfa(detailArticle.prixVente)}</span>
                 </div>
-                <div className="mt-4 rounded-md border-l-2 border-primary bg-muted/50 p-3 text-sm text-muted-foreground">
+                <div style={{ marginTop: 14, borderLeft: "2px solid #3b82f6", background: "#151515", padding: 12, borderRadius: 6, fontSize: 12.5, color: "#aaa" }}>
                   {detailArticle.famille === "E"
                     ? "Recette du kit à définir dans Stocks (§8.3) — le stock est calculé automatiquement depuis les composants."
                     : detailArticle.famille === "C" || detailArticle.famille === "D"
                       ? familleMeta(detailArticle.famille).guidance
-                      : "Stock pas encore configuré — variantes, approvisionnement et lots se renseignent dans Stocks (Phase 1.2)."}
+                      : "Stock — variantes, approvisionnement et lots se renseignent dans Stocks."}
                 </div>
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                  <button
+                    onClick={() => {
+                      const next = !detailArticle.publieBoutique;
+                      togglePublieBoutique(detailArticle.id, next);
+                      setDetailArticle({ ...detailArticle, publieBoutique: next });
+                    }}
+                    style={{
+                      position: "relative",
+                      width: 36,
+                      height: 20,
+                      borderRadius: 999,
+                      border: "none",
+                      cursor: "pointer",
+                      background: detailArticle.publieBoutique ? "#10b981" : "#333",
+                    }}
+                  >
+                    <span style={{ position: "absolute", top: 2, left: detailArticle.publieBoutique ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
+                  </button>
+                  <span style={{ fontSize: 12, color: "#888" }}>{detailArticle.publieBoutique ? "Publié sur la boutique" : "Non publié"}</span>
+                </div>
+
                 {detailArticle.famille === "E" && (
-                  <label className="mt-3 flex items-center gap-2 text-sm text-foreground">
+                  <label style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#e0e0e0" }}>
                     <input
                       type="checkbox"
                       checked={detailArticle.necessiteAssemblage}
@@ -290,14 +258,12 @@ export function CatalogueClient({
                         setDetailArticle({ ...detailArticle, necessiteAssemblage: next });
                       }}
                     />
-                    Nécessite assemblage — déclenche un Ordre de Fabrication à la vente (§8.1)
+                    Nécessite assemblage — déclenche un Ordre de Fabrication à la vente
                   </label>
                 )}
                 {detailArticle.famille === "A" && (
-                  <div className="mt-3">
-                    <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
-                      Type de marquage (R&amp;D Calculateurs, §10bis)
-                    </label>
+                  <div style={{ marginTop: 12 }}>
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Type de marquage</label>
                     <select
                       value={detailArticle.categorieMarquage ?? ""}
                       onChange={(e) => {
@@ -305,7 +271,7 @@ export function CatalogueClient({
                         definirCategorieMarquage(detailArticle.id, next);
                         setDetailArticle({ ...detailArticle, categorieMarquage: next });
                       }}
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                      style={inputStyle}
                     >
                       <option value="">Non concerné</option>
                       <option value="ENSEMBLE">Ensemble (bascule haut + bas)</option>
@@ -314,11 +280,9 @@ export function CatalogueClient({
                   </div>
                 )}
                 {(detailArticle.famille === "C" || detailArticle.famille === "D") && (
-                  <div className="mt-3">
-                    <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
-                      Prix de revient
-                    </label>
-                    <Input
+                  <div style={{ marginTop: 12 }}>
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Prix de revient</label>
+                    <input
                       type="number"
                       min="0"
                       step="1"
@@ -329,46 +293,25 @@ export function CatalogueClient({
                         definirPrixRevient(detailArticle.id, next);
                         setDetailArticle({ ...detailArticle, pmp: next.toFixed(2) });
                       }}
+                      style={inputStyle}
                     />
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Saisie manuelle — pas de lot d&apos;approvisionnement pour cette famille (§4.3). Alimente le coût
-                      d&apos;achat des ventes dans /rapports.
-                    </p>
                   </div>
                 )}
               </div>
-            </div>
-            <div className="flex justify-end gap-2 border-t border-border p-4">
-              <Button variant="outline" onClick={() => setDetailArticle(null)}>
-                Fermer
-              </Button>
             </div>
           </div>
         </div>
       )}
 
       {drawerOpen && (
-        <div
-          className="fixed inset-0 z-30 flex justify-end bg-black/40"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setDrawerOpen(false);
-          }}
-        >
-          <div className="h-full w-full max-w-md overflow-y-auto bg-background p-6 shadow-xl">
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Nouvel article</h2>
-              <button
-                onClick={() => setDrawerOpen(false)}
-                className="text-xl leading-none text-muted-foreground"
-                aria-label="Fermer"
-              >
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "flex-end" }} onClick={(e) => e.target === e.currentTarget && setDrawerOpen(false)}>
+          <div style={{ width: 460, maxWidth: "92vw", height: "100%", overflowY: "auto", background: "#1e1e1e", borderLeft: "1px solid #333", padding: 24, boxSizing: "border-box" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: "#fff", margin: 0 }}>Nouvel article</h2>
+              <button onClick={() => setDrawerOpen(false)} style={{ background: "none", border: "none", color: "#888", fontSize: 20, cursor: "pointer" }}>
                 &times;
               </button>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Les champs propres au stock (douzaines, variantes, recette) se renseignent après
-              création — ici seulement la fiche article.
-            </p>
 
             <form
               key={formKey}
@@ -378,99 +321,52 @@ export function CatalogueClient({
                 fd.set("code", `${drawerFamille}-${codeSuffix.trim()}`);
                 createAction(fd);
               }}
-              className="mt-5 space-y-4"
+              style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 14 }}
             >
               <div>
-                <label className="mb-2 block text-xs font-semibold uppercase text-muted-foreground">
-                  Famille <span className="text-destructive">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-2">
+                <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Famille</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   {FAMILLES.map((f) => (
                     <div
                       key={f.id}
                       onClick={() => setDrawerFamille(f.id)}
-                      className={`cursor-pointer rounded-md border p-2.5 text-xs ${
-                        drawerFamille === f.id
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-background"
-                      }`}
+                      style={{ cursor: "pointer", borderRadius: 8, border: `1px solid ${drawerFamille === f.id ? "#3b82f6" : "#333"}`, background: drawerFamille === f.id ? "rgba(59,130,246,0.1)" : "transparent", padding: 10, fontSize: 12 }}
                     >
-                      <div className="font-semibold text-foreground">
+                      <div style={{ fontWeight: 700, color: "#fff" }}>
                         {f.id} · {f.short}
                       </div>
-                      <div className="mt-0.5 text-muted-foreground">{f.desc}</div>
+                      <div style={{ marginTop: 2, color: "#888" }}>{f.desc}</div>
                     </div>
                   ))}
                 </div>
-                {!drawerFamille && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Choisissez une famille pour continuer — elle conditionne le reste de la fiche.
-                  </p>
-                )}
-                {drawerFamille && (
-                  <div className="mt-3 rounded-md border-l-2 border-primary bg-muted/50 p-3 text-xs text-muted-foreground">
-                    <b className="text-foreground">{familleMeta(drawerFamille).label} : </b>
-                    {familleMeta(drawerFamille).guidance}
-                  </div>
-                )}
               </div>
 
               {drawerFamille && (
                 <>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
-                      Code
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-9 items-center rounded-md border border-input bg-muted px-3 text-sm font-mono text-muted-foreground">
-                        {drawerFamille}-
-                      </span>
-                      <Input
-                        value={codeSuffix}
-                        onChange={(e) => setCodeSuffix(e.target.value)}
-                        placeholder="061"
-                        required
-                      />
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Code</label>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <span style={{ display: "flex", alignItems: "center", borderRadius: 8, border: "1px solid #333", background: "#151515", padding: "0 12px", fontSize: 13, color: "#888", fontFamily: "monospace" }}>{drawerFamille}-</span>
+                      <input value={codeSuffix} onChange={(e) => setCodeSuffix(e.target.value)} placeholder="061" required style={inputStyle} />
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      L&apos;indice de famille est ajouté automatiquement au code.
-                    </p>
                   </div>
-
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
-                      Nom de l&apos;article
-                    </label>
-                    <Input name="nom" placeholder="Ex. Polo brodé Standard" required />
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Nom de l&apos;article</label>
+                    <input name="nom" placeholder="Ex. Polo brodé Standard" required style={inputStyle} />
                   </div>
-
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
-                      Prix de vente (F CFA)
-                    </label>
-                    <Input name="prixVente" type="number" min="0" step="1" placeholder="Ex. 9000" required />
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Prix de vente (F CFA)</label>
+                    <input name="prixVente" type="number" min="0" step="1" placeholder="Ex. 9000" required style={inputStyle} />
                   </div>
-
                   {(drawerFamille === "C" || drawerFamille === "D") && (
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
-                        Prix de revient (optionnel)
-                      </label>
-                      <Input name="prixRevient" type="number" min="0" step="1" placeholder="Ex. 5000" />
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Pas de lot d&apos;approvisionnement pour cette famille — saisie manuelle, modifiable ensuite.
-                      </p>
+                      <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Prix de revient (optionnel)</label>
+                      <input name="prixRevient" type="number" min="0" step="1" placeholder="Ex. 5000" style={inputStyle} />
                     </div>
                   )}
-
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
-                      Branche
-                    </label>
-                    <select
-                      name="brancheId"
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                    >
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Branche</label>
+                    <select name="brancheId" style={inputStyle}>
                       <option value="">Non catégorisé</option>
                       {branches.map((b) => (
                         <option key={b.id} value={b.id}>
@@ -478,31 +374,15 @@ export function CatalogueClient({
                         </option>
                       ))}
                     </select>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Catégorisation légère (§1) — pour les rapports par branche, pas pour l&apos;accès.
-                    </p>
                   </div>
-
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
-                      Photo (URL)
-                    </label>
-                    <Input name="photoUrl" placeholder="https://... (optionnel)" />
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Import de fichier à venir avec le stockage objet (§3.2) — une URL suffit pour l&apos;instant.
-                    </p>
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Photo (URL)</label>
+                    <input name="photoUrl" placeholder="https:// (optionnel)" style={inputStyle} />
                   </div>
-
                   {drawerFamille === "A" && (
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">
-                        Type de marquage (R&amp;D Calculateurs, §10bis)
-                      </label>
-                      <select
-                        name="categorieMarquage"
-                        defaultValue=""
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                      >
+                      <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#888" }}>Type de marquage</label>
+                      <select name="categorieMarquage" defaultValue="" style={inputStyle}>
                         <option value="">Non concerné</option>
                         <option value="ENSEMBLE">Ensemble (bascule haut + bas)</option>
                         <option value="TISSU">Tissu (zones ou toute la surface)</option>
@@ -512,29 +392,25 @@ export function CatalogueClient({
                 </>
               )}
 
-              <label className="flex items-center gap-2 text-sm text-foreground">
-                <input type="checkbox" name="publieBoutique" className="h-4 w-4" />
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#e0e0e0" }}>
+                <input type="checkbox" name="publieBoutique" />
                 Publier sur la boutique en ligne
               </label>
 
-              {createState.error && (
-                <p className="text-sm text-destructive" role="alert">
-                  {createState.error}
-                </p>
-              )}
+              {createState.error && <p style={{ fontSize: 12.5, color: "#f87171", margin: 0 }}>{createState.error}</p>}
 
-              <div className="flex justify-end gap-2 border-t border-border pt-4">
-                <Button type="button" variant="outline" onClick={() => setDrawerOpen(false)}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, borderTop: "1px solid #333", paddingTop: 14 }}>
+                <button type="button" onClick={() => setDrawerOpen(false)} style={darkButton("#333", "#e0e0e0")}>
                   Annuler
-                </Button>
-                <Button type="submit" disabled={pending || !drawerFamille}>
+                </button>
+                <button type="submit" disabled={pending || !drawerFamille} style={darkButton("#3b82f6")}>
                   {pending ? "Création..." : "Créer l'article"}
-                </Button>
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </main>
+    </AppShell>
   );
 }
