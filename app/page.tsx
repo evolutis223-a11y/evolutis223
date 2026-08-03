@@ -1,34 +1,11 @@
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { utilisateurs, roles, affaires, clients, articles, vStockVariante, personnel, reglements } from "@/db/schema";
 import { getSession } from "@/lib/auth";
-import { hasModuleAccess, modulesForRole, type ModuleName } from "@/lib/permissions";
-import { logout } from "./actions";
-
-// Routes réellement construites — les autres modules restent des tuiles non cliquables
-// tant que leur page n'existe pas.
-const MODULE_ROUTES: Partial<Record<ModuleName, string>> = {
-  Catalogue: "/catalogue",
-  "Nos produits": "/boutique",
-  "R&D": "/rd-calculateurs",
-  Marketing: "/marketing",
-  Stocks: "/stocks",
-  Production: "/production",
-  Clients: "/clients",
-  Affaires: "/affaires",
-  Commandes: "/commandes",
-  Trésorerie: "/tresorerie",
-  Commercial: "/commercial",
-  Fournisseurs: "/fournisseurs",
-  Achats: "/achats",
-  Dépenses: "/depenses",
-  Charges: "/charges",
-  RH: "/rh",
-  Rapports: "/rapports",
-  "Frais numériques": "/frais-numeriques",
-};
+import { hasModuleAccess, type ModuleName } from "@/lib/permissions";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 
 function fmt(n: number) {
   return `${Math.round(n).toLocaleString("fr-FR")} F`;
@@ -47,12 +24,36 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login");
 
-  const modules = modulesForRole(user.roleCode);
   const peutAffaires = hasModuleAccess(user.roleCode, "Affaires");
   const peutClients = hasModuleAccess(user.roleCode, "Clients");
   const peutStocks = hasModuleAccess(user.roleCode, "Stocks");
   const peutRH = hasModuleAccess(user.roleCode, "RH");
   const estAdminOuSuper = user.roleCode === "ADMIN" || user.roleCode === "SUPER_ADMIN";
+
+  // Barre de modules — ordre et icônes copiés de design/Application de Gestion EVOLUTIS223.dc.html
+  // (lignes ~9144-9177). Seuls les modules qui ont une vraie page construite apparaissent : pas de
+  // lien vers un écran qui n'existe pas (Règlements/Documents/Paramètres dédiés — pas encore construits).
+  const barreModules: (ShellModule | false)[] = [
+    estAdminOuSuper && { key: "superadmin", label: "Tour de contrôle", href: "/validations" },
+    { key: "dashboard", label: "Tableau de bord", href: "/" },
+    peutAffaires && { key: "affaires", label: "Affaires", href: "/affaires" },
+    peutClients && { key: "clients", label: "Clients", href: "/clients" },
+    hasModuleAccess(user.roleCode, "Catalogue") && { key: "catalogue", label: "Catalogue", href: "/catalogue" },
+    hasModuleAccess(user.roleCode, "Nos produits") && { key: "produits", label: "Nos produits", href: "/boutique" },
+    hasModuleAccess(user.roleCode, "Marketing") && { key: "marketing", label: "Marketing", href: "/marketing" },
+    hasModuleAccess(user.roleCode, "R&D") && { key: "rd", label: "R&D", href: "/rd-calculateurs" },
+    peutStocks && { key: "stock", label: "Stocks", href: "/stocks" },
+    hasModuleAccess(user.roleCode, "Commandes") && { key: "livraisons", label: "Commandes", href: "/commandes" },
+    peutRH && { key: "rh", label: "RH", href: "/rh" },
+    hasModuleAccess(user.roleCode, "Commercial") && { key: "commercial", label: "Commercial", href: "/commercial" },
+    hasModuleAccess(user.roleCode, "Fournisseurs") && { key: "fournisseurs", label: "Fournisseurs", href: "/fournisseurs" },
+    hasModuleAccess(user.roleCode, "Achats") && { key: "achats", label: "Achats", href: "/achats" },
+    hasModuleAccess(user.roleCode, "Dépenses") && { key: "depenses", label: "Dépenses", href: "/depenses" },
+    hasModuleAccess(user.roleCode, "Charges") && { key: "charges", label: "Charges", href: "/charges" },
+    hasModuleAccess(user.roleCode, "Trésorerie") && { key: "tresorerie", label: "Trésorerie", href: "/tresorerie" },
+    hasModuleAccess(user.roleCode, "Rapports") && { key: "rapports", label: "Rapports", href: "/rapports" },
+  ];
+  const modules = barreModules.filter(Boolean) as ShellModule[];
 
   const [affairesAgg] = await db
     .select({
@@ -173,163 +174,156 @@ export default async function DashboardPage() {
     estAdminOuSuper && { label: "Tour de contrôle", icone: "👑", href: "/validations", primaire: false },
   ].filter(Boolean) as { label: string; icone: string; href: string; primaire: boolean }[];
 
+  // Modules accessibles à ce rôle mais sans page dédiée construite pour l'instant (donc absents
+  // de la barre du haut) — Règlements, Documents, Paramètres, plus les modules hors maquette
+  // d'origine (Frais numériques, Production).
+  const modulesSansEcranDedie: { label: string; href?: string }[] = [
+    hasModuleAccess(user.roleCode, "Production") && { label: "Production" },
+    hasModuleAccess(user.roleCode, "Règlements") && { label: "Règlements (voir Affaires)", href: "/affaires" },
+    hasModuleAccess(user.roleCode, "Documents") && { label: "Documents" },
+    hasModuleAccess(user.roleCode, "Paramètres") && { label: "Paramètres" },
+    hasModuleAccess(user.roleCode, "Frais numériques") && { label: "Frais numériques", href: "/frais-numeriques" },
+  ].filter(Boolean) as { label: string; href?: string }[];
+
   return (
-    <main style={{ minHeight: "100vh", background: "#0a0a0a", color: "#f5f5f5", fontFamily: "system-ui,-apple-system,'Segoe UI',sans-serif" }}>
-      <div style={{ maxWidth: 1040, margin: "0 auto", padding: "28px 24px 60px" }}>
-        <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 26, flexWrap: "wrap", gap: 12 }}>
+    <AppShell userName={user.nom} roleLibelle={user.roleLibelle} pageTitle="Tableau de bord" modules={modules}>
+      <div style={{ padding: "24px 28px", maxWidth: 1200, margin: "0 auto", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
           <div>
-            <div style={{ fontSize: 22, fontWeight: 700 }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#fff" }}>
               {salutation}, {prenom}
             </div>
             <div style={{ fontSize: 13, color: "#888", marginTop: 2, textTransform: "capitalize" }}>{dateStr}</div>
-            <div style={{ fontSize: 12, color: "#3b82f6", fontWeight: 700, marginTop: 6 }}>{user.roleLibelle}</div>
           </div>
-          <form action={logout}>
-            <button
-              type="submit"
-              style={{ background: "none", border: "1px solid #333", color: "#e0e0e0", borderRadius: 8, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}
-            >
-              Se déconnecter
-            </button>
-          </form>
-        </header>
+          {actionsRapides.length > 0 && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {actionsRapides.map((a) => (
+                <Link
+                  key={a.label}
+                  href={a.href}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    textDecoration: "none",
+                    fontSize: 13,
+                    fontWeight: a.primaire ? 700 : 400,
+                    padding: "9px 14px",
+                    borderRadius: 8,
+                    background: a.primaire ? "#3b82f6" : "#1e1e1e",
+                    color: a.primaire ? "#fff" : "#e0e0e0",
+                    border: a.primaire ? "none" : "1px solid #333",
+                  }}
+                >
+                  <span>{a.icone}</span>
+                  {a.label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* KPI */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 22 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 24 }}>
           {kpis.map((k) => (
             <div key={k.label} style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 10, padding: "14px 16px" }}>
               <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 0.3 }}>{k.label}</div>
-              <div style={{ fontSize: 19, fontWeight: 700, marginTop: 4 }}>{k.value}</div>
+              <div style={{ fontSize: 19, fontWeight: 700, marginTop: 4, color: "#fff" }}>{k.value}</div>
             </div>
           ))}
         </div>
 
-        {/* Actions rapides */}
-        {actionsRapides.length > 0 && (
-          <div style={{ display: "flex", gap: 10, marginBottom: 26, flexWrap: "wrap" }}>
-            {actionsRapides.map((a) => (
-              <Link
-                key={a.label}
-                href={a.href}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  textDecoration: "none",
-                  fontSize: 13.5,
-                  fontWeight: 600,
-                  padding: "10px 18px",
-                  borderRadius: 8,
-                  background: a.primaire ? "#3b82f6" : "#1e1e1e",
-                  color: a.primaire ? "#fff" : "#e0e0e0",
-                  border: a.primaire ? "none" : "1px solid #333",
-                }}
-              >
-                <span>{a.icone}</span>
-                {a.label}
-              </Link>
-            ))}
-          </div>
-        )}
-
         {/* Cartes modules principaux */}
         {cartesModules.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 30 }}>
-            {cartesModules.map((c) => (
-              <Link
-                key={c.key}
-                href={c.href}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  textDecoration: "none",
-                  color: "inherit",
-                  cursor: "pointer",
-                  background: "#1e1e1e",
-                  border: "1px solid #333",
-                  borderRadius: 10,
-                  padding: 18,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, fontWeight: 700, marginBottom: 10 }}>
-                  <span style={{ fontSize: 18 }}>{c.icone}</span>
-                  {c.titre}
-                </div>
-                {c.lignes.map((l) => (
-                  <div
-                    key={l.label}
-                    style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#ccc", padding: "4px 0", borderTop: "1px solid #262626" }}
-                  >
-                    <span>{l.label}</span>
-                    <span style={{ fontWeight: 700, color: "#fff" }}>{l.value}</span>
+          <>
+            <div style={{ fontSize: 12, color: "#888", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
+              Modules — vue d&apos;ensemble
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 30 }}>
+              {cartesModules.map((c) => (
+                <Link
+                  key={c.key}
+                  href={c.href}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    textDecoration: "none",
+                    color: "inherit",
+                    cursor: "pointer",
+                    background: "#1e1e1e",
+                    border: "1px solid #333",
+                    borderRadius: 10,
+                    padding: 18,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, fontWeight: 700, marginBottom: 10 }}>
+                    <span style={{ fontSize: 18 }}>{c.icone}</span>
+                    {c.titre}
                   </div>
-                ))}
-                <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #262626", fontSize: 12 }}>
-                  <span style={{ color: "#888" }}>{c.piedLabel} </span>
-                  <span style={{ fontWeight: 700, color: c.piedCouleur }}>{c.piedValue}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
+                  {c.lignes.map((l) => (
+                    <div
+                      key={l.label}
+                      style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#ccc", padding: "4px 0", borderTop: "1px solid #262626" }}
+                    >
+                      <span>{l.label}</span>
+                      <span style={{ fontWeight: 700, color: "#fff" }}>{l.value}</span>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #262626", fontSize: 12 }}>
+                    <span style={{ color: "#888" }}>{c.piedLabel} </span>
+                    <span style={{ fontWeight: 700, color: c.piedCouleur }}>{c.piedValue}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </>
         )}
 
-        {/* Autres réservés */}
-        {hasModuleAccess(user.roleCode, "Trésorerie") && (
-          <div style={{ marginBottom: 10 }}>
+        {/* Autres liens */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+          {hasModuleAccess(user.roleCode, "Trésorerie") && (
             <Link
               href="/fonds-circulation"
               style={{ display: "block", textDecoration: "none", color: "#e0e0e0", background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}
             >
               💵 Fonds en circulation (§8.2)
             </Link>
-          </div>
-        )}
-        {peutAffaires && (
-          <div style={{ marginBottom: 26 }}>
+          )}
+          {peutAffaires && (
             <Link
               href="/vente-comptoir"
               style={{ display: "block", textDecoration: "none", color: "#e0e0e0", background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}
             >
               🧾 Poste de vente comptoir — résiste aux coupures internet (§3.3)
             </Link>
-          </div>
-        )}
-
-        {/* Tous les modules */}
-        <div>
-          <h2 style={{ fontSize: 12, color: "#888", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 10 }}>
-            Tous les modules ({modules.length})
-          </h2>
-          {modules.length === 0 ? (
-            <p style={{ fontSize: 13, color: "#888" }}>Aucun module — ce rôle n&apos;a pas de compte applicatif prévu.</p>
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8 }}>
-              {modules.map((m) => {
-                const href = MODULE_ROUTES[m];
-                const style: React.CSSProperties = {
-                  display: "block",
-                  textDecoration: "none",
-                  color: href ? "#e0e0e0" : "#666",
-                  background: "#151515",
-                  border: "1px solid #2a2a2a",
-                  borderRadius: 8,
-                  padding: "9px 12px",
-                  fontSize: 12.5,
-                };
-                return href ? (
-                  <Link key={m} href={href} style={style}>
-                    {m}
-                  </Link>
-                ) : (
-                  <div key={m} style={style}>
-                    {m}
-                  </div>
-                );
-              })}
-            </div>
           )}
         </div>
+
+        {modulesSansEcranDedie.length > 0 && (
+          <div>
+            <div style={{ fontSize: 12, color: "#888", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
+              Autres modules accessibles
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {modulesSansEcranDedie.map((m) =>
+                m.href ? (
+                  <Link
+                    key={m.label}
+                    href={m.href}
+                    style={{ textDecoration: "none", color: "#e0e0e0", background: "#151515", border: "1px solid #2a2a2a", borderRadius: 8, padding: "8px 12px", fontSize: 12.5 }}
+                  >
+                    {m.label}
+                  </Link>
+                ) : (
+                  <div key={m.label} style={{ color: "#555", background: "#151515", border: "1px solid #2a2a2a", borderRadius: 8, padding: "8px 12px", fontSize: 12.5 }}>
+                    {m.label} <span style={{ fontSize: 10 }}>(à construire)</span>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        )}
       </div>
-    </main>
+    </AppShell>
   );
 }
