@@ -1,8 +1,8 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, gte, isNotNull, sql } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { utilisateurs, roles, affaires, clients, articles, vStockVariante, personnel, reglements } from "@/db/schema";
+import { utilisateurs, roles, affaires, clients, articles, vStockVariante, personnel, reglements, bonsDecaissement } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess, type ModuleName } from "@/lib/permissions";
 import { AppShell, type ShellModule } from "@/components/app-shell";
@@ -90,10 +90,43 @@ export default async function DashboardPage() {
     .where(eq(personnel.actif, true));
 
   const now = new Date();
+  const debutMois = new Date(now.getFullYear(), now.getMonth(), 1);
+  const peutTresorerie = hasModuleAccess(user.roleCode, "Trésorerie");
+
+  // Trésorerie disponible (caisse espèces) : cumul depuis toujours, même logique que
+  // calculerSoldeTheorique (§8.2) mais sur tout l'historique plutôt qu'une seule journée. Pas de
+  // notion de "Banque" dans le schéma actuel — on ne l'affiche pas pour ne pas inventer un chiffre.
+  const [tresorerieAgg] = peutTresorerie
+    ? await db
+        .select({
+          encaisseEspeces: sql<string>`coalesce(sum(${reglements.montant}) filter (where ${reglements.mode} = 'ESPECES'), 0)`,
+          decaisseValide: sql<string>`coalesce((select sum(montant) from ${bonsDecaissement} where validateur_id is not null), 0)`,
+        })
+        .from(reglements)
+    : [{ encaisseEspeces: "0", decaisseValide: "0" }];
+
+  const [moisAgg] = peutTresorerie
+    ? await db
+        .select({
+          ttcMois: sql<string>`coalesce((select sum(montant_ttc) from ${affaires} where date_creation >= ${debutMois}), 0)`,
+          sortiesMois: sql<string>`coalesce(sum(${bonsDecaissement.montant}) filter (where ${bonsDecaissement.validateurId} is not null), 0)`,
+        })
+        .from(bonsDecaissement)
+        .where(and(isNotNull(bonsDecaissement.validateurId), gte(bonsDecaissement.dateCreation, debutMois)))
+    : [{ ttcMois: "0", sortiesMois: "0" }];
+
+  const tresorerieDisponible = Number(tresorerieAgg.encaisseEspeces) - Number(tresorerieAgg.decaisseValide);
+  const resultatNetMois = Number(moisAgg.ttcMois) - Number(moisAgg.sortiesMois);
+  const soldeRestantDu = Number(affairesAgg.ttc) - Number(reglementsAgg.encaisse);
+
   const heure = now.getHours();
   const salutation = heure < 12 ? "Bonjour" : heure < 18 ? "Bon après-midi" : "Bonsoir";
   const prenom = user.nom.split(" ")[0];
   const dateStr = now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+  const narrativeText = peutTresorerie
+    ? `En ce moment, EVOLUTIS223 dispose de ${fmt(tresorerieDisponible)} en caisse (espèces). Ce mois-ci : ${fmt(resultatNetMois)} de résultat net (CA facturé moins sorties validées), pour ${affairesAgg.total} affaire(s) au total et ${fmt(Number(reglementsAgg.encaisse))} encaissés depuis le début. ${Number(ruptureAgg.total) > 0 ? `${ruptureAgg.total} article(s) en rupture de stock à traiter.` : "Aucune rupture de stock en cours."}`
+    : null;
 
   const kpis = [
     { label: "CA TTC", value: fmt(Number(affairesAgg.ttc)) },
@@ -223,15 +256,41 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {/* KPI */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 24 }}>
-          {kpis.map((k) => (
-            <div key={k.label} style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 10, padding: "14px 16px" }}>
-              <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 0.3 }}>{k.label}</div>
-              <div style={{ fontSize: 19, fontWeight: 700, marginTop: 4, color: "#fff" }}>{k.value}</div>
-            </div>
-          ))}
-        </div>
+        {narrativeText && (
+          <div style={{ background: "#182233", border: "1px solid #2a3a55", borderRadius: 10, padding: "16px 20px", marginBottom: 22, fontSize: 14, color: "#dbe4f5", lineHeight: 1.5 }}>
+            {narrativeText}
+          </div>
+        )}
+
+        {peutTresorerie && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
+            <Link href="/tresorerie" style={{ textDecoration: "none", color: "inherit", cursor: "pointer", background: "#1e1e1e", border: "1px solid #10b981", borderRadius: 10, padding: 20 }}>
+              <span style={{ color: "#888", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.4 }}>Trésorerie disponible (caisse)</span>
+              <div style={{ fontSize: 28, fontWeight: 800, color: "#fff", marginTop: 8 }}>{fmt(tresorerieDisponible)}</div>
+            </Link>
+            <Link href="/tresorerie" style={{ textDecoration: "none", color: "inherit", cursor: "pointer", background: "#1e1e1e", border: "1px solid #333", borderRadius: 10, padding: 20 }}>
+              <span style={{ color: "#888", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.4 }}>Résultat net — ce mois-ci</span>
+              <div style={{ fontSize: 28, fontWeight: 800, color: resultatNetMois >= 0 ? "#10b981" : "#dc2626", marginTop: 8 }}>{fmt(resultatNetMois)}</div>
+            </Link>
+            <Link href="/affaires" style={{ textDecoration: "none", color: "inherit", cursor: "pointer", background: "#1e1e1e", border: "1px solid #333", borderRadius: 10, padding: 20 }}>
+              <span style={{ color: "#888", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.4 }}>Total facturé (TTC, toutes affaires)</span>
+              <div style={{ fontSize: 28, fontWeight: 800, color: "#fff", marginTop: 8 }}>{fmt(Number(affairesAgg.ttc))}</div>
+              <div style={{ fontSize: 12, color: "#dc2626", marginTop: 6 }}>Solde restant dû : {fmt(soldeRestantDu)}</div>
+            </Link>
+          </div>
+        )}
+
+        {/* KPI — repli pour les rôles sans accès Trésorerie (pas de tuiles santé pour eux) */}
+        {!peutTresorerie && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 24 }}>
+            {kpis.map((k) => (
+              <div key={k.label} style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 10, padding: "14px 16px" }}>
+                <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 0.3 }}>{k.label}</div>
+                <div style={{ fontSize: 19, fontWeight: 700, marginTop: 4, color: "#fff" }}>{k.value}</div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Cartes modules principaux */}
         {cartesModules.length > 0 && (
