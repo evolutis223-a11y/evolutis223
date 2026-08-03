@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { articles, clients, variantes, vStockVariante } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { buildShellModules } from "@/lib/shell-modules";
+import { chargerUtilisateurAffiche } from "@/lib/session-user";
 import { chargerBibliotheque, chargerParametresMarquage } from "./actions";
 import { RdCalculateursClient } from "./rd-calculateurs-client";
 
@@ -35,8 +37,13 @@ export default async function RdCalculateursPage() {
     chargerParametresMarquage(),
   ]);
 
+  const user = await chargerUtilisateurAffiche(session.userId);
+
   return (
     <RdCalculateursClient
+      userName={user.nom}
+      roleLibelle={user.roleLibelle}
+      modules={buildShellModules(session.roleCode)}
       articles={articleRows}
       variantes={varianteRows}
       clients={clientRows}

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppShell, type ShellModule } from "@/components/app-shell";
 import type { articles, clients } from "@/db/schema";
 import {
   ajouterCadre,
@@ -108,6 +109,9 @@ function GarmentStage({
 }
 
 export function RdCalculateursClient({
+  userName,
+  roleLibelle,
+  modules,
   articles: initialArticles,
   variantes,
   clients: initialClients,
@@ -115,6 +119,9 @@ export function RdCalculateursClient({
   parametres,
   isAdmin,
 }: {
+  userName: string;
+  roleLibelle: string;
+  modules: ShellModule[];
   articles: Article[];
   variantes: VarianteRow[];
   clients: Client[];
@@ -267,7 +274,8 @@ export function RdCalculateursClient({
   }
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
+    <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="R&D" modules={modules}>
+    <div className="mx-auto max-w-6xl p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Marquage personnalisé (§10bis)</h1>
@@ -684,7 +692,8 @@ export function RdCalculateursClient({
       {adminOpen && (
         <AdminModal biblio={biblio} parametres={parametres} isAdmin={isAdmin} onClose={() => setAdminOpen(false)} />
       )}
-    </main>
+    </div>
+    </AppShell>
   );
 }
 
