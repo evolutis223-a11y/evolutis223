@@ -18,7 +18,10 @@ export async function login(
   _prevState: LoginState,
   formData: FormData
 ): Promise<LoginState> {
-  const telephone = String(formData.get("telephone") ?? "").trim();
+  // Le placeholder affiche "+223 00 00 00 00" (espacé) — normalise les espaces internes en plus
+  // du trim, sinon un client qui tape le numéro exactement comme le modèle affiché ne correspond
+  // plus à la valeur stockée sans espaces et se voit refuser un compte pourtant valide.
+  const telephone = String(formData.get("telephone") ?? "").trim().replace(/\s+/g, "");
   const pin = String(formData.get("pin") ?? "").trim();
 
   if (!telephone || !pin) {
