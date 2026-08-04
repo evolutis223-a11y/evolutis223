@@ -323,7 +323,7 @@ CREATE TABLE reglements (
   -- CORRECTION 2026-07-27 (v2) : liste ouverte à l'origine, sans CHECK — incohérent avec le reste
   -- du schéma (chaque champ à vocabulaire contrôlé a un CHECK). Le choix agrégateur Mobile Money
   -- étant tranché (§12), les valeurs sont connues :
-  mode           VARCHAR(20) NOT NULL CHECK (mode IN ('ESPECES','MOBILE_MONEY','VIREMENT','CARTE')),
+  mode           VARCHAR(20) NOT NULL CHECK (mode IN ('ESPECES','MOBILE_MONEY','VIREMENT','CHEQUE')),
   date_reglement TIMESTAMP NOT NULL DEFAULT now(),
   auteur_id      INTEGER NOT NULL REFERENCES utilisateurs(id)
 );

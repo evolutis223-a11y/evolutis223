@@ -9,6 +9,7 @@ import {
   clients,
   demandesValidationStock,
   lignesAffaire,
+  livraisons,
   reglements,
   variantes,
   vStockVariante,
@@ -16,6 +17,8 @@ import {
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 import { buildShellModules } from "@/lib/shell-modules";
+import { chargerParametresAffaireDocument } from "@/lib/documents/parametres";
+import { chargerMastheadTexte } from "@/app/parametres/actions";
 import { AffairesClient } from "./affaires-client";
 
 export default async function AffairesPage() {
@@ -29,7 +32,7 @@ export default async function AffairesPage() {
     );
   }
 
-  const [[user], articleRows, varianteRows, affaireRows, ligneRows, reglementRows, demandeRows] =
+  const [[user], articleRows, varianteRows, affaireRows, ligneRows, reglementRows, demandeRows, livraisonRows, masthead, mentionsValidite] =
     await Promise.all([
       db
         .select({ nom: utilisateurs.nom, roleLibelle: roles.libelle })
@@ -66,13 +69,24 @@ export default async function AffairesPage() {
           tvaPct: affaires.tvaPct,
           remiseMontant: affaires.remiseMontant,
           remiseUnite: affaires.remiseUnite,
+          modeFinalisation: affaires.modeFinalisation,
+          infosComplementaires: affaires.infosComplementaires,
+          mentionValidite: affaires.mentionValidite,
+          acomptePct: affaires.acomptePct,
+          commercialNom: utilisateurs.nom,
         })
         .from(affaires)
         .innerJoin(clients, eq(clients.id, affaires.clientId))
+        .innerJoin(utilisateurs, eq(utilisateurs.id, affaires.auteurId))
         .orderBy(desc(affaires.id)),
       db.select().from(lignesAffaire),
       db.select().from(reglements),
       db.select().from(demandesValidationStock).where(eq(demandesValidationStock.statut, "EN_ATTENTE")),
+      db.select({ affaireId: livraisons.affaireId, adresse: livraisons.adresse }).from(livraisons),
+      chargerMastheadTexte(),
+      Promise.all(
+        (["FACTURE", "DEVIS", "PROFORMA", "BON_COMMANDE", "TICKET"] as const).map(async (t) => [t, (await chargerParametresAffaireDocument(t)).mentionValidite] as const)
+      ).then((entries) => Object.fromEntries(entries)),
     ]);
 
   return (
@@ -87,6 +101,9 @@ export default async function AffairesPage() {
       lignes={ligneRows}
       reglements={reglementRows}
       demandesEnAttente={demandeRows}
+      livraisons={livraisonRows}
+      masthead={masthead}
+      mentionsValidite={mentionsValidite}
     />
   );
 }

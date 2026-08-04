@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 import { buildShellModules } from "@/lib/shell-modules";
 import { chargerUtilisateurAffiche } from "@/lib/session-user";
+import { chargerModelesData } from "./actions";
 import { ParametresClient } from "./parametres-client";
 
 export default async function ParametresPage() {
@@ -16,13 +17,16 @@ export default async function ParametresPage() {
     );
   }
 
-  const user = await chargerUtilisateurAffiche(session.userId);
+  const [user, modelesData] = await Promise.all([chargerUtilisateurAffiche(session.userId), chargerModelesData()]);
 
   return (
     <ParametresClient
       userName={user.nom}
       roleLibelle={user.roleLibelle}
       modules={buildShellModules(session.roleCode)}
+      roleCode={session.roleCode}
+      masthead={modelesData.masthead}
+      exemples={modelesData.exemples}
     />
   );
 }

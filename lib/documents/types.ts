@@ -3,7 +3,7 @@
 // c'est à l'appelant (app/actions.ts, routes API, etc.) de charger les données depuis
 // la base et de les mapper vers ces formes avant d'appeler un générateur.
 
-export type ModeReglement = "ESPECES" | "MOBILE_MONEY" | "VIREMENT" | "CARTE";
+export type ModeReglement = "ESPECES" | "MOBILE_MONEY" | "VIREMENT" | "CHEQUE";
 
 export interface LigneRecu {
   designation: string;

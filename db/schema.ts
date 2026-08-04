@@ -292,6 +292,11 @@ export const affaires = pgTable(
     remiseMontant: numeric("remise_montant", { precision: 12, scale: 2 }),
     remiseUnite: varchar("remise_unite", { length: 4 }),
     infosComplementaires: text("infos_complementaires"),
+    // AJOUT 2026-08-04 (maquette, bloc "Conditions de paiement" — Devis/Facture/Proforma
+    // uniquement) : mentionValidite écrase le texte par défaut du paramétrage global si renseigné
+    // (NULL = on garde le texte défini dans Paramètres > Mes modèles pour ce type de document).
+    mentionValidite: varchar("mention_validite", { length: 120 }),
+    acomptePct: numeric("acompte_pct", { precision: 5, scale: 2 }),
   },
   (table) => [
     check(
@@ -340,11 +345,19 @@ export const reglements = pgTable(
   "reglements",
   {
     id: serial("id").primaryKey(),
-    affaireId: integer("affaire_id")
-      .notNull()
-      .references(() => affaires.id),
+    // AJOUT 2026-08-04 (maquette, module Règlements — "Fiche de règlement") : un règlement peut
+    // exister sans affaire liée (encaissement libre, payeur identifié par nom/prénom/téléphone
+    // saisis directement ici plutôt que via un vrai compte client).
+    affaireId: integer("affaire_id").references(() => affaires.id),
+    payeurNom: varchar("payeur_nom", { length: 100 }),
+    payeurPrenom: varchar("payeur_prenom", { length: 100 }),
+    payeurTelephone: varchar("payeur_telephone", { length: 20 }),
+    // AJOUT 2026-08-04 (maquette) : référence/n° d'opération, saisie uniquement pour les modes
+    // Virement et Mobile Money (isModeWithRef côté maquette).
+    reference: varchar("reference", { length: 60 }),
+    commentaire: text("commentaire"),
     montant: numeric("montant", { precision: 12, scale: 2 }).notNull(),
-    mode: varchar("mode", { length: 20 }).notNull(), // ESPECES | MOBILE_MONEY | VIREMENT | CARTE
+    mode: varchar("mode", { length: 20 }).notNull(), // ESPECES | MOBILE_MONEY | VIREMENT | CHEQUE
     dateReglement: timestamp("date_reglement").notNull().defaultNow(),
     auteurId: integer("auteur_id")
       .notNull()
@@ -353,7 +366,7 @@ export const reglements = pgTable(
   (table) => [
     check(
       "reglements_mode_check",
-      sql`${table.mode} in ('ESPECES','MOBILE_MONEY','VIREMENT','CARTE')`
+      sql`${table.mode} in ('ESPECES','MOBILE_MONEY','VIREMENT','CHEQUE')`
     ),
   ]
   // Solde = affaires.montant_ttc - SUM(reglements.montant)

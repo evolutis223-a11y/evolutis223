@@ -17,7 +17,7 @@ const LIBELLE_MODE_REGLEMENT: Record<ModeReglement, string> = {
   ESPECES: "Espèces",
   MOBILE_MONEY: "Mobile Money",
   VIREMENT: "Virement",
-  CARTE: "Carte",
+  CHEQUE: "Chèque",
 };
 
 const styles = StyleSheet.create({

@@ -1,18 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell, type ShellModule } from "@/components/app-shell";
 import { formatFcfa, formatNombre } from "@/lib/format";
+import { DocumentPreview, type DocumentPreviewData } from "@/components/documents/document-preview";
 import type { affaires, articles, demandesValidationStock, lignesAffaire, reglements } from "@/db/schema";
-import {
-  ajouterReglement,
-  creerAffaireDepuisFormulaire,
-  validerAffaire,
-  type DetailsAffaireInput,
-  type LigneInput,
-  type ReglementState,
-} from "./actions";
+import { ajouterReglement, creerAffaireDepuisFormulaire, validerAffaire, type DetailsAffaireInput, type LigneInput } from "./actions";
 
 type Article = typeof articles.$inferSelect;
 type Variante = {
@@ -39,7 +33,13 @@ type AffaireRow = {
   tvaPct: string | null;
   remiseMontant: string | null;
   remiseUnite: string | null;
+  modeFinalisation: string | null;
+  infosComplementaires: string | null;
+  mentionValidite: string | null;
+  acomptePct: string | null;
+  commercialNom: string;
 };
+type LivraisonAdresseRow = { affaireId: number; adresse: string | null };
 type LigneRow = typeof lignesAffaire.$inferSelect;
 type ReglementRow = typeof reglements.$inferSelect;
 type DemandeRow = typeof demandesValidationStock.$inferSelect;
@@ -57,8 +57,6 @@ const TYPE_LABEL: Record<string, string> = {
   FACTURE: "Facture",
   AVOIR: "Avoir",
 };
-
-const initialReglementState: ReglementState = { error: null };
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -242,11 +240,13 @@ function NouvelleAffairePage({
   articlesList,
   variantesList,
   roleCode,
+  mentionsValidite,
   onClose,
 }: {
   articlesList: Article[];
   variantesList: Variante[];
   roleCode: string;
+  mentionsValidite: Record<string, string>;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -270,6 +270,8 @@ function NouvelleAffairePage({
   const [delaiNombre, setDelaiNombre] = useState("");
   const [delaiUnite, setDelaiUnite] = useState("Jour");
   const [dateLivraison, setDateLivraison] = useState("");
+  const [infosComplementaires, setInfosComplementaires] = useState("");
+  const [acomptePct, setAcomptePct] = useState("");
   const [montantRecu, setMontantRecu] = useState("");
   const [modeReglement, setModeReglement] = useState("ESPECES");
   const [error, setError] = useState<string | null>(null);
@@ -313,6 +315,7 @@ function NouvelleAffairePage({
     setDraftMsg(`Brouillon enregistré — ${new Date().toLocaleTimeString("fr-FR")}`);
   }
 
+  const aConditionsPaiement = docType === "DEVIS" || docType === "FACTURE" || docType === "PROFORMA";
   const brut = lignes.reduce((acc, l) => acc + l.quantite * l.prixUnitaire, 0);
   const remiseValeur = remiseUnite === "%" ? brut * ((Number(remise) || 0) / 100) : Number(remise) || 0;
   // Même formule que creerAffaireInterne (actions.ts) : la TVA est capturée pour le document
@@ -365,6 +368,8 @@ function NouvelleAffairePage({
     setDelaiUnite("Jour");
     setDateLivraison("");
     setMontantRecu("");
+    setInfosComplementaires("");
+    setAcomptePct("");
     setError(null);
     setDraftMsg(null);
     localStorage.removeItem(DRAFT_KEY);
@@ -387,6 +392,8 @@ function NouvelleAffairePage({
       docType,
       coutLivraison: modeFinalisation === "LIVRAISON" && coutLivraisonMode === "montant" && coutLivraison ? Number(coutLivraison) : null,
       coutLivraisonPaye: modeFinalisation === "LIVRAISON" && coutLivraisonMode === "montant" ? coutLivraisonPaye : false,
+      infosComplementaires: infosComplementaires.trim() || null,
+      acomptePct: aConditionsPaiement && acomptePct ? Number(acomptePct) : null,
     };
     const res = await creerAffaireDepuisFormulaire(
       nomClient.trim(),
@@ -431,7 +438,18 @@ function NouvelleAffairePage({
         </div>
 
         <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
-          <select value={provenance} onChange={(e) => setProvenance(e.target.value)} style={{ ...inputStyle, flex: 0.7 }}>
+          <select
+            value={provenance}
+            onChange={(e) => setProvenance(e.target.value)}
+            style={{
+              ...inputStyle,
+              flex: 0.7,
+              background: provenance === "Boutique en ligne" ? "#10b981" : provenance === "Boutique physique" ? "#3b82f6" : inputStyle.background,
+              color: provenance === "Boutique en ligne" || provenance === "Boutique physique" ? "#fff" : "#e0e0e0",
+              fontWeight: provenance ? 700 : 400,
+              border: provenance ? "none" : inputStyle.border,
+            }}
+          >
             <option value="">Provenance…</option>
             {PROVENANCES.map((p) => (
               <option key={p} value={p}>
@@ -556,6 +574,48 @@ function NouvelleAffairePage({
             </div>
           )}
 
+          {aConditionsPaiement && (
+            <div style={{ display: "flex", gap: 16, marginTop: 14 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12.5, color: "#888", marginBottom: 6 }}>Informations complémentaires</div>
+                <textarea
+                  value={infosComplementaires}
+                  onChange={(e) => setInfosComplementaires(e.target.value)}
+                  placeholder="Précisions à faire apparaître sur le document (optionnel)..."
+                  style={{ ...inputStyle, minHeight: 70, resize: "vertical", boxSizing: "border-box" }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12.5, color: "#888", marginBottom: 6 }}>Conditions de paiement</div>
+                <div
+                  title="Défini dans Paramètres > Mes modèles — pas modifiable ici"
+                  style={{ ...inputStyle, marginBottom: 8, color: "#888", cursor: "not-allowed", boxSizing: "border-box" }}
+                >
+                  {mentionsValidite[docType] || "Valable pour 30 jours"}
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ flex: 1, position: "relative" }}>
+                    <input
+                      value={acomptePct}
+                      onChange={(e) => setAcomptePct(e.target.value)}
+                      placeholder="0"
+                      type="number"
+                      min={0}
+                      max={100}
+                      style={{ ...inputStyle, paddingRight: 26 }}
+                      title="Acompte à la commande (%)"
+                    />
+                    <span style={{ position: "absolute", right: 10, top: 10, color: "#888", fontSize: 13 }}>%</span>
+                  </div>
+                  <div style={{ flex: 1, position: "relative" }}>
+                    <input value={acomptePct ? String(100 - Number(acomptePct)) : ""} disabled placeholder="—" style={{ ...inputStyle, paddingRight: 26, opacity: 0.6 }} title="Solde à la livraison (%)" />
+                    <span style={{ position: "absolute", right: 10, top: 10, color: "#888", fontSize: 13 }}>%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div style={{ marginTop: 14, padding: 12, background: "#121212", borderRadius: 8, border: "2px solid #fff" }}>
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               <input value={montantRecu} onChange={(e) => setMontantRecu(e.target.value)} placeholder="Montant reçu" type="number" style={{ ...inputStyle, flex: 1, background: "#1e1e1e" }} />
@@ -563,7 +623,7 @@ function NouvelleAffairePage({
                 <option value="ESPECES">Espèces</option>
                 <option value="MOBILE_MONEY">Mobile Money</option>
                 <option value="VIREMENT">Virement</option>
-                <option value="CARTE">Carte</option>
+                <option value="CHEQUE">Chèque</option>
               </select>
               <div
                 style={{
@@ -658,7 +718,7 @@ function NouvelleAffairePage({
             <span style={{ fontSize: 12, fontWeight: 400, marginLeft: 4 }}>FCFA</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", margin: "6px 0", fontSize: 14, color: "#ccc" }}>
-            <span>TVA ({tva || 0}%) : {tvaValeur > 0 ? formatFcfa(tvaValeur) : "—"}</span>
+            <span>TVA ({tva || 0}%) : {formatFcfa(tvaValeur)}</span>
             <span>Remise : {remiseValeur > 0 ? formatFcfa(remiseValeur) : "—"}</span>
           </div>
           <div style={{ fontSize: 24, fontWeight: 700, color: "#10b981", marginTop: 4 }}>
@@ -673,6 +733,22 @@ function NouvelleAffairePage({
               <span style={{ fontSize: 14, fontWeight: 700, color: badgeSolde.couleur, whiteSpace: "nowrap" }}>{badgeSolde.texte}</span>
             )}
           </div>
+
+          {aConditionsPaiement && (
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #333", fontSize: 13, color: "#ccc" }}>
+              <div style={{ marginBottom: 4 }}>
+                📝 Informations complémentaires : <b style={{ color: "#e0e0e0" }}>{infosComplementaires || "—"}</b>
+              </div>
+              <div style={{ marginBottom: acomptePct ? 2 : 0 }}>
+                📄 Conditions de paiement : <b style={{ color: "#e0e0e0" }}>{mentionsValidite[docType] || "Valable pour 30 jours"}</b>
+              </div>
+              {acomptePct && (
+                <div style={{ fontSize: 12.5, color: "#999" }}>
+                  Acompte à la commande {acomptePct}% — Solde à la livraison {100 - Number(acomptePct)}%
+                </div>
+              )}
+            </div>
+          )}
 
           {(provenance || modeFinalisation || adresseLivraison) && (
             <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #333", fontSize: 13, color: "#ccc" }}>
@@ -706,38 +782,6 @@ function NouvelleAffairePage({
   );
 }
 
-function ReglementForm({ affaireId, onDone }: { affaireId: number; onDone: () => void }) {
-  const [state, action, pending] = useActionState(ajouterReglement, initialReglementState);
-  const wasPending = useRef(false);
-
-  useEffect(() => {
-    if (wasPending.current && !pending && !state.error) onDone();
-    wasPending.current = pending;
-  }, [pending, state.error, onDone]);
-
-  return (
-    <form
-      action={(fd) => {
-        fd.set("affaireId", String(affaireId));
-        action(fd);
-      }}
-      style={{ marginTop: 10, display: "flex", alignItems: "flex-end", gap: 8, flexWrap: "wrap" }}
-    >
-      <input name="montant" type="number" min="1" placeholder="Montant" required style={{ ...inputStyle, width: 130 }} />
-      <select name="mode" required style={{ ...inputStyle, width: "auto" }}>
-        <option value="ESPECES">Espèces</option>
-        <option value="MOBILE_MONEY">Mobile Money</option>
-        <option value="VIREMENT">Virement</option>
-        <option value="CARTE">Carte</option>
-      </select>
-      <button type="submit" disabled={pending} style={darkButton("#10b981")}>
-        {pending ? "..." : "Encaisser"}
-      </button>
-      {state.error && <span style={{ fontSize: 11.5, color: "#f87171" }}>{state.error}</span>}
-    </form>
-  );
-}
-
 function statutColor(a: AffaireRow, bloquee: boolean) {
   if (bloquee) return "#f59e0b";
   if (a.statut === "CLOTUREE") return "#10b981";
@@ -757,6 +801,9 @@ export function AffairesClient({
   lignes,
   reglements,
   demandesEnAttente,
+  livraisons,
+  masthead,
+  mentionsValidite,
 }: {
   userName: string;
   roleLibelle: string;
@@ -768,6 +815,9 @@ export function AffairesClient({
   lignes: LigneRow[];
   reglements: ReglementRow[];
   demandesEnAttente: DemandeRow[];
+  livraisons: LivraisonAdresseRow[];
+  masthead: string;
+  mentionsValidite: Record<string, string>;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -793,11 +843,18 @@ export function AffairesClient({
   const reglementsByAffaire = useMemo(() => {
     const m = new Map<number, ReglementRow[]>();
     for (const r of reglements) {
+      if (r.affaireId == null) continue;
       if (!m.has(r.affaireId)) m.set(r.affaireId, []);
       m.get(r.affaireId)!.push(r);
     }
     return m;
   }, [reglements]);
+
+  const livraisonByAffaire = useMemo(() => {
+    const m = new Map<number, string | null>();
+    for (const l of livraisons) if (!m.has(l.affaireId)) m.set(l.affaireId, l.adresse);
+    return m;
+  }, [livraisons]);
 
   const demandesByAffaire = useMemo(() => {
     const m = new Map<number, DemandeRow[]>();
@@ -875,6 +932,7 @@ export function AffairesClient({
           articlesList={articles}
           variantesList={variantes}
           roleCode={roleCode}
+          mentionsValidite={mentionsValidite}
           onClose={() => {
             setDrawerOpen(false);
             if (searchParams.get("nouveau") === "1") router.replace("/affaires");
@@ -905,16 +963,34 @@ export function AffairesClient({
               <option value="solde">Trier : Solde décroissant</option>
             </select>
           </div>
-          <div style={{ display: "flex", gap: 10, marginBottom: 14, flexShrink: 0 }}>
-            <select value={typeFiltre} onChange={(e) => setTypeFiltre(e.target.value)} style={{ ...inputStyle, width: "100%" }}>
-              <option value="">Tous les types de document</option>
-              <option value="DEVIS">Devis</option>
-              <option value="PROFORMA">Proforma</option>
-              <option value="FACTURE">Facture</option>
-              <option value="TICKET">Reçu</option>
-              <option value="BON_COMMANDE">Bon de commande</option>
-              <option value="COMMANDE_ATTENTE">Commande en attente</option>
-            </select>
+          <div style={{ display: "flex", gap: 6, marginBottom: 14, flexShrink: 0, flexWrap: "wrap" }}>
+            {[
+              { v: "", l: "Tous" },
+              { v: "DEVIS", l: "Devis" },
+              { v: "PROFORMA", l: "Proforma" },
+              { v: "FACTURE", l: "Facture" },
+              { v: "TICKET", l: "Reçu" },
+              { v: "BON_COMMANDE", l: "Bon de commande" },
+              { v: "COMMANDE_ATTENTE", l: "Commande en attente" },
+            ].map((opt) => (
+              <button
+                key={opt.v}
+                onClick={() => setTypeFiltre(opt.v)}
+                style={{
+                  background: typeFiltre === opt.v ? "#3b82f6" : "#1e1e1e",
+                  color: typeFiltre === opt.v ? "#fff" : "#ccc",
+                  border: "1px solid #333",
+                  padding: "7px 12px",
+                  borderRadius: 20,
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {opt.l}
+              </button>
+            ))}
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", minHeight: 0, border: "1px solid #262626", borderRadius: 8 }}>
@@ -1031,16 +1107,35 @@ export function AffairesClient({
             (() => {
               const bloquee = (demandesByAffaire.get(selected.id) ?? []).length > 0;
               const totalRegle = (reglementsByAffaire.get(selected.id) ?? []).reduce((acc, r) => acc + Number(r.montant), 0);
-              const ttc = Number(selected.montantTtc);
-              const solde = ttc - totalRegle;
+              const solde = Number(selected.montantTtc) - totalRegle;
               const lignesAff = lignesByAffaire.get(selected.id) ?? [];
-              const sousTotal = lignesAff.reduce((s, l) => s + Number(l.prixUnitaire) * l.quantite, 0);
-              const remiseNum = Number(selected.remiseMontant ?? 0);
-              const remiseValeur = !remiseNum ? 0 : selected.remiseUnite === "%" ? sousTotal * (remiseNum / 100) : remiseNum;
-              const tvaPctNum = Number(selected.tvaPct ?? 0);
-              const apresRemise = Math.max(0, sousTotal - remiseValeur);
-              const tvaValeur = tvaPctNum ? apresRemise * (tvaPctNum / 100) : 0;
-              const estDocumentReel = ["FACTURE", "DEVIS", "PROFORMA", "BON_COMMANDE", "TICKET"].includes(selected.type);
+              const previewData: DocumentPreviewData = {
+                type: selected.type,
+                numero: selected.numero,
+                dateCreation: selected.dateCreation,
+                immuable: selected.immuable,
+                objet: selected.objet,
+                clientNom: selected.clientNom,
+                clientAdresse: selected.clientAdresse,
+                clientTelephone: selected.clientTelephone,
+                commercialNom: selected.commercialNom,
+                provenance: selected.provenance,
+                modeFinalisation: selected.modeFinalisation,
+                adresseLivraison: livraisonByAffaire.get(selected.id) ?? null,
+                tvaPct: selected.tvaPct ? Number(selected.tvaPct) : null,
+                remiseMontant: selected.remiseMontant ? Number(selected.remiseMontant) : null,
+                remiseUnite: selected.remiseUnite,
+                montantTtc: Number(selected.montantTtc),
+                montantRegle: totalRegle,
+                infosComplementaires: selected.infosComplementaires,
+                mentionValidite: selected.mentionValidite || mentionsValidite[selected.type] || null,
+                acomptePct: selected.acomptePct != null ? Number(selected.acomptePct) : null,
+                lignes: lignesAff.map((l) => {
+                  const art = articles.find((x) => x.id === l.articleId);
+                  const vnt = variantes.find((v) => v.id === l.varianteId);
+                  return { nom: `${art?.nom ?? ""}${vnt ? ` — ${vnt.taille ?? ""} ${vnt.couleur ?? ""}` : ""}`, qte: l.quantite, pu: Number(l.prixUnitaire) };
+                }),
+              };
               return (
                 <>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 10, flexShrink: 0 }}>
@@ -1067,115 +1162,7 @@ export function AffairesClient({
                   </div>
 
                   <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-                    <div style={{ background: "#fff", color: "#000", borderRadius: 6, padding: 24, fontFamily: "Arial,sans-serif", position: "relative" }}>
-                      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-                        <div style={{ flex: 1, minWidth: 0, padding: "4px 8px 4px 0", display: "flex", alignItems: "center" }}>
-                          <img src="/logo.png" alt="EVOLUTIS223" style={{ height: 50, width: 174 }} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0, padding: 4, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <div style={{ textAlign: "center", flex: 1, minWidth: 0 }}>
-                            {estDocumentReel ? (
-                              <div style={{ fontSize: 28, fontWeight: 800 }}>{(TYPE_LABEL[selected.type] ?? selected.type).toUpperCase()}</div>
-                            ) : (
-                              <div style={{ fontSize: 15, fontWeight: 700, color: "#555" }}>Commande en attente de traitement</div>
-                            )}
-                            <div style={{ fontSize: 11, marginTop: 4 }}>
-                              N° {selected.numero} — {formatDate(selected.dateCreation)}
-                            </div>
-                            <div style={{ fontSize: 10.5, fontWeight: 700, marginTop: 4 }}>{selected.immuable ? "VALIDÉE" : "EN COURS"}</div>
-                          </div>
-                          <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(`EVOLUTIS223|${selected.numero}`)}`}
-                            alt="QR"
-                            style={{ width: 48, height: 48, flexShrink: 0 }}
-                          />
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-                        <div style={{ flex: 1.2, minWidth: 0, padding: 10, fontSize: 13 }}>
-                          <b>Objet :</b> {selected.objet || "—"}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0, padding: "10px 10px 10px 46px", fontSize: 13 }}>
-                          <b style={{ textDecoration: "underline" }}>DOIT :</b>
-                          <br />
-                          <b>{selected.clientNom}</b>
-                          {selected.clientAdresse && (
-                            <>
-                              <br />
-                              <span style={{ fontSize: 11.5, color: "#555" }}>{selected.clientAdresse}</span>
-                            </>
-                          )}
-                          {selected.clientTelephone && (
-                            <>
-                              <br />
-                              <span style={{ fontSize: 11.5, color: "#555" }}>Tel {selected.clientTelephone}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 10 }}>
-                        <thead>
-                          <tr style={{ background: "#000", color: "#fff" }}>
-                            <th style={{ padding: 6, border: "1px solid #000", textAlign: "left" }}>N°</th>
-                            <th style={{ padding: 6, border: "1px solid #000", textAlign: "left" }}>Désignation</th>
-                            <th style={{ padding: 6, border: "1px solid #000" }}>Qté</th>
-                            <th style={{ padding: 6, border: "1px solid #000" }}>P.U.</th>
-                            <th style={{ padding: 6, border: "1px solid #000" }}>Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lignesAff.map((l, i) => {
-                            const art = articles.find((x) => x.id === l.articleId);
-                            const vnt = variantes.find((v) => v.id === l.varianteId);
-                            return (
-                              <tr key={l.id}>
-                                <td style={{ padding: 8, border: "1px solid #000" }}>{i + 1}</td>
-                                <td style={{ padding: 8, border: "1px solid #000" }}>
-                                  {art?.nom} {vnt ? `— ${vnt.taille ?? ""} ${vnt.couleur ?? ""}` : ""}
-                                </td>
-                                <td style={{ padding: 8, border: "1px solid #000", textAlign: "center" }}>{l.quantite}</td>
-                                <td style={{ padding: 8, border: "1px solid #000", textAlign: "right" }}>{formatFcfa(l.prixUnitaire)}</td>
-                                <td style={{ padding: 8, border: "1px solid #000", textAlign: "right" }}>{formatFcfa(Number(l.prixUnitaire) * l.quantite)}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-                        <div style={{ flex: 1 }} />
-                        <div style={{ flex: 1, minWidth: 0, fontSize: 13, border: "1px solid #000" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px" }}>
-                            <span>TOTAL HT</span>
-                            <span>{formatFcfa(sousTotal - remiseValeur)}</span>
-                          </div>
-                          {tvaPctNum > 0 && (
-                            <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px" }}>
-                              <span>TVA ({tvaPctNum}%)</span>
-                              <span>{formatFcfa(tvaValeur)}</span>
-                            </div>
-                          )}
-                          <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px", borderTop: "2px solid #000", fontWeight: 800, fontSize: 15 }}>
-                            <span>TOTAL TTC</span>
-                            <span>{formatFcfa(ttc)}</span>
-                          </div>
-                          {totalRegle > 0 && (
-                            <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px", color: "#166534", borderTop: "1px solid #000" }}>
-                              <span>Réglé</span>
-                              <span>{formatFcfa(totalRegle)}</span>
-                            </div>
-                          )}
-                          <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px", color: "#b91c1c", fontWeight: 700, borderTop: "1px solid #000" }}>
-                            <span>SOLDE</span>
-                            <span>{formatFcfa(Math.max(0, solde))}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: "center", fontSize: 12, fontStyle: "italic", color: "#333", margin: "6px 0 10px" }}>Merci pour votre confiance.</div>
-                      <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between" }}>
-                        <span style={{ fontStyle: "italic", fontSize: 15, fontWeight: 700, textDecoration: "underline" }}>Le Client</span>
-                        <span style={{ fontStyle: "italic", fontSize: 15, fontWeight: 700, textDecoration: "underline" }}>Pour EVOLUTIS223</span>
-                      </div>
-                    </div>
+                    <DocumentPreview data={previewData} masthead={masthead} />
 
                     {bloquee && (
                       <p style={{ marginTop: 14, borderLeft: "2px solid #f59e0b", background: "rgba(245,158,11,0.1)", padding: 12, borderRadius: 6, fontSize: 12.5, color: "#fcd34d" }}>
@@ -1189,7 +1176,12 @@ export function AffairesClient({
 
                     {selected.immuable && solde > 0 && (
                       <div style={{ marginTop: 16, borderTop: "1px solid #262626", paddingTop: 14 }}>
-                        <ReglementForm affaireId={selected.id} onDone={() => router.refresh()} />
+                        <a
+                          href={`/reglements?affaire=${selected.id}`}
+                          style={{ ...darkButton("#10b981"), textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                        >
+                          💰 Aller au paiement
+                        </a>
                       </div>
                     )}
 

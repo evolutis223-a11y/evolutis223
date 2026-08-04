@@ -1,24 +1,580 @@
 "use client";
 
+import { useState } from "react";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { DocumentPreview } from "@/components/documents/document-preview";
+import { enregistrerMastheadTexte, type ExempleDocument } from "./actions";
+
+const TABS = [
+  { key: "apparence", label: "Général" },
+  { key: "modeles", label: "Modèles de documents" },
+  { key: "categories", label: "Catégories d'articles" },
+  { key: "site", label: "Site & Marketing" },
+  { key: "support", label: "Support & bugs" },
+  { key: "guide", label: "Documentation" },
+] as const;
+type TabKey = (typeof TABS)[number]["key"];
+
+const MODELE_TYPES = [
+  { key: "facture", label: "Facture" },
+  { key: "proforma", label: "Proforma" },
+  { key: "devis", label: "Devis" },
+  { key: "recu", label: "Reçu" },
+  { key: "bl", label: "Bon de livraison" },
+  { key: "bc", label: "Bon de commande" },
+  { key: "recucaisse", label: "Reçu de caisse" },
+  { key: "fichepaie", label: "Fiche de paie" },
+  { key: "demission", label: "Lettre de démission" },
+  { key: "entete", label: "En-tête vierge" },
+  { key: "courrier", label: "Courrier" },
+  { key: "ordremission", label: "Ordre de mission" },
+  { key: "ticket", label: "Ticket" },
+] as const;
+type ModeleKey = (typeof MODELE_TYPES)[number]["key"];
 
 export function ParametresClient({
   userName,
   roleLibelle,
   modules,
+  roleCode,
+  masthead,
+  exemples,
 }: {
   userName: string;
   roleLibelle: string;
   modules: ShellModule[];
+  roleCode: string;
+  masthead: string;
+  exemples: { facture: ExempleDocument | null; devis: ExempleDocument | null; proforma: ExempleDocument | null; bc: ExempleDocument | null; bl: ExempleDocument | null };
 }) {
+  const [tab, setTab] = useState<TabKey>("modeles");
+
   return (
     <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Paramètres" modules={modules}>
       <div style={{ padding: 20 }}>
         <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 16 }}>Paramètres</div>
-        <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 20, color: "#888", fontSize: 13.5 }}>
-          Module pas encore construit — onglets Général / Modèles de documents / Catégories d&apos;articles / Site &amp; Marketing / Support &amp; bugs / Documentation à venir.
+        <div style={{ display: "flex", gap: 6, background: "#121212", border: "1px solid #333", borderRadius: 8, padding: 4, marginBottom: 22, width: "fit-content", flexWrap: "wrap" }}>
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              style={{ background: tab === t.key ? "#3b82f6" : "transparent", color: tab === t.key ? "#fff" : "#888", border: "none", padding: "9px 16px", borderRadius: 6, fontSize: 13, cursor: "pointer" }}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
+
+        {tab === "modeles" ? (
+          <ModelesDeDocuments roleCode={roleCode} mastheadInitial={masthead} exemples={exemples} />
+        ) : (
+          <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 20, color: "#888", fontSize: 13.5 }}>
+            Onglet pas encore construit.
+          </div>
+        )}
       </div>
     </AppShell>
   );
+}
+
+function ModelesDeDocuments({
+  roleCode,
+  mastheadInitial,
+  exemples,
+}: {
+  roleCode: string;
+  mastheadInitial: string;
+  exemples: { facture: ExempleDocument | null; devis: ExempleDocument | null; proforma: ExempleDocument | null; bc: ExempleDocument | null; bl: ExempleDocument | null };
+}) {
+  const [type, setType] = useState<ModeleKey>("facture");
+  const [editMode, setEditMode] = useState(false);
+  const [masthead, setMasthead] = useState(mastheadInitial);
+  const [saving, setSaving] = useState(false);
+
+  async function handleSaveMasthead(texte: string) {
+    setSaving(true);
+    await enregistrerMastheadTexte(texte);
+    setSaving(false);
+  }
+
+  return (
+    <div style={{ display: "flex", gap: 20, height: "calc(100vh - 260px)", minHeight: 500 }}>
+      <div style={{ width: 220, flexShrink: 0, display: "flex", flexDirection: "column", gap: 6, overflowY: "auto" }}>
+        {MODELE_TYPES.map((m) => (
+          <button
+            key={m.key}
+            onClick={() => setType(m.key)}
+            style={{ textAlign: "left", background: type === m.key ? "#3b82f6" : "#1e1e1e", color: type === m.key ? "#fff" : "#ccc", border: "none", padding: "11px 14px", borderRadius: 6, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0, overflow: "auto" }}>
+        <div style={{ maxWidth: 760, margin: "0 auto 10px", display: "flex", justifyContent: "flex-end" }}>
+          <button
+            onClick={() => setEditMode((v) => !v)}
+            style={{ background: editMode ? "#3b82f6" : "none", color: editMode ? "#fff" : "#93c5fd", border: "1px solid #3b82f6", padding: "7px 14px", borderRadius: 6, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
+          >
+            {editMode ? "✓ Terminé" : "✏️ Modifier ce modèle"}
+          </button>
+        </div>
+        <div style={{ background: "#fff", color: "#000", border: "1px solid #444", padding: 24, fontFamily: "Arial,sans-serif", fontSize: 13, width: 794, maxWidth: "100%", boxSizing: "border-box", margin: "0 auto", position: "relative" }}>
+          {type === "recu" && <ModeleRecu />}
+          {type === "recucaisse" && <ModeleRecuCaisse masthead={masthead} editMode={editMode} onChange={setMasthead} onSave={handleSaveMasthead} saving={saving} />}
+          {type === "fichepaie" && <ModeleFichePaie masthead={masthead} editMode={editMode} onChange={setMasthead} onSave={handleSaveMasthead} saving={saving} />}
+          {type === "demission" && <ModeleDemission masthead={masthead} editMode={editMode} onChange={setMasthead} onSave={handleSaveMasthead} saving={saving} />}
+          {type === "entete" && <ModeleEntete masthead={masthead} editMode={editMode} onChange={setMasthead} onSave={handleSaveMasthead} saving={saving} />}
+          {type === "courrier" && <ModeleCourrier masthead={masthead} editMode={editMode} onChange={setMasthead} onSave={handleSaveMasthead} saving={saving} />}
+          {type === "ordremission" && <ModeleOrdreMission masthead={masthead} editMode={editMode} onChange={setMasthead} onSave={handleSaveMasthead} saving={saving} />}
+          {type === "ticket" && <ModeleTicket masthead={masthead} editMode={editMode} onChange={setMasthead} onSave={handleSaveMasthead} saving={saving} />}
+          {type === "bc" &&
+            (exemples.bc ? (
+              <DocumentPreview data={exemples.bc} masthead={masthead} editMode={editMode} onMastheadChange={setMasthead} onMastheadSave={handleSaveMasthead} />
+            ) : (
+              <AucunExemple type="Bon de commande" />
+            ))}
+          {type === "bl" &&
+            (exemples.bl ? (
+              <DocumentPreview data={exemples.bl} masthead={masthead} editMode={editMode} onMastheadChange={setMasthead} onMastheadSave={handleSaveMasthead} />
+            ) : (
+              <AucunExemple type="Bon de livraison" />
+            ))}
+          {type === "facture" &&
+            (exemples.facture ? (
+              <DocumentPreview data={exemples.facture} masthead={masthead} editMode={editMode} onMastheadChange={setMasthead} onMastheadSave={handleSaveMasthead} />
+            ) : (
+              <AucunExemple type="Facture" />
+            ))}
+          {type === "proforma" &&
+            (exemples.proforma ? (
+              <DocumentPreview data={exemples.proforma} masthead={masthead} editMode={editMode} onMastheadChange={setMasthead} onMastheadSave={handleSaveMasthead} />
+            ) : (
+              <AucunExemple type="Proforma" />
+            ))}
+          {type === "devis" &&
+            (exemples.devis ? (
+              <DocumentPreview data={exemples.devis} masthead={masthead} editMode={editMode} onMastheadChange={setMasthead} onMastheadSave={handleSaveMasthead} />
+            ) : (
+              <AucunExemple type="Devis" />
+            ))}
+        </div>
+        {type === "recu" && (
+          <p style={{ maxWidth: 760, margin: "10px auto 0", textAlign: "center", fontSize: 11.5, color: "#666" }}>
+            Ce modèle n&apos;a pas de pied de page (pas de mentions légales sur un reçu de paiement simple).
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---- Modèle Reçu (générique, non lié à une affaire) ----
+function ModeleRecu() {
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "3px solid #000", paddingBottom: 14, marginBottom: 20 }}>
+        <img src="/logo.png" alt="" style={{ height: 38, width: 132 }} />
+        <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: "0.02em" }}>REÇU</div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 22 }}>
+        <div>
+          <b>N°</b> ______
+        </div>
+        <div>
+          <b>Date</b> __/__/____
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 34, alignItems: "stretch", marginBottom: 20 }}>
+        <div style={{ flex: 1.15, display: "flex", flexDirection: "column", justifyContent: "space-around", fontSize: 14, lineHeight: 1.5 }}>
+          <div>
+            <span style={{ color: "#666", fontSize: 11, textTransform: "uppercase", display: "block" }}>Reçu de</span>
+            <b>________________________</b>
+          </div>
+          <div>
+            <span style={{ color: "#666", fontSize: 11, textTransform: "uppercase", display: "block" }}>Pour</span>________________________
+          </div>
+          <div>
+            <span style={{ color: "#666", fontSize: 11, textTransform: "uppercase", display: "block" }}>Mode de règlement</span>☐ Espèces ☐ Mobile Money ☐ Virement ☐ Chèque
+          </div>
+          <div>
+            <span style={{ color: "#666", fontSize: 11, textTransform: "uppercase", display: "block" }}>Reçu par</span>________________________
+          </div>
+        </div>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", borderLeft: "2px solid #000", paddingLeft: 34 }}>
+          <span style={{ color: "#666", fontSize: 11, textTransform: "uppercase" }}>Montant reçu</span>
+          <div style={{ fontSize: 36, fontWeight: 800, margin: "8px 0" }}>____________ F</div>
+          <div style={{ fontSize: 11.5, textAlign: "center", color: "#444", fontStyle: "italic" }}>________________________________ francs CFA</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+        <div style={{ fontSize: 12, fontStyle: "italic", color: "#333" }}>Merci pour votre confiance.</div>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=EVOLUTIS223" alt="QR" style={{ width: 60, height: 60 }} />
+      </div>
+    </>
+  );
+}
+
+// ---- Modèle Reçu de caisse (générique) ----
+function ModeleRecuCaisse({ masthead, editMode, onChange, onSave, saving }: MastheadEditProps) {
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "3px solid #000", paddingBottom: 14, marginBottom: 20 }}>
+        <img src="/logo.png" alt="" style={{ height: 34, width: 118 }} />
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 20, fontWeight: 800 }}>Reçu de caisse</div>
+          <div style={{ fontSize: 10.5, color: "#444" }}>N° ______ — __/__/____ __:__</div>
+        </div>
+      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10 }}>
+        <tbody>
+          <tr style={{ background: "#000", color: "#fff" }}>
+            <th style={{ padding: 6, textAlign: "left" }}>Article</th>
+            <th style={{ padding: 6, textAlign: "center" }}>Qté</th>
+            <th style={{ padding: 6, textAlign: "right" }}>Total</th>
+          </tr>
+          {[1, 2, 3].map((i) => (
+            <tr key={i}>
+              <td style={{ padding: "8px 6px", borderBottom: "1px solid #ddd" }}>&nbsp;</td>
+              <td style={{ padding: "8px 6px", borderBottom: "1px solid #ddd", textAlign: "center" }}>&nbsp;</td>
+              <td style={{ padding: "8px 6px", borderBottom: "1px solid #ddd", textAlign: "right" }}>&nbsp;</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+        <div style={{ flex: 1 }} />
+        <div style={{ flex: 1, minWidth: 0, fontSize: 13, border: "1px solid #000" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px" }}>
+            <span>SOUS-TOTAL</span>
+            <span>____________</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px" }}>
+            <span>REMISE</span>
+            <span>—</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px" }}>
+            <span>TOTAL HT</span>
+            <span>____________</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px" }}>
+            <span>TVA (0%)</span>
+            <span>____________</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px", borderTop: "2px solid #000", fontWeight: 800, fontSize: 15 }}>
+            <span>TOTAL TTC</span>
+            <span>____________ F</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px", color: "#b91c1c", fontWeight: 700, borderTop: "1px solid #000" }}>
+            <span>SOLDE</span>
+            <span>____________ F</span>
+          </div>
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ fontSize: 11.5, fontStyle: "italic", color: "#333" }}>Merci pour votre confiance.</div>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=EVOLUTIS223" alt="QR" style={{ width: 56, height: 56 }} />
+      </div>
+      <MastheadFooter masthead={masthead} editMode={editMode} onChange={onChange} onSave={onSave} saving={saving} />
+    </>
+  );
+}
+
+// ---- Modèle Fiche de paie (générique) ----
+function ModeleFichePaie({ masthead, editMode, onChange, onSave, saving }: MastheadEditProps) {
+  return (
+    <>
+      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+        <div style={{ flex: 1, padding: "8px 8px 8px 0", display: "flex", alignItems: "center" }}>
+          <img src="/logo.png" alt="" style={{ height: 55, width: 191 }} />
+        </div>
+        <div style={{ flex: 1, padding: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ textAlign: "center", flex: 1 }}>
+            <div style={{ fontSize: 32, fontWeight: 800 }}>Bulletin de paie</div>
+            <div style={{ fontSize: 9, marginTop: 4 }}>Période : __________ — Émis le __/__/____</div>
+          </div>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=EVOLUTIS223" alt="QR" style={{ width: 52, height: 52, flexShrink: 0 }} />
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+        <div style={{ flex: 1, padding: 14, fontSize: 13 }}>
+          <b>Employé :</b> ________________________
+          <br />
+          Matricule : ______
+          <br />
+          Poste : ________________________
+        </div>
+        <div style={{ flex: 1, padding: 14, fontSize: 13 }}>
+          <b>EVOLUTIS223</b>
+          <br />
+          Badalabougou, Rue 90, Porte 307
+          <br />
+          N°RCCM: MA.BKO.2022.A03394
+        </div>
+      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10 }}>
+        <tbody>
+          <tr style={{ background: "#000", color: "#fff" }}>
+            <th style={{ border: "1px solid #000", padding: 5, textAlign: "left", width: "52%" }}>Désignation</th>
+            <th style={{ border: "1px solid #000", padding: 5, width: "24%" }}>Base</th>
+            <th style={{ border: "1px solid #000", padding: 5, width: "24%" }}>Montant</th>
+          </tr>
+          {["Salaire de base", "Primes", "Retenue INPS"].map((l) => (
+            <tr key={l}>
+              <td style={{ border: "1px solid #000", padding: 9 }}>{l}</td>
+              <td style={{ border: "1px solid #000", textAlign: "center" }}>—</td>
+              <td style={{ border: "1px solid #000", textAlign: "right", padding: "0 6px" }}>&nbsp;</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+        <div style={{ width: 260, fontSize: 13 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+            <span>SALAIRE BRUT</span>
+            <span>____________</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+            <span>RETENUES</span>
+            <span>____________</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderTop: "2px solid #000", fontWeight: 800, fontSize: 16 }}>
+            <span>NET À PAYER</span>
+            <span>____________ F</span>
+          </div>
+        </div>
+      </div>
+      <div style={{ fontSize: 12, marginBottom: 16 }}>
+        <b>Mode de paiement :</b> ________________________
+      </div>
+      <MastheadFooter masthead={masthead} editMode={editMode} onChange={onChange} onSave={onSave} saving={saving} />
+    </>
+  );
+}
+
+// ---- Modèle Lettre de démission ----
+function ModeleDemission({ masthead, editMode, onChange, onSave, saving }: MastheadEditProps) {
+  return (
+    <>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+        <div style={{ flex: 1, padding: "8px 8px 8px 0", display: "flex", alignItems: "center" }}>
+          <img src="/logo.png" alt="" style={{ height: 50, width: 174 }} />
+        </div>
+        <div style={{ flex: 1, padding: 8, textAlign: "right", fontSize: 12, color: "#555" }}>Bamako, le __/__/____</div>
+      </div>
+      <div style={{ fontSize: 20, fontWeight: 800, textAlign: "center", marginBottom: 20 }}>Lettre de démission</div>
+      <div style={{ fontSize: 13, marginBottom: 16 }}>
+        <b>Destinataire :</b> Direction — EVOLUTIS223
+        <br />
+        <b>Objet :</b> Notification de démission
+      </div>
+      <div style={{ fontFamily: "Georgia,'Times New Roman',serif", fontSize: 13, lineHeight: 1.7, color: "#1a1a1a" }}>
+        <p>Madame, Monsieur,</p>
+        <p>
+          Je soussigné(e) ________________________, Matricule ______, occupant le poste de ________________________ au sein d&apos;EVOLUTIS223, vous informe
+          par la présente de ma décision de démissionner de mon poste.
+        </p>
+        <p>Conformément au délai de préavis prévu par mon contrat, ma date de départ effective sera fixée au __/__/____.</p>
+        <p>
+          Je reste à votre disposition pour assurer la passation de mes dossiers en cours et vous prie d&apos;agréer, Madame, Monsieur, l&apos;expression de mes
+          salutations distinguées.
+        </p>
+      </div>
+      <div style={{ marginTop: 36, marginBottom: 16, textAlign: "right", fontSize: 13 }}>
+        <div style={{ fontWeight: 700 }}>________________________</div>
+        <div style={{ color: "#555" }}>L&apos;Employé(e)</div>
+      </div>
+      <MastheadFooter masthead={masthead} editMode={editMode} onChange={onChange} onSave={onSave} saving={saving} />
+    </>
+  );
+}
+
+interface MastheadEditProps {
+  masthead: string;
+  editMode: boolean;
+  onChange: (v: string) => void;
+  onSave: (v: string) => void;
+  saving: boolean;
+}
+
+function MastheadFooter({ masthead, editMode, onChange, onSave, saving }: MastheadEditProps) {
+  return (
+    <div style={{ borderTop: "1px solid #000", paddingTop: 8 }}>
+      {editMode ? (
+        <textarea
+          value={masthead}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={(e) => onSave(e.target.value)}
+          disabled={saving}
+          style={{ width: "100%", height: 44, background: "#fff", border: "1px solid #999", color: "#333", fontFamily: "Arial,sans-serif", fontSize: 9, padding: 6, boxSizing: "border-box", textAlign: "center" }}
+        />
+      ) : (
+        <div style={{ textAlign: "center", fontSize: 9.5, color: "#333", whiteSpace: "pre-line" }}>{masthead}</div>
+      )}
+    </div>
+  );
+}
+
+// ---- Modèle En-tête vierge ----
+function ModeleEntete({ masthead, editMode, onChange, onSave, saving }: { masthead: string; editMode: boolean; onChange: (v: string) => void; onSave: (v: string) => void; saving: boolean }) {
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid #000", paddingBottom: 12, marginBottom: 40 }}>
+        <img src="/logo.png" alt="" style={{ height: 34, width: 118 }} />
+        <div style={{ fontSize: 9, color: "#666" }}>Bamako, Mali</div>
+      </div>
+      <div style={{ minHeight: 520 }} />
+      <MastheadFooter masthead={masthead} editMode={editMode} onChange={onChange} onSave={onSave} saving={saving} />
+    </>
+  );
+}
+
+// ---- Modèle Courrier ----
+function ModeleCourrier({ masthead, editMode, onChange, onSave, saving }: { masthead: string; editMode: boolean; onChange: (v: string) => void; onSave: (v: string) => void; saving: boolean }) {
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid #000", paddingBottom: 12, marginBottom: 20 }}>
+        <img src="/logo.png" alt="" style={{ height: 34, width: 118 }} />
+        <div style={{ fontSize: 9, color: "#666" }}>Bamako, Mali</div>
+      </div>
+      <div style={{ fontFamily: "Georgia,'Times New Roman',serif", color: "#1a1a1a", fontSize: 13, lineHeight: 1.6 }}>
+        <div style={{ textAlign: "right", marginBottom: 28 }}>Bamako, le __/__/____</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 40 }}>
+          <div style={{ fontSize: 13.5 }}>
+            <b>Destinataire :</b>
+            <br />
+            ________________________
+            <br />
+            ________________________
+            <br />À l&apos;attention de ________________________
+          </div>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=EVOLUTIS223" alt="QR" style={{ width: 52, height: 52, flexShrink: 0 }} />
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <b>Objet :</b> ________________________
+        </div>
+        <p>Madame, Monsieur,</p>
+        <p>[Corps du courrier — texte à rédiger selon le contexte.]</p>
+        <p>Nous restons à votre disposition pour toute information complémentaire et vous prions d&apos;agréer, Madame, Monsieur, l&apos;expression de nos salutations distinguées.</p>
+        <div style={{ marginTop: 40, marginBottom: 20, textAlign: "right" }}>
+          <div style={{ height: 50 }} />
+          <div style={{ fontWeight: 700 }}>________________________</div>
+          <div style={{ fontSize: 11.5, color: "#555" }}>________________________</div>
+        </div>
+      </div>
+      <MastheadFooter masthead={masthead} editMode={editMode} onChange={onChange} onSave={onSave} saving={saving} />
+    </>
+  );
+}
+
+// ---- Modèle Ordre de mission ----
+function ModeleOrdreMission({ masthead, editMode, onChange, onSave, saving }: MastheadEditProps) {
+  return (
+    <>
+      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+        <div style={{ flex: 1, padding: "8px 8px 8px 0", display: "flex", alignItems: "center" }}>
+          <img src="/logo.png" alt="" style={{ height: 55, width: 191 }} />
+        </div>
+        <div style={{ flex: 1, padding: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ textAlign: "center", flex: 1 }}>
+            <div style={{ fontSize: 32, fontWeight: 800 }}>Ordre de mission</div>
+            <div style={{ fontSize: 9, marginTop: 4 }}>N° ______ — __/__/____</div>
+          </div>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=EVOLUTIS223" alt="QR" style={{ width: 52, height: 52, flexShrink: 0 }} />
+        </div>
+      </div>
+      <div style={{ padding: "0 14px", fontSize: 13, marginBottom: 10 }}>
+        <b>Objet :</b> ________________________
+      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10 }}>
+        <tbody>
+          <tr style={{ background: "#000", color: "#fff" }}>
+            <th style={{ border: "1px solid #000", padding: 5, textAlign: "left", width: "12%" }}>Rôle</th>
+            <th style={{ border: "1px solid #000", padding: 5, textAlign: "left", width: "38%" }}>Nom</th>
+            <th style={{ border: "1px solid #000", padding: 5, textAlign: "left", width: "18%" }}>Matricule</th>
+            <th style={{ border: "1px solid #000", padding: 5, textAlign: "left", width: "32%" }}>Poste</th>
+          </tr>
+          <tr>
+            <td style={{ border: "1px solid #000", padding: 8, fontWeight: 700 }}>Chef de mission</td>
+            <td style={{ border: "1px solid #000" }}>&nbsp;</td>
+            <td style={{ border: "1px solid #000" }}>&nbsp;</td>
+            <td style={{ border: "1px solid #000" }}>&nbsp;</td>
+          </tr>
+          <tr>
+            <td style={{ border: "1px solid #000", padding: 8 }}>Membre</td>
+            <td style={{ border: "1px solid #000" }}>&nbsp;</td>
+            <td style={{ border: "1px solid #000" }}>&nbsp;</td>
+            <td style={{ border: "1px solid #000" }}>&nbsp;</td>
+          </tr>
+        </tbody>
+      </table>
+      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
+        <tbody>
+          <tr style={{ background: "#000", color: "#fff" }}>
+            <th style={{ border: "1px solid #000", padding: 6, textAlign: "left", width: "30%" }}>Détail</th>
+            <th style={{ border: "1px solid #000", padding: 6, textAlign: "left" }}>Information</th>
+          </tr>
+          {["Destination", "Date de départ", "Date de retour", "Moyen de transport", "Frais avancés"].map((l) => (
+            <tr key={l}>
+              <td style={{ border: "1px solid #000", padding: 9, fontWeight: 700 }}>{l}</td>
+              <td style={{ border: "1px solid #000", padding: 9 }}>&nbsp;</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ fontSize: 12, marginBottom: 16 }}>
+        <b>Instructions :</b> ________________________
+      </div>
+      <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+        <span style={{ fontStyle: "italic", fontSize: 15, fontWeight: 700, textDecoration: "underline" }}>Le Chef de mission</span>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontStyle: "italic", fontSize: 15, fontWeight: 700, textDecoration: "underline" }}>Pour EVOLUTIS223</div>
+          <div style={{ position: "relative", width: 104, marginLeft: "auto", marginTop: 2 }}>
+            <img src="/cachet.png" alt="" style={{ height: 102, display: "block", width: 104 }} />
+            <img src="/signature.png" alt="" style={{ height: 176, position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)" }} />
+          </div>
+        </div>
+      </div>
+      <MastheadFooter masthead={masthead} editMode={editMode} onChange={onChange} onSave={onSave} saving={saving} />
+    </>
+  );
+}
+
+// ---- Modèle Ticket (nouveau — usage futur : promotions, offres... § décision utilisateur 2026-08-04) ----
+function ModeleTicket({ masthead, editMode, onChange, onSave, saving }: MastheadEditProps) {
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "3px solid #000", paddingBottom: 14, marginBottom: 20 }}>
+        <img src="/logo.png" alt="" style={{ height: 38, width: 132 }} />
+        <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: "0.02em" }}>TICKET</div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 22 }}>
+        <div>
+          <b>N°</b> ______
+        </div>
+        <div>
+          <b>Date</b> __/__/____
+        </div>
+      </div>
+      <div style={{ fontSize: 14, marginBottom: 20 }}>
+        <span style={{ color: "#666", fontSize: 11, textTransform: "uppercase", display: "block" }}>Libellé</span>
+        ________________________
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", border: "2px dashed #999", borderRadius: 8, padding: 24, marginBottom: 20, color: "#888", fontStyle: "italic", fontSize: 12.5, textAlign: "center" }}>
+        Modèle en réserve pour un usage futur (promotions, offres, etc.) — contenu à définir.
+      </div>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+        <div style={{ fontSize: 12, fontStyle: "italic", color: "#333" }}>Merci pour votre confiance.</div>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=EVOLUTIS223" alt="QR" style={{ width: 60, height: 60 }} />
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <MastheadFooter masthead={masthead} editMode={editMode} onChange={onChange} onSave={onSave} saving={saving} />
+      </div>
+    </>
+  );
+}
+
+function AucunExemple({ type }: { type: string }) {
+  return <div style={{ padding: 40, textAlign: "center", color: "#888", fontStyle: "italic" }}>Aucune affaire de type {type} pour l&apos;instant — exemple non disponible.</div>;
 }

@@ -84,6 +84,10 @@ export interface DetailsAffaireInput {
   // interne), NULL/absent = livraison incluse dans le prix.
   coutLivraison?: number | null;
   coutLivraisonPaye?: boolean;
+  // Bloc "Conditions de paiement" (maquette, Devis/Facture/Proforma uniquement) — écrase le
+  // texte/pourcentage par défaut du paramétrage global (Paramètres > Mes modèles) si renseigné.
+  mentionValidite?: string | null;
+  acomptePct?: number | null;
 }
 
 const PREFIXE_PAR_TYPE: Record<string, string> = {
@@ -133,6 +137,8 @@ export async function creerAffaireInterne(
           remiseMontant: details.remiseMontant != null ? details.remiseMontant.toFixed(2) : null,
           remiseUnite: details.remiseUnite || null,
           infosComplementaires: details.infosComplementaires || null,
+          mentionValidite: details.mentionValidite || null,
+          acomptePct: details.acomptePct != null ? details.acomptePct.toFixed(2) : null,
         })
         .returning();
 
@@ -442,7 +448,7 @@ export async function ajouterReglement(
 
   if (!Number.isFinite(affaireId)) return { error: "Affaire invalide." };
   if (!Number.isFinite(montant) || montant <= 0) return { error: "Montant invalide." };
-  if (!["ESPECES", "MOBILE_MONEY", "VIREMENT", "CARTE"].includes(mode)) {
+  if (!["ESPECES", "MOBILE_MONEY", "VIREMENT", "CHEQUE"].includes(mode)) {
     return { error: "Mode de règlement invalide." };
   }
 
