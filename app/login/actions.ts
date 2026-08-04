@@ -77,5 +77,23 @@ export async function login(
     .where(eq(utilisateurs.id, user.id));
 
   await createSession({ userId: user.id, roleCode: user.roleCode });
-  redirect("/");
+  redirect("/hub");
+}
+
+// Décision utilisateur 2026-08-04 : accès direct sans PIN pendant la période de vérification —
+// "nous imposerons des règles justes avant commit". La fonction `login()` ci-dessus (PIN + bcrypt
+// + blocage anti-brute-force) reste intacte et branchable à tout moment ; ceci est un chemin
+// temporaire en parallèle, pas un remplacement. À retirer avant mise en production réelle.
+export async function loginDirect(telephone: string) {
+  const [user] = await db
+    .select({ id: utilisateurs.id, actif: utilisateurs.actif, roleCode: roles.code })
+    .from(utilisateurs)
+    .innerJoin(roles, eq(utilisateurs.roleId, roles.id))
+    .where(eq(utilisateurs.telephone, telephone))
+    .limit(1);
+
+  if (!user || !user.actif) return;
+
+  await createSession({ userId: user.id, roleCode: user.roleCode });
+  redirect("/hub");
 }

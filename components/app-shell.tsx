@@ -6,6 +6,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { logout } from "@/app/actions";
 
 type IconKey =
@@ -58,6 +59,13 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  // Reproduction du garde `canGoBack` de la maquette (pageHistory.length > 0) : notre navigation
+  // est du vrai routing Next.js (URLs), pas une pile de pages en mémoire — window.history.length
+  // reste à 1 sur un premier chargement direct et augmente dès qu'une navigation a eu lieu.
+  const [canGoBack, setCanGoBack] = useState(false);
+  useEffect(() => {
+    setCanGoBack(window.history.length > 1);
+  }, [pathname]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#121212", color: "#e0e0e0", fontFamily: "system-ui,-apple-system,'Segoe UI',sans-serif" }}>
@@ -95,13 +103,15 @@ export function AppShell({
       {/* Bandeau */}
       <div style={{ padding: "10px 18px", background: "#1e1e1e", borderBottom: "1px solid #333", display: "flex", alignItems: "center", gap: 18, flexShrink: 0, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <button
-            onClick={() => router.back()}
-            title="Retour"
-            style={{ background: "none", border: "1px solid #333", color: "#e0e0e0", borderRadius: 20, width: 34, height: 34, fontSize: 16, cursor: "pointer", flexShrink: 0 }}
-          >
-            ←
-          </button>
+          {canGoBack && (
+            <button
+              onClick={() => router.back()}
+              title="Retour"
+              style={{ background: "none", border: "1px solid #333", color: "#e0e0e0", borderRadius: 20, width: 34, height: 34, fontSize: 16, cursor: "pointer", flexShrink: 0 }}
+            >
+              ←
+            </button>
+          )}
           <button
             onClick={() => router.push("/")}
             title="Accueil"
@@ -124,13 +134,20 @@ export function AppShell({
           <button onClick={() => router.push("/rapports")} title="Rapports" style={{ background: "none", border: "1px solid #333", color: "#888", fontSize: 12, padding: "5px 10px", borderRadius: 6, cursor: "pointer" }}>
             🖨️ Rapport
           </button>
+          <button onClick={() => router.push("/parametres")} title="Paramètres" style={{ background: "none", border: "none", color: "#888", fontSize: 19, cursor: "pointer" }}>
+            ⚙️
+          </button>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
           <input
             placeholder="Rechercher..."
-            style={{ background: "#121212", border: "1px solid #333", color: "#e0e0e0", padding: "7px 14px", borderRadius: 20, width: 200, fontSize: 14, boxSizing: "border-box" }}
+            style={{ background: "#121212", border: "1px solid #333", color: "#e0e0e0", padding: "7px 14px", borderRadius: 20, width: 220, fontSize: 14, boxSizing: "border-box" }}
           />
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#1e1e1e", border: "1px solid #333", borderRadius: 20, padding: "5px 12px 5px 6px" }}>
+          <div
+            onClick={() => logout()}
+            title="Changer de profil"
+            style={{ display: "flex", alignItems: "center", gap: 8, background: "#1e1e1e", border: "1px solid #333", borderRadius: 20, padding: "5px 12px 5px 6px", cursor: "pointer" }}
+          >
             <span style={{ fontSize: 18 }}>👤</span>
             <div style={{ lineHeight: 1.2 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{userName}</div>

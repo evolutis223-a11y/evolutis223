@@ -3,10 +3,25 @@
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { affaires, besoinsSaisonniers, bulletinsPaie, incidentsPersonnel, personnel, utilisateurs } from "@/db/schema";
+import {
+  affaires,
+  avancesPersonnel,
+  besoinsSaisonniers,
+  bulletinsPaie,
+  incidentsPersonnel,
+  personnel,
+  pretsPersonnel,
+  utilisateurs,
+} from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 import { creerBonDecaissement } from "@/app/tresorerie/actions";
+
+async function genererMatricule(): Promise<string> {
+  const [row] = await db.select({ n: sql<string>`count(*)` }).from(personnel);
+  const seq = Number(row.n) + 1;
+  return `EMP-${seq.toString().padStart(4, "0")}`;
+}
 
 async function requireRhAccess() {
   const session = await getSession();
@@ -17,7 +32,7 @@ async function requireRhAccess() {
 }
 
 export async function chargerDonneesRh() {
-  const [personnelRows, bulletinRows, utilisateurRows, incidentRows, besoinRows] = await Promise.all([
+  const [personnelRows, bulletinRows, utilisateurRows, incidentRows, besoinRows, pretRows, avanceRows] = await Promise.all([
     db.select().from(personnel).orderBy(personnel.nom),
     db
       .select({
@@ -57,14 +72,31 @@ export async function chargerDonneesRh() {
       .orderBy(desc(incidentsPersonnel.dateIncident))
       .limit(100),
     db.select().from(besoinsSaisonniers).orderBy(desc(besoinsSaisonniers.periodeDebut)).limit(100),
+    db.select().from(pretsPersonnel).where(eq(pretsPersonnel.statut, "ACTIF")).orderBy(desc(pretsPersonnel.dateCreation)),
+    db.select().from(avancesPersonnel).where(eq(avancesPersonnel.statut, "ACTIVE")).orderBy(desc(avancesPersonnel.date)),
   ]);
 
+  // Un seul prêt/avance actif affiché par personnel (le plus récent) — cohérent avec la fiche
+  // employé de la maquette qui ne montre qu'un bloc "Prêt en cours" / "Avance sur salaire" à la fois.
+  const pretActifParPersonnel = new Map<number, (typeof pretRows)[number]>();
+  for (const p of pretRows) if (!pretActifParPersonnel.has(p.personnelId)) pretActifParPersonnel.set(p.personnelId, p);
+  const avanceActiveParPersonnel = new Map<number, (typeof avanceRows)[number]>();
+  for (const a of avanceRows) if (!avanceActiveParPersonnel.has(a.personnelId)) avanceActiveParPersonnel.set(a.personnelId, a);
+
   return {
-    personnel: personnelRows.map((p) => ({
-      ...p,
-      salaireBase: Number(p.salaireBase),
-      tauxCommission: p.tauxCommission ? Number(p.tauxCommission) : null,
-    })),
+    personnel: personnelRows.map((p) => {
+      const pret = pretActifParPersonnel.get(p.id);
+      const avance = avanceActiveParPersonnel.get(p.id);
+      return {
+        ...p,
+        salaireBase: Number(p.salaireBase),
+        tauxCommission: p.tauxCommission ? Number(p.tauxCommission) : null,
+        pretActif: pret
+          ? { id: pret.id, montant: Number(pret.montant), mensualite: Number(pret.mensualite), soldeRestant: Number(pret.soldeRestant) }
+          : null,
+        avanceActive: avance ? { id: avance.id, montant: Number(avance.montant), date: avance.date } : null,
+      };
+    }),
     bulletins: bulletinRows.map((b) => ({
       ...b,
       salaireBase: Number(b.salaireBase),
@@ -182,8 +214,11 @@ export async function ajouterPersonnel(_prev: PersonnelState, formData: FormData
     await requireRhAccess();
     const nom = String(formData.get("nom") ?? "").trim();
     const telephone = String(formData.get("telephone") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
     const fonction = String(formData.get("fonction") ?? "").trim();
+    const departement = String(formData.get("departement") ?? "").trim();
     const typeContrat = String(formData.get("typeContrat") ?? "");
+    const dureeContrat = String(formData.get("dureeContrat") ?? "").trim();
     const salaireBase = Number(formData.get("salaireBase") || 0);
     const tauxCommissionRaw = String(formData.get("tauxCommission") ?? "").trim();
     const utilisateurIdRaw = String(formData.get("utilisateurId") ?? "").trim();
@@ -191,15 +226,21 @@ export async function ajouterPersonnel(_prev: PersonnelState, formData: FormData
 
     if (!nom) return { error: "Nom requis." };
     if (!["SALARIE", "JOURNALIER", "PARTENAIRE"].includes(typeContrat)) return { error: "Type de contrat invalide." };
+    if (dureeContrat && !["CDI", "CDD", "Stagiaire"].includes(dureeContrat)) return { error: "Durée de contrat invalide." };
     if (!Number.isFinite(salaireBase) || salaireBase < 0) return { error: "Salaire de base invalide." };
 
+    const matricule = await genererMatricule();
     const [created] = await db
       .insert(personnel)
       .values({
+        matricule,
         nom,
         telephone: telephone || null,
+        email: email || null,
         fonction: fonction || null,
+        departement: departement || null,
         typeContrat,
+        dureeContrat: typeContrat === "SALARIE" && dureeContrat ? dureeContrat : null,
         salaireBase: salaireBase.toFixed(2),
         tauxCommission: tauxCommissionRaw ? Number(tauxCommissionRaw).toFixed(2) : null,
         utilisateurId: utilisateurIdRaw ? Number(utilisateurIdRaw) : null,
@@ -333,4 +374,81 @@ export async function marquerBulletinPaye(bulletinId: number): Promise<{ error?:
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Erreur." };
   }
+}
+
+// Prêt et avance sortent réellement de la caisse au moment où ils sont accordés (pas à la
+// résorption) — même logique de bon de décaissement que la paie, catégorie RH_SALAIRE faute de
+// catégorie dédiée dans bons_decaissement (§16.7, motif explicite pour la traçabilité).
+export async function accorderPret(personnelId: number, montant: number, mensualite: number): Promise<{ error?: string }> {
+  try {
+    const session = await requireRhAccess();
+    if (!Number.isFinite(montant) || montant <= 0) return { error: "Montant du prêt invalide." };
+    if (!Number.isFinite(mensualite) || mensualite <= 0) return { error: "Mensualité invalide." };
+
+    const [p] = await db.select().from(personnel).where(eq(personnel.id, personnelId)).limit(1);
+    if (!p) return { error: "Personnel introuvable." };
+
+    const fd = new FormData();
+    fd.set("categorie", "RH_SALAIRE");
+    fd.set("montant", montant.toFixed(2));
+    fd.set("motif", `Prêt personnel — ${p.nom}`);
+    const res = await creerBonDecaissement({ error: null }, fd);
+    if (res.error || !res.bonId) return { error: res.error ?? "Échec de création du bon de décaissement." };
+
+    await db.insert(pretsPersonnel).values({
+      personnelId,
+      montant: montant.toFixed(2),
+      mensualite: mensualite.toFixed(2),
+      soldeRestant: montant.toFixed(2),
+      auteurId: session.userId,
+    });
+    revalidatePath("/rh");
+    revalidatePath("/tresorerie");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur." };
+  }
+}
+
+export async function soldePret(pretId: number): Promise<{ error?: string }> {
+  await requireRhAccess();
+  await db.update(pretsPersonnel).set({ statut: "SOLDE", soldeRestant: "0" }).where(eq(pretsPersonnel.id, pretId));
+  revalidatePath("/rh");
+  return {};
+}
+
+export async function accorderAvance(personnelId: number, montant: number): Promise<{ error?: string }> {
+  try {
+    const session = await requireRhAccess();
+    if (!Number.isFinite(montant) || montant <= 0) return { error: "Montant de l'avance invalide." };
+
+    const [p] = await db.select().from(personnel).where(eq(personnel.id, personnelId)).limit(1);
+    if (!p) return { error: "Personnel introuvable." };
+
+    const fd = new FormData();
+    fd.set("categorie", "RH_SALAIRE");
+    fd.set("montant", montant.toFixed(2));
+    fd.set("motif", `Avance sur salaire — ${p.nom}`);
+    const res = await creerBonDecaissement({ error: null }, fd);
+    if (res.error || !res.bonId) return { error: res.error ?? "Échec de création du bon de décaissement." };
+
+    await db.insert(avancesPersonnel).values({
+      personnelId,
+      montant: montant.toFixed(2),
+      date: new Date().toISOString().slice(0, 10),
+      auteurId: session.userId,
+    });
+    revalidatePath("/rh");
+    revalidatePath("/tresorerie");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur." };
+  }
+}
+
+export async function soldeAvance(avanceId: number): Promise<{ error?: string }> {
+  await requireRhAccess();
+  await db.update(avancesPersonnel).set({ statut: "SOLDEE" }).where(eq(avancesPersonnel.id, avanceId));
+  revalidatePath("/rh");
+  return {};
 }

@@ -500,6 +500,29 @@ export const parametresVenteGros = pgTable("parametres_vente_gros", {
   dateModification: timestamp("date_modification").notNull().defaultNow(),
 });
 
+// AJOUT 2026-08-04 — Auto-inscription du futur personnel (page publique "Rejoignez-nous") :
+// la personne saisit son PIN elle-même dès la demande (jamais transmis en clair au validateur),
+// le compte utilisateurs n'est créé qu'à la validation, avec le rôle choisi à ce moment-là par le
+// validateur (la personne ne se choisit pas son propre rôle).
+export const demandesAcces = pgTable(
+  "demandes_acces",
+  {
+    id: serial("id").primaryKey(),
+    nom: varchar("nom", { length: 100 }).notNull(),
+    telephone: varchar("telephone", { length: 20 }).notNull(),
+    pinHash: text("pin_hash").notNull(),
+    posteVise: varchar("poste_vise", { length: 100 }),
+    statut: varchar("statut", { length: 20 }).notNull().default("EN_ATTENTE"),
+    dateCreation: timestamp("date_creation").notNull().defaultNow(),
+    traiteParId: integer("traite_par_id").references(() => utilisateurs.id),
+    dateTraitement: timestamp("date_traitement"),
+    utilisateurCreeId: integer("utilisateur_cree_id").references(() => utilisateurs.id),
+  },
+  (table) => [
+    check("demandes_acces_statut_check", sql`${table.statut} in ('EN_ATTENTE','VALIDEE','REFUSEE')`),
+  ]
+);
+
 // §4.8 — Validation vente au détail — demandes admin
 export const demandesValidationStock = pgTable(
   "demandes_validation_stock",
@@ -748,10 +771,18 @@ export const personnel = pgTable(
   "personnel",
   {
     id: serial("id").primaryKey(),
+    // AJOUT 2026-08-04 (maquette, écran isRH, fiche employé) : identifiant affiché en tête de
+    // liste et de fiche — généré à la création (EMP-0001...), jamais recalculé/réutilisé.
+    matricule: varchar("matricule", { length: 20 }).notNull().unique(),
     nom: varchar("nom", { length: 150 }).notNull(),
     telephone: varchar("telephone", { length: 20 }),
+    email: varchar("email", { length: 150 }),
     fonction: varchar("fonction", { length: 100 }),
+    departement: varchar("departement", { length: 100 }),
     typeContrat: varchar("type_contrat", { length: 20 }).notNull(),
+    // Durée du contrat (CDI/CDD/Stagiaire, maquette écran isRH) — uniquement pertinent pour
+    // typeContrat SALARIE ; NULL pour JOURNALIER/PARTENAIRE qui n'ont pas cette notion.
+    dureeContrat: varchar("duree_contrat", { length: 20 }),
     utilisateurId: integer("utilisateur_id").references(() => utilisateurs.id),
     salaireBase: numeric("salaire_base", { precision: 12, scale: 2 }).notNull().default("0"),
     // % appliqué au total des affaires de la période dont ce personnel est l'auteur (utilisateurId
@@ -765,7 +796,52 @@ export const personnel = pgTable(
       "personnel_type_contrat_check",
       sql`${table.typeContrat} in ('SALARIE','JOURNALIER','PARTENAIRE')`
     ),
+    check(
+      "personnel_duree_contrat_check",
+      sql`${table.dureeContrat} is null or ${table.dureeContrat} in ('CDI','CDD','Stagiaire')`
+    ),
   ]
+);
+
+// AJOUT 2026-08-04 (maquette, fiche employé — bloc "Prêt en cours") : un prêt à la fois par
+// employé côté affichage (le plus récent ACTIF), mais l'historique reste consultable.
+export const pretsPersonnel = pgTable(
+  "prets_personnel",
+  {
+    id: serial("id").primaryKey(),
+    personnelId: integer("personnel_id")
+      .notNull()
+      .references(() => personnel.id),
+    montant: numeric("montant", { precision: 12, scale: 2 }).notNull(),
+    mensualite: numeric("mensualite", { precision: 12, scale: 2 }).notNull(),
+    soldeRestant: numeric("solde_restant", { precision: 12, scale: 2 }).notNull(),
+    statut: varchar("statut", { length: 20 }).notNull().default("ACTIF"),
+    dateCreation: timestamp("date_creation").notNull().defaultNow(),
+    auteurId: integer("auteur_id")
+      .notNull()
+      .references(() => utilisateurs.id),
+  },
+  (table) => [check("prets_personnel_statut_check", sql`${table.statut} in ('ACTIF','SOLDE')`)]
+);
+
+// AJOUT 2026-08-04 (maquette, fiche employé — bloc "Avance sur salaire") : distinct du champ
+// `avance` de bulletins_paie (qui ne fait que déduire un montant déjà versé sur un bulletin donné)
+// — ceci trace l'avance elle-même comme un événement, soldée quand elle est reprise sur un bulletin.
+export const avancesPersonnel = pgTable(
+  "avances_personnel",
+  {
+    id: serial("id").primaryKey(),
+    personnelId: integer("personnel_id")
+      .notNull()
+      .references(() => personnel.id),
+    montant: numeric("montant", { precision: 12, scale: 2 }).notNull(),
+    date: date("date").notNull(),
+    statut: varchar("statut", { length: 20 }).notNull().default("ACTIVE"),
+    auteurId: integer("auteur_id")
+      .notNull()
+      .references(() => utilisateurs.id),
+  },
+  (table) => [check("avances_personnel_statut_check", sql`${table.statut} in ('ACTIVE','SOLDEE')`)]
 );
 
 // Un bulletin par personnel/période (YYYY-MM) — brouillon éditable jusqu'à "Marquer payé", qui

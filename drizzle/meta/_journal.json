@@ -134,6 +134,20 @@
       "when": 1785794980226,
       "tag": "0018_ancient_bulldozer",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785805356722,
+      "tag": "0019_lazy_maginty",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1785810661140,
+      "tag": "0020_fine_magneto",
+      "breakpoints": true
     }
   ]
 }
