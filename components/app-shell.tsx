@@ -120,7 +120,13 @@ export function AppShell({
             🏠
           </button>
         </div>
-        <div>
+        <div
+          onClick={() => {
+            window.location.href = pathname;
+          }}
+          title="Revenir à l'écran par défaut de ce module"
+          style={{ cursor: "pointer" }}
+        >
           <div style={{ fontSize: 19, fontWeight: 700, color: "#fff" }}>EVOLUTIS223</div>
           <div style={{ color: "#888", fontSize: 12 }}>{pageTitle}</div>
         </div>
