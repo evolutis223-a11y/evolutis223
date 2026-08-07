@@ -10,7 +10,7 @@ import {
   retirerModeleConfigurateur,
 } from "../configurateur/actions";
 
-type Zone = { id: string; label: string; technique: string };
+type Zone = { id: string; label: string; technique: string; xPct?: number; yPct?: number; largeurCm?: number; hauteurCm?: number };
 type Modele = { id: number; nom: string; articleId: number; photoUrl: string; prixDepart: number; zones: Zone[] };
 type Finition = { id: number; nom: string; montant: number };
 type ArticleOpt = { id: number; nom: string; code: string };
@@ -60,6 +60,7 @@ export function ConfigurateurAdminClient({
 
   const [zonesModeleId, setZonesModeleId] = useState<number | null>(null);
   const [zonesEdit, setZonesEdit] = useState<Zone[]>([]);
+  const [positionActiveId, setPositionActiveId] = useState<string | null>(null);
   const [nouvelleZoneLabel, setNouvelleZoneLabel] = useState("");
   const [nouvelleZoneTechnique, setNouvelleZoneTechnique] = useState("DTF");
   const [erreurZones, setErreurZones] = useState<string | null>(null);
@@ -68,12 +69,19 @@ export function ConfigurateurAdminClient({
   function openZonesEditor(m: Modele) {
     setZonesModeleId(m.id);
     setZonesEdit(m.zones.map((z) => ({ ...z })));
+    setPositionActiveId(m.zones[0]?.id ?? null);
     setErreurZones(null);
+  }
+
+  function placerZone(id: string, xPct: number, yPct: number) {
+    setZonesEdit((zs) => zs.map((z) => (z.id === id ? { ...z, xPct: Math.round(xPct * 10) / 10, yPct: Math.round(yPct * 10) / 10 } : z)));
   }
 
   function addZoneEdit() {
     if (!nouvelleZoneLabel.trim()) return;
-    setZonesEdit((z) => [...z, { id: `z-new-${zoneIdCounter++}`, label: nouvelleZoneLabel.trim(), technique: nouvelleZoneTechnique }]);
+    const id = `z-new-${zoneIdCounter++}`;
+    setZonesEdit((z) => [...z, { id, label: nouvelleZoneLabel.trim(), technique: nouvelleZoneTechnique, largeurCm: 10, hauteurCm: 10 }]);
+    setPositionActiveId(id);
     setNouvelleZoneLabel("");
   }
 
@@ -85,6 +93,10 @@ export function ConfigurateurAdminClient({
     if (zonesModeleId === null) return;
     if (zonesEdit.length === 0) {
       setErreurZones("Au moins une zone est requise.");
+      return;
+    }
+    if (zonesEdit.some((z) => z.xPct == null)) {
+      setErreurZones("Chaque zone doit être positionnée sur la photo avant d'enregistrer.");
       return;
     }
     setSavingZones(true);
@@ -120,7 +132,7 @@ export function ConfigurateurAdminClient({
     }
     setModeles((m) => [
       ...m,
-      { id: Date.now(), nom: nomModele.trim(), articleId: Number(articleId), photoUrl: res.url!, prixDepart: Number(prixDepart), zones: [{ id: "z1", label: "Logo poitrine", technique: "DTF" }] },
+      { id: Date.now(), nom: nomModele.trim(), articleId: Number(articleId), photoUrl: res.url!, prixDepart: Number(prixDepart), zones: [{ id: "z1", label: "Logo poitrine", technique: "DTF", xPct: 50, yPct: 30, largeurCm: 10, hauteurCm: 10 }] },
     ]);
     setNomModele("");
     setArticleId("");
@@ -258,25 +270,85 @@ export function ConfigurateurAdminClient({
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
             Chaque zone correspond à un emplacement de logo proposé au client sur le chemin court (ex. « Logo poitrine », « Logo manche »).
+            Sélectionnez une zone ci-dessous puis cliquez sur la photo pour la positionner — la position est figée dès que vous enregistrez.
           </p>
+
+          <div
+            onClick={(e) => {
+              if (!positionActiveId) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              placerZone(positionActiveId, ((e.clientX - rect.left) / rect.width) * 100, ((e.clientY - rect.top) / rect.height) * 100);
+            }}
+            className="relative mt-3 h-56 cursor-crosshair overflow-hidden rounded-md border border-border bg-muted"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={modeles.find((m) => m.id === zonesModeleId)?.photoUrl} alt="" className="h-full w-full object-cover" />
+            {!positionActiveId && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 px-6 text-center text-xs text-white">
+                Sélectionnez une zone ci-dessous pour la positionner
+              </div>
+            )}
+            {zonesEdit.map((z, i) =>
+              z.xPct == null ? null : (
+                <button
+                  key={z.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPositionActiveId(z.id);
+                  }}
+                  style={{ left: `${z.xPct}%`, top: `${z.yPct}%` }}
+                  className={`absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-primary-foreground shadow ${
+                    z.id === positionActiveId ? "bg-amber-500" : "bg-primary"
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              )
+            )}
+          </div>
+
           <div className="mt-3 flex flex-col gap-2">
-            {zonesEdit.map((z) => (
-              <div key={z.id} className="flex items-center gap-2 rounded-md border border-border bg-background p-2">
+            {zonesEdit.map((z, i) => (
+              <div
+                key={z.id}
+                onClick={() => setPositionActiveId(z.id)}
+                className={`flex items-center gap-2 rounded-md border p-2 ${z.id === positionActiveId ? "border-primary bg-primary/5" : "border-border bg-background"}`}
+              >
+                <span className="text-[11px] font-bold text-muted-foreground">{i + 1}</span>
                 <input
                   value={z.label}
                   onChange={(e) => setZonesEdit((zs) => zs.map((x) => (x.id === z.id ? { ...x, label: e.target.value } : x)))}
+                  onClick={(e) => e.stopPropagation()}
                   className="h-8 flex-1 rounded-md border border-input bg-card px-2 text-sm"
                 />
                 <select
                   value={z.technique}
                   onChange={(e) => setZonesEdit((zs) => zs.map((x) => (x.id === z.id ? { ...x, technique: e.target.value } : x)))}
+                  onClick={(e) => e.stopPropagation()}
                   className="h-8 rounded-md border border-input bg-card px-1 text-xs"
                 >
                   {TECHNIQUES.map((t) => (
                     <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
-                <button onClick={() => removeZoneEdit(z.id)} className="text-xs text-destructive">Retirer</button>
+                <input
+                  type="number"
+                  value={z.largeurCm ?? 10}
+                  onChange={(e) => setZonesEdit((zs) => zs.map((x) => (x.id === z.id ? { ...x, largeurCm: Number(e.target.value) } : x)))}
+                  onClick={(e) => e.stopPropagation()}
+                  title="Largeur (cm)"
+                  className="h-8 w-14 rounded-md border border-input bg-card px-1 text-xs"
+                />
+                <input
+                  type="number"
+                  value={z.hauteurCm ?? 10}
+                  onChange={(e) => setZonesEdit((zs) => zs.map((x) => (x.id === z.id ? { ...x, hauteurCm: Number(e.target.value) } : x)))}
+                  onClick={(e) => e.stopPropagation()}
+                  title="Hauteur (cm)"
+                  className="h-8 w-14 rounded-md border border-input bg-card px-1 text-xs"
+                />
+                {z.xPct == null && <span className="text-[10px] text-amber-600">non placée</span>}
+                <button onClick={(e) => { e.stopPropagation(); removeZoneEdit(z.id); }} className="text-xs text-destructive">Retirer</button>
               </div>
             ))}
             {zonesEdit.length === 0 && <p className="text-sm text-muted-foreground">Aucune zone — le client ne pourra pas envoyer de logo.</p>}

@@ -6,7 +6,7 @@ import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 import { buildShellModules } from "@/lib/shell-modules";
 import { chargerUtilisateurAffiche } from "@/lib/session-user";
-import { chargerBibliotheque, chargerParametresMarquage } from "./actions";
+import { chargerBibliotheque, chargerModelesPrets, chargerParametresMarquage } from "./actions";
 import { RdCalculateursClient } from "./rd-calculateurs-client";
 
 export default async function RdCalculateursPage() {
@@ -20,7 +20,7 @@ export default async function RdCalculateursPage() {
     );
   }
 
-  const [articleRows, varianteRows, clientRows, biblio, parametres] = await Promise.all([
+  const [articleRows, varianteRows, clientRows, biblio, parametres, modelesPrets] = await Promise.all([
     db.select().from(articles).where(eq(articles.famille, "A")),
     db
       .select({
@@ -35,6 +35,7 @@ export default async function RdCalculateursPage() {
     db.select().from(clients).orderBy(clients.nom),
     chargerBibliotheque(),
     chargerParametresMarquage(),
+    chargerModelesPrets(),
   ]);
 
   const user = await chargerUtilisateurAffiche(session.userId);
@@ -49,6 +50,7 @@ export default async function RdCalculateursPage() {
       clients={clientRows}
       biblio={biblio}
       parametres={parametres}
+      modelesPrets={modelesPrets}
       isAdmin={["ADMIN", "SUPER_ADMIN"].includes(session.roleCode)}
     />
   );

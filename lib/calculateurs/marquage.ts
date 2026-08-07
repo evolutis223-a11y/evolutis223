@@ -8,6 +8,11 @@ export interface Encre {
   nom: string;
   technique: string;
   prixReference: number;
+  // Quantité de référence en ml — informatif, affiché/édité en admin. N'entre jamais dans le
+  // calcul du prix (voir calculerCoutZone) : le ml s'annule mathématiquement dans le ratio
+  // prixReference/surfaceReferenceCm2, le rendre variable indépendamment ferait dériver le prix
+  // sans justification réelle.
+  qteReferenceMl: number | null;
   surfaceReferenceCm2: number;
 }
 export interface Support {
@@ -46,6 +51,10 @@ export interface ZoneConfig {
   encreId: number | null;
   supportId: number | null;
   palierBroderieId: number | null;
+  // Position (% de la photo) où l'épingle de la zone s'affiche — purement visuel, jamais utilisé
+  // par calculerCoutZone/calculerTotal. Absent pour "Toute la surface" (une seule zone, pas d'épingle).
+  x?: number;
+  y?: number;
 }
 
 export interface ZoneCoutResult {
@@ -54,6 +63,8 @@ export interface ZoneCoutResult {
   detailEncre?: number;
   detailSupport?: number;
   feuilles?: number;
+  // Purement informatif — dérivé de Encre.qteReferenceMl, ne participe pas à `montant`.
+  mlConsommes?: number;
 }
 
 // Encre : consommation continue au cm² réel — aucun arrondi, ce n'est pas un support physique.
@@ -92,12 +103,14 @@ export function calculerCoutZone(zone: ZoneConfig, biblio: Bibliotheque): ZoneCo
   const surfaceRefSupport = support.largeurCm * support.hauteurCm;
   const feuilles = Math.max(1, Math.ceil(surface / surfaceRefSupport));
   const detailSupport = feuilles * support.prix;
+  const mlConsommes = encre.qteReferenceMl != null ? (surface / encre.surfaceReferenceCm2) * encre.qteReferenceMl : undefined;
   return {
     montant: detailEncre + detailSupport,
     detailLabel: `${zone.technique === "DTF" ? "DTF" : "Sublimation"} — ${surface.toFixed(0)}cm²`,
     detailEncre,
     detailSupport,
     feuilles,
+    mlConsommes,
   };
 }
 

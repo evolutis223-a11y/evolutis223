@@ -359,9 +359,10 @@ export const reglements = pgTable(
     montant: numeric("montant", { precision: 12, scale: 2 }).notNull(),
     mode: varchar("mode", { length: 20 }).notNull(), // ESPECES | MOBILE_MONEY | VIREMENT | CHEQUE
     dateReglement: timestamp("date_reglement").notNull().defaultNow(),
-    auteurId: integer("auteur_id")
-      .notNull()
-      .references(() => utilisateurs.id),
+    // AJOUT 2026-08-07 (§12, paiement en ligne Mobile Money/Jemenipay) : auteurId devient nullable
+    // — un règlement créé automatiquement par le webhook de confirmation de paiement (boutique
+    // publique, aucune session interne) n'a pas d'auteur humain.
+    auteurId: integer("auteur_id").references(() => utilisateurs.id),
   },
   (table) => [
     check(
@@ -370,6 +371,32 @@ export const reglements = pgTable(
     ),
   ]
   // Solde = affaires.montant_ttc - SUM(reglements.montant)
+);
+
+// AJOUT 2026-08-07 (§12) : suivi des paiements Mobile Money en ligne (Jemenipay, agrégateur
+// Orange Money/Moov Money) — une ligne par tentative, indépendante de reglements tant que le
+// paiement n'est pas confirmé. À la réception du webhook "payment.success", un reglement
+// (mode MOBILE_MONEY) est créé automatiquement et reglementId est renseigné ici pour la trace.
+export const paiementsMobileMoney = pgTable(
+  "paiements_mobile_money",
+  {
+    id: serial("id").primaryKey(),
+    affaireId: integer("affaire_id").references(() => affaires.id),
+    reference: varchar("reference", { length: 80 }).notNull().unique(),
+    montant: numeric("montant", { precision: 12, scale: 2 }).notNull(),
+    telephone: varchar("telephone", { length: 20 }).notNull(),
+    statut: varchar("statut", { length: 20 }).notNull().default("EN_ATTENTE"),
+    reglementId: integer("reglement_id").references(() => reglements.id),
+    brut: jsonb("brut"),
+    dateCreation: timestamp("date_creation").notNull().defaultNow(),
+    dateConfirmation: timestamp("date_confirmation"),
+  },
+  (table) => [
+    check(
+      "paiements_mobile_money_statut_check",
+      sql`${table.statut} in ('EN_ATTENTE','REUSSI','ECHOUE')`
+    ),
+  ]
 );
 
 export const ordresFabrication = pgTable(
@@ -613,6 +640,11 @@ export const encresMarquage = pgTable(
     technique: varchar("technique", { length: 20 }).notNull(), // SUBLIMATION | DTF
     prixReference: numeric("prix_reference", { precision: 12, scale: 2 }).notNull(),
     volumeReferenceLabel: varchar("volume_reference_label", { length: 30 }), // ex "100 ml" — informatif
+    // AJOUT 2026-08-04 : quantité de référence en ml, rendue explicite/modifiable en admin.
+    // Purement informatif (ml consommés affichés par zone) — n'entre jamais dans le calcul du
+    // prix, qui reste prixReference/surfaceReferenceCm2 (le ml s'annule mathématiquement dans ce
+    // ratio ; le rendre variable indépendamment ferait dériver le prix sans justification réelle).
+    qteReferenceMl: numeric("qte_reference_ml", { precision: 10, scale: 2 }),
     surfaceReferenceCm2: numeric("surface_reference_cm2", { precision: 10, scale: 2 }).notNull(),
     actif: boolean("actif").notNull().default(true),
   },

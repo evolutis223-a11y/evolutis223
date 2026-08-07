@@ -1,7 +1,7 @@
 import { asc, desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { articles, branches, utilisateurs, roles } from "@/db/schema";
+import { articles, branches, modelesConfigurateur, utilisateurs, roles } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 import { buildShellModules } from "@/lib/shell-modules";
@@ -20,7 +20,7 @@ export default async function CataloguePage() {
     );
   }
 
-  const [[user], rows, brancheRows] = await Promise.all([
+  const [[user], rows, brancheRows, modeleRows] = await Promise.all([
     db
       .select({ nom: utilisateurs.nom, roleLibelle: roles.libelle })
       .from(utilisateurs)
@@ -29,6 +29,21 @@ export default async function CataloguePage() {
       .limit(1),
     db.select().from(articles).orderBy(desc(articles.id)),
     db.select().from(branches).orderBy(asc(branches.nom)),
+    db
+      .select({
+        id: modelesConfigurateur.id,
+        nom: modelesConfigurateur.nom,
+        articleId: modelesConfigurateur.articleId,
+        articleNom: articles.nom,
+        photoUrl: modelesConfigurateur.photoUrl,
+        prixDepart: modelesConfigurateur.prixDepart,
+        zones: modelesConfigurateur.zones,
+        actif: modelesConfigurateur.actif,
+      })
+      .from(modelesConfigurateur)
+      .innerJoin(articles, eq(articles.id, modelesConfigurateur.articleId))
+      .where(eq(modelesConfigurateur.actif, true))
+      .orderBy(desc(modelesConfigurateur.id)),
   ]);
 
   return (
@@ -39,6 +54,11 @@ export default async function CataloguePage() {
       articles={rows}
       branches={brancheRows}
       isSuperAdmin={session.roleCode === "SUPER_ADMIN"}
+      modeles={modeleRows.map((m) => ({
+        ...m,
+        prixDepart: Number(m.prixDepart),
+        zones: m.zones as { id: string; label: string; technique: string; xPct?: number; yPct?: number; largeurCm?: number; hauteurCm?: number }[],
+      }))}
     />
   );
 }

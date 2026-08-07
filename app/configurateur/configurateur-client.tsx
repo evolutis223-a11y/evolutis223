@@ -7,7 +7,14 @@ import { soumettreCommandePublique, uploadLogoConfigurateurAction, type Soumissi
 
 type Article = { id: number; code: string; nom: string; prixVente: number; photoUrl: string | null };
 type Variante = { id: number; articleId: number; taille: string | null; couleur: string | null; photoUrl: string | null; stockDetail: number };
-type Modele = { id: number; nom: string; articleId: number; photoUrl: string; prixDepart: number; zones: { id: string; label: string; technique: string }[] };
+type Modele = {
+  id: number;
+  nom: string;
+  articleId: number;
+  photoUrl: string;
+  prixDepart: number;
+  zones: { id: string; label: string; technique: string; xPct?: number; yPct?: number; largeurCm?: number; hauteurCm?: number }[];
+};
 type Finition = { id: number; nom: string; montant: number };
 
 interface Donnees {
@@ -63,7 +70,11 @@ export function ConfigurateurClient({ donnees }: { donnees: Donnees }) {
 
   const [submitting, setSubmitting] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
-  const [resultat, setResultat] = useState<{ numero: string; total: number } | null>(null);
+  const [resultat, setResultat] = useState<{
+    numero: string;
+    total: number;
+    paiement?: { ok: boolean; transactionId?: string; error?: string };
+  } | null>(null);
 
   const article = useMemo(() => donnees.articles.find((a) => a.id === articleId) ?? null, [articleId, donnees.articles]);
   const modele = useMemo(() => donnees.modeles.find((m) => m.id === modeleId) ?? null, [modeleId, donnees.modeles]);
@@ -249,7 +260,7 @@ export function ConfigurateurClient({ donnees }: { donnees: Donnees }) {
       setErreur(res.error);
       return;
     }
-    setResultat({ numero: `CDE-${res.affaireId}`, total: res.total ?? 0 });
+    setResultat({ numero: res.numero ?? `CDE-${res.affaireId}`, total: res.total ?? 0, paiement: res.paiementMobileMoney });
   }
 
   if (resultat) {
@@ -261,6 +272,17 @@ export function ConfigurateurClient({ donnees }: { donnees: Donnees }) {
           Votre commande est enregistrée pour un total de <b className="text-foreground">{fmt(resultat.total)}</b>. Notre équipe la
           confirme sous peu — vous serez recontacté au {telephoneClient}.
         </p>
+        {resultat.paiement?.ok ? (
+          <p className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm text-foreground">
+            Une demande de paiement Mobile Money vient de vous être envoyée au {telephoneClient}. Confirmez-la sur votre téléphone
+            pour finaliser le règlement.
+          </p>
+        ) : (
+          <p className="mt-2 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">
+            Le paiement Mobile Money en ligne n&apos;est pas disponible pour le moment — notre équipe vous contactera pour convenir
+            du règlement.
+          </p>
+        )}
       </main>
     );
   }
@@ -619,10 +641,20 @@ function CheminCourtWizard(p: CheminCourtWizardProps) {
           <div className="relative mt-3 overflow-hidden rounded-lg border border-border bg-muted">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={p.photoActuelle ?? p.modele.photoUrl} alt="" className="aspect-[4/5] w-full object-cover" />
-            {Object.values(p.logosParZoneCourt).map((url, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={url} alt="" className="absolute left-4 top-4 h-14 w-14 rounded border-2 border-background bg-background object-contain" style={{ top: `${16 + i * 60}px` }} />
-            ))}
+            {p.modele.zones.map((z) => {
+              const url = p.logosParZoneCourt[z.id];
+              if (!url) return null;
+              return (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={z.id}
+                  src={url}
+                  alt=""
+                  className="absolute h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded border-2 border-background bg-background object-contain"
+                  style={{ left: `${z.xPct ?? 50}%`, top: `${z.yPct ?? 30}%` }}
+                />
+              );
+            })}
           </div>
           <Nav onBack={() => p.setEtape(4)} onNext={() => p.setEtape(6)} />
         </div>

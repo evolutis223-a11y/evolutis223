@@ -17,6 +17,7 @@ import { uploadFichier } from "@/lib/blob";
 import { chargerBibliotheque } from "@/app/rd-calculateurs/actions";
 import { creerAffaireInterne, type LigneInput } from "@/app/affaires/actions";
 import { calculerCheminCourt, calculerCheminLong, type FinitionSelection } from "@/lib/configurateur/prix";
+import { initierPaiementJemenipay } from "@/lib/jemenipay";
 import type { ZoneConfig } from "@/lib/calculateurs/marquage";
 
 // Route publique (§3.3/§10) — aucune session requise pour soumettre une commande (décision
@@ -74,7 +75,7 @@ export async function chargerDonneesConfigurateur() {
       articleId: m.articleId,
       photoUrl: m.photoUrl,
       prixDepart: Number(m.prixDepart),
-      zones: m.zones as { id: string; label: string; technique: string }[],
+      zones: m.zones as { id: string; label: string; technique: string; xPct?: number; yPct?: number; largeurCm?: number; hauteurCm?: number }[],
     })),
     finitions: finitionRows.map((f) => ({ id: f.id, nom: f.nom, montant: Number(f.montant) })),
     biblio,
@@ -137,6 +138,7 @@ export interface SoumissionResult {
   numero?: string;
   affaireId?: number;
   total?: number;
+  paiementMobileMoney?: { ok: boolean; transactionId?: string; error?: string };
 }
 
 async function trouverOuCreerClient(nom: string, telephone: string) {
@@ -242,7 +244,23 @@ export async function soumettreCommandePublique(payload: SoumissionConfigurateur
   if (res.error || !res.affaireId) return { error: res.error ?? "Échec de création de la commande." };
 
   revalidatePath("/affaires");
-  return { affaireId: res.affaireId, total };
+
+  // Paiement Mobile Money (§12, Jemenipay) — non bloquant : la commande reste créée même si
+  // l'initiation échoue (identifiants pas encore configurés, agrégateur indisponible, etc.), le
+  // client peut alors régler autrement (le vendeur/technicien sera de toute façon notifié).
+  let paiementMobileMoney: SoumissionResult["paiementMobileMoney"];
+  try {
+    paiementMobileMoney = await initierPaiementJemenipay({
+      montant: total,
+      telephone: payload.telephoneClient.trim(),
+      reference: res.numero ?? String(res.affaireId),
+      description: `Commande EVOLUTIS223 ${res.numero ?? ""}`.trim(),
+    });
+  } catch (err) {
+    paiementMobileMoney = { ok: false, error: err instanceof Error ? err.message : "Erreur d'initiation du paiement." };
+  }
+
+  return { affaireId: res.affaireId, numero: res.numero, total, paiementMobileMoney };
 }
 
 // ---- Administration (Admin/Super Admin) — galerie de modèles chemin court + finitions ----
@@ -265,7 +283,7 @@ export async function ajouterModeleConfigurateur(_prev: UploadState, formData: F
       articleId,
       photoUrl: url,
       prixDepart: prixDepart.toFixed(2),
-      zones: [{ id: "z1", label: "Logo poitrine", technique: "DTF" }],
+      zones: [{ id: "z1", label: "Logo poitrine", technique: "DTF", xPct: 50, yPct: 30, largeurCm: 10, hauteurCm: 10 }],
     });
     revalidatePath("/configurateur-admin");
     return { error: null, url };
@@ -283,7 +301,10 @@ export async function retirerModeleConfigurateur(id: number) {
 // Les zones de logo prédéfinies (chemin court) étaient figées à une seule zone codée en dur à la
 // création du modèle (§10) — l'Admin n'avait aucun moyen réel de les modifier. Remplace ce
 // placeholder par une vraie édition (ajout/suppression/technique) par modèle.
-export async function definirZonesModele(modeleId: number, zones: { id: string; label: string; technique: string }[]) {
+export async function definirZonesModele(
+  modeleId: number,
+  zones: { id: string; label: string; technique: string; xPct?: number; yPct?: number; largeurCm?: number; hauteurCm?: number }[]
+) {
   await requireAdmin();
   if (zones.length === 0) throw new Error("Un modèle doit garder au moins une zone de logo.");
   await db.update(modelesConfigurateur).set({ zones }).where(eq(modelesConfigurateur.id, modeleId));

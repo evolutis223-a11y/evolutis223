@@ -12,10 +12,14 @@ import {
   ajouterPalierBroderie,
   ajouterSupport,
   creerAffaireAvecMarquage,
+  creerAffaireDepuisModele,
   definirParametresMarquage,
   modifierPrixReference,
+  modifierQteReferenceMlEncre,
+  modifierSurfaceReferenceEncre,
   retirerReference,
   type LigneBase,
+  type ModelePret,
 } from "./actions";
 import {
   calculerTotal,
@@ -98,8 +102,10 @@ function GarmentStage({
             e.stopPropagation();
             onSelect(z.id);
           }}
-          style={{ left: `${z.largeurCm ? undefined : 0}` }}
-          className="absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white text-[11px] font-bold text-primary-foreground shadow"
+          style={{ left: `${z.x ?? 50}%`, top: `${z.y ?? 50}%` }}
+          className={`absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white text-[11px] font-bold text-primary-foreground shadow ${
+            z.id === selectedId ? "bg-amber-500" : "bg-primary"
+          }`}
         >
           {i + 1}
         </button>
@@ -117,6 +123,7 @@ export function RdCalculateursClient({
   clients: initialClients,
   biblio,
   parametres,
+  modelesPrets,
   isAdmin,
 }: {
   userName: string;
@@ -127,9 +134,18 @@ export function RdCalculateursClient({
   clients: Client[];
   biblio: Bibliotheque;
   parametres: { mainOeuvreDefaut: number; margeDefaut: number };
+  modelesPrets: ModelePret[];
   isAdmin: boolean;
 }) {
   const router = useRouter();
+  const [modeAchat, setModeAchat] = useState<"libre" | "modele">("libre");
+  const [modeleId, setModeleId] = useState<number | "">("");
+  const [modeleVarianteId, setModeleVarianteId] = useState<number | "">("");
+  const [modeleQuantite, setModeleQuantite] = useState(1);
+  const [modeleClientId, setModeleClientId] = useState<number | "">("");
+  const [modelePending, setModelePending] = useState(false);
+  const [modeleErreur, setModeleErreur] = useState<string | null>(null);
+  const [modeleSucces, setModeleSucces] = useState<string | null>(null);
   const [articleId, setArticleId] = useState<number | "">("");
   const [varianteId, setVarianteId] = useState<number | "">("");
   const [zones, setZones] = useState<ZoneConfig[]>([]);
@@ -201,6 +217,8 @@ export function RdCalculateursClient({
       encreId: null,
       supportId: null,
       palierBroderieId: biblio.paliersBroderie[0]?.id ?? null,
+      x,
+      y,
     };
     setZones((prev) => [...prev, z]);
     setSelectedZoneId(z.id);
@@ -291,22 +309,169 @@ export function RdCalculateursClient({
         />
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1.3fr_1fr]">
+      <div className="mt-4 inline-flex overflow-hidden rounded-full border border-border text-xs">
+        <button
+          onClick={() => setModeAchat("libre")}
+          className={`px-3 py-1.5 font-semibold ${modeAchat === "libre" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"}`}
+        >
+          Configuration libre
+        </button>
+        <button
+          onClick={() => setModeAchat("modele")}
+          className={`px-3 py-1.5 font-semibold ${modeAchat === "modele" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"}`}
+        >
+          Modèles prêts ({modelesPrets.length})
+        </button>
+      </div>
+
+      {modeAchat === "modele" && (
+        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[260px_1fr]">
+          <div className="max-h-[calc(100vh-220px)] overflow-y-auto rounded-md border border-border bg-card">
+            {modelesPrets.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => {
+                  setModeleId(m.id);
+                  setModeleVarianteId("");
+                  setModeleErreur(null);
+                  setModeleSucces(null);
+                }}
+                className={`block w-full border-b border-border px-3 py-2.5 text-left text-sm last:border-b-0 ${
+                  m.id === modeleId ? "bg-primary/10 font-semibold text-foreground" : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {m.nom} <span className="text-xs text-muted-foreground">({m.articleNom})</span>
+              </button>
+            ))}
+            {modelesPrets.length === 0 && <p className="p-3 text-xs text-muted-foreground">Aucun modèle prêt — à créer depuis Catalogue &gt; Paramètres.</p>}
+          </div>
+          <div className="space-y-4">
+            {(() => {
+              const modele = modelesPrets.find((m) => m.id === modeleId) ?? null;
+              if (!modele) {
+                return (
+                  <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                    Choisissez un modèle prêt dans la liste à gauche.
+                  </p>
+                );
+              }
+              const variantesModele = variantes.filter((v) => v.articleId === modele.articleId);
+              const total = modele.prixDepart * modeleQuantite;
+              return (
+                <div className="rounded-md border border-border bg-card p-4">
+                  <div className="flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={modele.photoUrl} alt="" className="h-16 w-16 flex-none rounded-md object-cover" />
+                    <div>
+                      <div className="text-sm font-semibold text-foreground">{modele.nom}</div>
+                      <div className="text-xs text-muted-foreground">{modele.articleNom} — {fmt(modele.prixDepart)} / pièce</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {modele.zones.map((z) => (
+                      <span key={z.id} className="rounded-full border border-border bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+                        {z.label} — {z.technique}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <select
+                      value={modeleVarianteId}
+                      onChange={(e) => setModeleVarianteId(Number(e.target.value))}
+                      className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                    >
+                      <option value="">Choisir une variante (taille/couleur)...</option>
+                      {variantesModele.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.taille} {v.couleur} — dispo {v.stockDetail ?? 0}
+                        </option>
+                      ))}
+                    </select>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={modeleQuantite}
+                      onChange={(e) => setModeleQuantite(Math.max(1, Number(e.target.value)))}
+                      placeholder="Quantité"
+                    />
+                  </div>
+
+                  <div className="mt-3">
+                    <select
+                      value={modeleClientId}
+                      onChange={(e) => setModeleClientId(Number(e.target.value))}
+                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    >
+                      <option value="">Choisir un client...</option>
+                      {initialClients.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nom}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="mt-3 flex items-baseline justify-between border-t border-border pt-3">
+                    <span className="text-sm font-semibold text-foreground">Prix total ({modeleQuantite} × {fmt(modele.prixDepart)})</span>
+                    <b className="text-xl text-amber-700 dark:text-amber-400">{fmt(total)}</b>
+                  </div>
+
+                  {modeleErreur && <p className="mt-2 text-xs text-destructive">{modeleErreur}</p>}
+                  {modeleSucces && <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">{modeleSucces}</p>}
+                  <Button
+                    className="mt-3 w-full"
+                    disabled={modelePending || !modeleVarianteId || !modeleClientId}
+                    onClick={async () => {
+                      setModelePending(true);
+                      setModeleErreur(null);
+                      setModeleSucces(null);
+                      const res = await creerAffaireDepuisModele(Number(modeleClientId), modele.id, Number(modeleVarianteId), modeleQuantite);
+                      setModelePending(false);
+                      if (res.error) {
+                        setModeleErreur(res.error);
+                        return;
+                      }
+                      setModeleSucces("Affaire créée. Ouvrez /affaires pour la valider.");
+                      router.refresh();
+                    }}
+                  >
+                    {modelePending ? "Création..." : "Créer l'affaire (Commande en attente)"}
+                  </Button>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {modeAchat === "libre" && (
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[260px_1fr]">
+        <div className="max-h-[calc(100vh-220px)] overflow-y-auto rounded-md border border-border bg-card">
+          {initialArticles.filter((a) => a.famille === "A").map((a) => (
+            <button
+              key={a.id}
+              onClick={() => selectArticle(a.id)}
+              className={`block w-full border-b border-border px-3 py-2.5 text-left text-sm last:border-b-0 ${
+                a.id === articleId ? "bg-primary/10 font-semibold text-foreground" : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {a.nom} <span className="text-xs text-muted-foreground">({a.code})</span>
+            </button>
+          ))}
+          {initialArticles.filter((a) => a.famille === "A").length === 0 && (
+            <p className="p-3 text-xs text-muted-foreground">Aucun article Famille A.</p>
+          )}
+        </div>
         <div className="space-y-4">
+          {!article && (
+            <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              Choisissez un article dans la liste à gauche.
+            </p>
+          )}
           <div className="rounded-md border border-border bg-card p-4">
             <div className="grid grid-cols-2 gap-2">
-              <select
-                value={articleId}
-                onChange={(e) => selectArticle(Number(e.target.value))}
-                className="col-span-2 h-9 rounded-md border border-input bg-background px-2 text-sm"
-              >
-                <option value="">Choisir un article (Famille A)...</option>
-                {initialArticles.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.nom} ({a.code})
-                  </option>
-                ))}
-              </select>
               {article && (
                 <select
                   value={varianteId}
@@ -573,7 +738,12 @@ export function RdCalculateursClient({
                       )}
                       {(cost?.detailEncre !== undefined || cost?.detailSupport !== undefined) && (
                         <p className="rounded bg-muted px-2 py-1.5 text-xs text-muted-foreground">
-                          {cost.detailEncre !== undefined && <>Encre : {fmt(cost.detailEncre)} · </>}
+                          {cost.detailEncre !== undefined && (
+                            <>
+                              Encre : {fmt(cost.detailEncre)}
+                              {cost.mlConsommes !== undefined && <> ({cost.mlConsommes.toFixed(1)} ml)</>} ·{" "}
+                            </>
+                          )}
                           Support ({cost.feuilles ?? 1} feuille(s)) : {fmt(cost.detailSupport ?? 0)}
                         </p>
                       )}
@@ -588,10 +758,8 @@ export function RdCalculateursClient({
               </p>
             )}
           </div>
-        </div>
 
-        <div className="space-y-4">
-          <div className="sticky top-4 rounded-md border border-border bg-card p-4">
+          <div className="rounded-md border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-foreground">Prix</h2>
             <div className="mt-2 space-y-1 text-sm">
               <div className="flex justify-between border-b border-border py-1.5">
@@ -688,6 +856,7 @@ export function RdCalculateursClient({
           </div>
         </div>
       </div>
+      )}
 
       {adminOpen && (
         <AdminModal biblio={biblio} parametres={parametres} isAdmin={isAdmin} onClose={() => setAdminOpen(false)} />
@@ -732,6 +901,14 @@ function AdminModal({
     await modifierPrixReference(categorie, id, Number(val));
     router.refresh();
   }
+  async function qteMl(id: number, val: string) {
+    await modifierQteReferenceMlEncre(id, val.trim() === "" ? null : Number(val));
+    router.refresh();
+  }
+  async function surfaceRef(id: number, val: string) {
+    await modifierSurfaceReferenceEncre(id, Number(val));
+    router.refresh();
+  }
   async function retirer(categorie: "encre" | "support" | "cadre" | "broderie", id: number) {
     await retirerReference(categorie, id);
     router.refresh();
@@ -764,15 +941,30 @@ function AdminModal({
 
         {tab === "encres" && (
           <div className="mt-3 space-y-2">
+            <div className="grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr_0.5fr] gap-2 px-1 text-[10px] font-semibold uppercase text-muted-foreground">
+              <span>Nom</span>
+              <span>Technique</span>
+              <span>Prix</span>
+              <span>Qté (ml)</span>
+              <span>Rendement (cm²)</span>
+            </div>
             {biblio.encres.map((e) => (
-              <div key={e.id} className="flex items-center gap-2 text-xs">
-                <span className="flex-1">
-                  {e.nom} ({e.technique})
-                </span>
-                <Input type="number" defaultValue={e.prixReference} onBlur={(ev) => prix("encre", e.id, ev.target.value)} className="h-7 w-24" />
-                <button onClick={() => retirer("encre", e.id)} className="text-destructive">
-                  Retirer
-                </button>
+              <div key={e.id} className="grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr_0.5fr] items-center gap-2 text-xs">
+                <span>{e.nom}</span>
+                <span className="text-muted-foreground">{e.technique}</span>
+                <Input type="number" defaultValue={e.prixReference} onBlur={(ev) => prix("encre", e.id, ev.target.value)} className="h-7" />
+                <Input type="number" defaultValue={e.qteReferenceMl ?? ""} placeholder="ex. 100" onBlur={(ev) => qteMl(e.id, ev.target.value)} className="h-7" />
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    defaultValue={e.surfaceReferenceCm2}
+                    onBlur={(ev) => surfaceRef(e.id, ev.target.value)}
+                    className="h-7"
+                  />
+                  <button onClick={() => retirer("encre", e.id)} className="text-destructive">
+                    ✕
+                  </button>
+                </div>
               </div>
             ))}
             <AjoutEncreForm onDone={() => router.refresh()} />
@@ -862,18 +1054,20 @@ function AjoutEncreForm({ onDone }: { onDone: () => void }) {
   const [nom, setNom] = useState("");
   const [technique, setTechnique] = useState("SUBLIMATION");
   const [prixReference, setPrixReference] = useState("");
+  const [qteReferenceMl, setQteReferenceMl] = useState("100");
   const [surfaceReferenceCm2, setSurfaceReferenceCm2] = useState("609");
   const [erreur, setErreur] = useState<string | null>(null);
   return (
     <div className="rounded border border-dashed border-border p-2">
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-5 gap-1.5">
         <Input placeholder="Nom" value={nom} onChange={(e) => setNom(e.target.value)} className="h-7 text-xs" />
         <select value={technique} onChange={(e) => setTechnique(e.target.value)} className="h-7 rounded border border-input bg-background text-xs">
           <option value="SUBLIMATION">Sublimation</option>
           <option value="DTF">DTF</option>
         </select>
         <Input placeholder="Prix" type="number" value={prixReference} onChange={(e) => setPrixReference(e.target.value)} className="h-7 text-xs" />
-        <Input placeholder="Surface réf. cm²" type="number" value={surfaceReferenceCm2} onChange={(e) => setSurfaceReferenceCm2(e.target.value)} className="h-7 text-xs" />
+        <Input placeholder="Qté (ml)" type="number" value={qteReferenceMl} onChange={(e) => setQteReferenceMl(e.target.value)} className="h-7 text-xs" />
+        <Input placeholder="Rendement cm²" type="number" value={surfaceReferenceCm2} onChange={(e) => setSurfaceReferenceCm2(e.target.value)} className="h-7 text-xs" />
       </div>
       {erreur && <p className="mt-1 text-destructive">{erreur}</p>}
       <button
@@ -883,6 +1077,7 @@ function AjoutEncreForm({ onDone }: { onDone: () => void }) {
           fd.set("nom", nom);
           fd.set("technique", technique);
           fd.set("prixReference", prixReference);
+          fd.set("qteReferenceMl", qteReferenceMl);
           fd.set("surfaceReferenceCm2", surfaceReferenceCm2);
           const res = await ajouterEncre({ error: null }, fd);
           if (res.error) setErreur(res.error);

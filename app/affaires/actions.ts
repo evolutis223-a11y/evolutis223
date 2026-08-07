@@ -105,7 +105,7 @@ export async function creerAffaireInterne(
   modeFinalisation: "RETRAIT" | "LIVRAISON" | null = null,
   adresseLivraison: string | null = null,
   details: DetailsAffaireInput = {}
-): Promise<{ affaireId?: number; error?: string }> {
+): Promise<{ affaireId?: number; numero?: string; error?: string }> {
   try {
     if (!clientId) return { error: "Client requis." };
     if (lignes.length === 0) return { error: "Au moins une ligne requise." };
@@ -169,7 +169,7 @@ export async function creerAffaireInterne(
     });
 
     revalidatePath("/affaires");
-    return { affaireId };
+    return { affaireId, numero };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Erreur inconnue." };
   }
@@ -322,6 +322,7 @@ export async function validerAffaire(
         articleNom: articles.nom,
         personnalise: lignesAffaire.personnalise,
         necessiteAssemblage: articles.necessiteAssemblage,
+        configMarquage: lignesAffaire.configMarquage,
       })
       .from(lignesAffaire)
       .innerJoin(articles, eq(articles.id, lignesAffaire.articleId))
@@ -400,8 +401,12 @@ export async function validerAffaire(
         }
 
         // Ordre de Fabrication (§8.1 point 4) : toujours pour Famille D, seulement si la recette
-        // du Kit est marquée « nécessite assemblage » pour Famille E. Jamais pour A/B/C.
-        const declencheOf = l.famille === "D" || (l.famille === "E" && l.necessiteAssemblage);
+        // du Kit est marquée « nécessite assemblage » pour Famille E. AJOUT 2026-08-04 : aussi
+        // Famille A dès qu'un marquage réel est configuré sur la ligne (configMarquage non NULL,
+        // qu'il vienne d'un modèle prêt ou d'une configuration libre R&D) — impression/broderie
+        // est un vrai travail de production, pas différent d'un Kit à assembler.
+        const declencheOf =
+          l.famille === "D" || (l.famille === "E" && l.necessiteAssemblage) || (l.famille === "A" && l.configMarquage != null);
         if (declencheOf) {
           const [of_] = await tx
             .insert(ordresFabrication)

@@ -17,6 +17,25 @@ import { FAMILLES, FamilleIcon, familleMeta, type FamilleId } from "./familles";
 
 type Article = typeof articles.$inferSelect;
 type Branche = typeof branches.$inferSelect;
+type ModeleZone = { id: string; label: string; technique: string; xPct?: number; yPct?: number; largeurCm?: number; hauteurCm?: number };
+type Modele = {
+  id: number;
+  nom: string;
+  articleId: number;
+  articleNom: string;
+  photoUrl: string;
+  prixDepart: number;
+  zones: ModeleZone[];
+  actif: boolean;
+};
+
+const TECHNIQUE_LABEL: Record<string, string> = {
+  SERIGRAPHIE: "Sérigraphie",
+  SUBLIMATION: "Sublimation",
+  DTF: "DTF",
+  FLOCAGE: "Flocage",
+  BRODERIE: "Broderie",
+};
 
 function formatFcfa(value: string | number): string {
   return `${Math.round(Number(value)).toLocaleString("fr-FR")} FCFA`;
@@ -136,6 +155,7 @@ export function CatalogueClient({
   articles: initialArticles,
   branches,
   isSuperAdmin,
+  modeles,
 }: {
   userName: string;
   roleLibelle: string;
@@ -143,10 +163,12 @@ export function CatalogueClient({
   articles: Article[];
   branches: Branche[];
   isSuperAdmin: boolean;
+  modeles: Modele[];
 }) {
   const brancheNom = (id: number | null) => branches.find((b) => b.id === id)?.nom ?? null;
-  const [activeFamille, setActiveFamille] = useState<FamilleId | "TOUS">("TOUS");
+  const [activeFamille, setActiveFamille] = useState<FamilleId | "TOUS" | "MODELES">("TOUS");
   const [detailArticle, setDetailArticle] = useState<Article | null>(null);
+  const [detailModele, setDetailModele] = useState<Modele | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerFamille, setDrawerFamille] = useState<FamilleId | null>(null);
   const [codeSuffix, setCodeSuffix] = useState("");
@@ -231,8 +253,64 @@ export function CatalogueClient({
                 </button>
               );
             })}
+            <button
+              onClick={() => setActiveFamille("MODELES")}
+              style={{
+                borderRadius: 999,
+                border: `1px solid ${activeFamille === "MODELES" ? "#f59e0b" : "#333"}`,
+                padding: "6px 14px",
+                fontSize: 12,
+                fontWeight: 700,
+                background: activeFamille === "MODELES" ? "#f59e0b" : "transparent",
+                color: activeFamille === "MODELES" ? "#151515" : "#888",
+                cursor: "pointer",
+              }}
+            >
+              {modeles.length} Modèles prêts
+            </button>
           </div>
 
+          {activeFamille === "MODELES" ? (
+            <div style={{ flex: 1, overflowY: "auto", minHeight: 0, border: "1px solid #262626", borderRadius: 8 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: "40%", padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333", position: "sticky", top: 0, background: "#151515" }}>Modèle</th>
+                    <th style={{ width: "30%", padding: 10, textAlign: "left", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333", position: "sticky", top: 0, background: "#151515" }}>Article de base</th>
+                    <th style={{ width: "12%", padding: 10, textAlign: "center", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333", position: "sticky", top: 0, background: "#151515" }}>Zones</th>
+                    <th style={{ width: "18%", padding: 10, textAlign: "right", color: "#888", fontSize: 11.5, borderBottom: "1px solid #333", position: "sticky", top: 0, background: "#151515" }}>Prix</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {modeles.length === 0 && (
+                    <tr>
+                      <td colSpan={4} style={{ padding: 24, textAlign: "center", color: "#666", fontSize: 13 }}>
+                        Aucun modèle prêt — à créer depuis Paramètres &gt; Configurateur.
+                      </td>
+                    </tr>
+                  )}
+                  {modeles.map((m) => (
+                    <tr
+                      key={m.id}
+                      onClick={() => setDetailModele(m)}
+                      style={{ cursor: "pointer", background: detailModele?.id === m.id ? "#263041" : "transparent", borderLeft: "3px solid #f59e0b" }}
+                    >
+                      <td style={{ padding: 10, borderBottom: "1px solid #262626" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={m.photoUrl} alt="" style={{ width: 34, height: 34, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
+                          <span style={{ fontSize: 13, color: "#fff", fontWeight: 600 }}>{m.nom}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: 10, borderBottom: "1px solid #262626", color: "#888", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.articleNom}</td>
+                      <td style={{ padding: 10, borderBottom: "1px solid #262626", textAlign: "center", color: "#888", fontSize: 12 }}>{m.zones.length}</td>
+                      <td style={{ padding: 10, borderBottom: "1px solid #262626", textAlign: "right", fontSize: 13, fontWeight: 700, color: "#f59e0b" }}>{formatFcfa(m.prixDepart)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
           <div style={{ flex: 1, overflowY: "auto", minHeight: 0, border: "1px solid #262626", borderRadius: 8 }}>
             <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
               <thead>
@@ -255,7 +333,7 @@ export function CatalogueClient({
                 {filtered.map((a) => (
                   <tr
                     key={a.id}
-                    onClick={() => setDetailArticle(a)}
+                    onClick={() => { setDetailArticle(a); setDetailModele(null); }}
                     style={{ cursor: "pointer", background: detailArticle?.id === a.id ? "#263041" : "transparent", borderLeft: `3px solid ${a.publieBoutique ? "#10b981" : "#333"}` }}
                   >
                     <td style={{ padding: 10, borderBottom: "1px solid #262626", color: "#888", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.code}</td>
@@ -278,11 +356,46 @@ export function CatalogueClient({
               </tbody>
             </table>
           </div>
+          )}
         </div>
 
         {/* Détail — même patron que /affaires : liste à gauche, aperçu permanent à droite */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
-          {!detailArticle ? (
+          {detailModele ? (
+            <div style={{ flex: 1, overflowY: "auto", border: "1px solid #262626", borderRadius: 8, padding: 20 }}>
+              <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                <div style={{ width: 90, height: 90, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={detailModele.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, color: "#f59e0b", fontWeight: 700, textTransform: "uppercase" }}>Modèle prêt</div>
+                  <h2 style={{ marginTop: 4, fontSize: 17, fontWeight: 700, color: "#fff" }}>{detailModele.nom}</h2>
+                  <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                    <span style={{ borderRadius: 999, background: "#333", color: "#ccc", padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>{detailModele.articleNom}</span>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: "#f59e0b" }}>{formatFcfa(detailModele.prixDepart)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 14, borderLeft: "2px solid #f59e0b", background: "#151515", padding: 12, borderRadius: 6, fontSize: 12.5, color: "#aaa" }}>
+                Composition figée : prix fixe (pas recalculé zone par zone), fabriqué à la commande — pas de stock physique dédié. Vendable en ligne (chemin court) ou par un vendeur en boutique depuis R&amp;D.
+              </div>
+
+              <div style={{ marginTop: 16, fontSize: 12, color: "#888", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+                Zones de marquage ({detailModele.zones.length})
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {detailModele.zones.map((z) => (
+                  <div key={z.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 10px", background: "#151515", border: "1px solid #262626", borderRadius: 6, fontSize: 13 }}>
+                    <span style={{ color: "#fff" }}>{z.label}</span>
+                    <span style={{ color: "#888" }}>{TECHNIQUE_LABEL[z.technique] ?? z.technique}</span>
+                  </div>
+                ))}
+                {detailModele.zones.length === 0 && <p style={{ fontSize: 12.5, color: "#666" }}>Aucune zone définie.</p>}
+              </div>
+            </div>
+          ) : !detailArticle ? (
             <div style={{ flex: 1, overflowY: "auto", border: "1px solid #262626", borderRadius: 8, padding: 20 }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 4 }}>Catalogue — vue d&apos;ensemble</div>
               <div style={{ fontSize: 12.5, color: "#888", marginBottom: 16 }}>Cliquez un article à gauche pour voir sa fiche détaillée.</div>

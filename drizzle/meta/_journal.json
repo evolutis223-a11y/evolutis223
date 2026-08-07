@@ -169,6 +169,20 @@
       "when": 1785849017244,
       "tag": "0023_worthless_bill_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1785876772514,
+      "tag": "0024_charming_shiva",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1786117266013,
+      "tag": "0025_luxuriant_sandman",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "encres_marquage" ADD COLUMN "qte_reference_ml" numeric(10, 2);

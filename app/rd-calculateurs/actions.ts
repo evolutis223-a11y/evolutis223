@@ -4,8 +4,10 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
+  articles,
   cadresSerigraphie,
   encresMarquage,
+  modelesConfigurateur,
   paliersBroderie,
   parametresMarquage,
   supportsMarquage,
@@ -39,11 +41,81 @@ export async function chargerBibliotheque(): Promise<Bibliotheque> {
     db.select().from(paliersBroderie).where(eq(paliersBroderie.actif, true)),
   ]);
   return {
-    encres: encres.map((e) => ({ ...e, prixReference: Number(e.prixReference), surfaceReferenceCm2: Number(e.surfaceReferenceCm2) })),
+    encres: encres.map((e) => ({
+      ...e,
+      prixReference: Number(e.prixReference),
+      surfaceReferenceCm2: Number(e.surfaceReferenceCm2),
+      qteReferenceMl: e.qteReferenceMl != null ? Number(e.qteReferenceMl) : null,
+    })),
     supports: supports.map((s) => ({ ...s, prix: Number(s.prix), largeurCm: Number(s.largeurCm), hauteurCm: Number(s.hauteurCm) })),
     cadres: cadres.map((c) => ({ ...c, prixCadre: Number(c.prixCadre) })).sort((a, b) => a.id - b.id),
     paliersBroderie: paliers.map((p) => ({ ...p, prix: Number(p.prix) })).sort((a, b) => a.id - b.id),
   };
+}
+
+export interface ModelePret {
+  id: number;
+  nom: string;
+  articleId: number;
+  articleNom: string;
+  photoUrl: string;
+  prixDepart: number;
+  zones: { id: string; label: string; technique: string }[];
+}
+
+// AJOUT 2026-08-04 : "Modèles prêts" (décision utilisateur) — les modèles déjà définis pour le
+// chemin court public (app/configurateur-admin) sont aussi proposables par un vendeur en interne
+// depuis R&D, au lieu de repartir d'une configuration libre à chaque fois.
+export async function chargerModelesPrets(): Promise<ModelePret[]> {
+  const rows = await db
+    .select({
+      id: modelesConfigurateur.id,
+      nom: modelesConfigurateur.nom,
+      articleId: modelesConfigurateur.articleId,
+      articleNom: articles.nom,
+      photoUrl: modelesConfigurateur.photoUrl,
+      prixDepart: modelesConfigurateur.prixDepart,
+      zones: modelesConfigurateur.zones,
+    })
+    .from(modelesConfigurateur)
+    .innerJoin(articles, eq(articles.id, modelesConfigurateur.articleId))
+    .where(eq(modelesConfigurateur.actif, true))
+    .orderBy(modelesConfigurateur.id);
+  return rows.map((r) => ({
+    ...r,
+    prixDepart: Number(r.prixDepart),
+    zones: r.zones as { id: string; label: string; technique: string }[],
+  }));
+}
+
+// Prix fixe du modèle × quantité — même règle que calculerCheminCourt (lib/configurateur/prix.ts)
+// côté public : le prix d'un modèle prêt n'est jamais recalculé zone par zone, il est figé par
+// l'admin à la création du modèle. configMarquage garde une trace des zones pour audit/OF.
+export async function creerAffaireDepuisModele(
+  clientId: number,
+  modeleId: number,
+  varianteId: number | null,
+  quantite: number
+): Promise<{ affaireId?: number; error?: string }> {
+  try {
+    await requireRdAccess();
+    if (!Number.isFinite(quantite) || quantite <= 0) return { error: "Quantité invalide." };
+    const [modele] = await db.select().from(modelesConfigurateur).where(eq(modelesConfigurateur.id, modeleId)).limit(1);
+    if (!modele || !modele.actif) return { error: "Modèle introuvable." };
+
+    const lignes: LigneInput[] = [
+      {
+        articleId: modele.articleId,
+        varianteId,
+        quantite,
+        prixUnitaire: Number(modele.prixDepart),
+        configMarquage: { modeleId: modele.id, modeleNom: modele.nom, zones: modele.zones },
+      },
+    ];
+    return await creerAffaire(clientId, lignes);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur inconnue." };
+  }
 }
 
 export async function chargerParametresMarquage(): Promise<{ mainOeuvreDefaut: number; margeDefaut: number }> {
@@ -66,11 +138,16 @@ export async function ajouterEncre(_prevState: BiblioState, formData: FormData):
     const prixReference = Number(formData.get("prixReference"));
     const volumeReferenceLabel = String(formData.get("volumeReferenceLabel") ?? "").trim();
     const surfaceReferenceCm2 = Number(formData.get("surfaceReferenceCm2"));
+    const qteReferenceMlRaw = String(formData.get("qteReferenceMl") ?? "").trim();
+    const qteReferenceMl = qteReferenceMlRaw === "" ? null : Number(qteReferenceMlRaw);
 
     if (!nom) return { error: "Nom requis." };
     if (!["SUBLIMATION", "DTF"].includes(technique)) return { error: "Technique invalide." };
     if (!Number.isFinite(prixReference) || prixReference <= 0) return { error: "Prix invalide." };
     if (!Number.isFinite(surfaceReferenceCm2) || surfaceReferenceCm2 <= 0) return { error: "Surface de référence invalide." };
+    if (qteReferenceMl != null && (!Number.isFinite(qteReferenceMl) || qteReferenceMl <= 0)) {
+      return { error: "Quantité (ml) invalide." };
+    }
 
     await db.insert(encresMarquage).values({
       nom,
@@ -78,6 +155,7 @@ export async function ajouterEncre(_prevState: BiblioState, formData: FormData):
       prixReference: prixReference.toFixed(2),
       volumeReferenceLabel: volumeReferenceLabel || null,
       surfaceReferenceCm2: surfaceReferenceCm2.toFixed(2),
+      qteReferenceMl: qteReferenceMl != null ? qteReferenceMl.toFixed(2) : null,
     });
     revalidatePath("/rd-calculateurs");
     return { error: null };
@@ -161,6 +239,33 @@ export async function modifierPrixReference(
     else if (categorie === "support") await db.update(supportsMarquage).set({ prix: val }).where(eq(supportsMarquage.id, id));
     else if (categorie === "cadre") await db.update(cadresSerigraphie).set({ prixCadre: val }).where(eq(cadresSerigraphie.id, id));
     else await db.update(paliersBroderie).set({ prix: val }).where(eq(paliersBroderie.id, id));
+    revalidatePath("/rd-calculateurs");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur inconnue." };
+  }
+}
+
+export async function modifierQteReferenceMlEncre(id: number, qteMl: number | null): Promise<{ error?: string }> {
+  try {
+    await requireAdmin();
+    if (qteMl != null && (!Number.isFinite(qteMl) || qteMl <= 0)) return { error: "Quantité (ml) invalide." };
+    await db
+      .update(encresMarquage)
+      .set({ qteReferenceMl: qteMl != null ? qteMl.toFixed(2) : null })
+      .where(eq(encresMarquage.id, id));
+    revalidatePath("/rd-calculateurs");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur inconnue." };
+  }
+}
+
+export async function modifierSurfaceReferenceEncre(id: number, surfaceCm2: number): Promise<{ error?: string }> {
+  try {
+    await requireAdmin();
+    if (!Number.isFinite(surfaceCm2) || surfaceCm2 <= 0) return { error: "Surface de référence invalide." };
+    await db.update(encresMarquage).set({ surfaceReferenceCm2: surfaceCm2.toFixed(2) }).where(eq(encresMarquage.id, id));
     revalidatePath("/rd-calculateurs");
     return {};
   } catch (err) {
