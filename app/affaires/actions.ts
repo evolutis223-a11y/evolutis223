@@ -171,7 +171,8 @@ export async function creerAffaireInterne(
     revalidatePath("/affaires");
     return { affaireId, numero };
   } catch (err) {
-    return { error: err instanceof Error ? err.message : "Erreur inconnue." };
+    const cause = err instanceof Error && err.cause ? ` | cause: ${err.cause instanceof Error ? err.cause.stack ?? err.cause.message : String(err.cause)}` : "";
+    return { error: (err instanceof Error ? err.message : "Erreur inconnue.") + cause };
   }
 }
 
