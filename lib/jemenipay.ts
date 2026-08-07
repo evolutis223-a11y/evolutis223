@@ -1,14 +1,11 @@
 // §12 — intégration Jemenipay (agrégateur Mobile Money Orange Money/Moov Money, Mali).
-// Doc publique consultée (2026-08-07) : authentification par clé API (pk_test_/pk_live_) +
-// jeton d'accès + signature HMAC-SHA512 calculée sur (clé secrète, méthode, URL, corps, horodatage
-// Unix, tolérance ±5 min). Endpoints confirmés : POST /sandbox/payments (initier), GET
-// /sandbox/payments/{id} (statut) ; /live/ en production. Webhooks signés séparément — en-tête
-// X-Jemeni-Signature = HMAC-SHA512(corps brut, secret webhook) (capture d'écran fournie 2026-08-07).
-//
-// ATTENTION — les noms exacts des champs de la requête POST /payments (montant/téléphone/devise/
-// référence/URL de callback) n'ont pas été confirmés contre la doc réelle (accès connecté requis,
-// hors de portée ici) : la forme ci-dessous est une reconstruction raisonnable à vérifier au premier
-// test réel en sandbox — ajuster `initierPaiementJemenipay` seul si les noms diffèrent.
+// Doc officielle consultée et confirmée (2026-08-07, https://jemeni.net/docs) :
+// - BASE_URL = https://jemeni.net/api, endpoints sous /sandbox/... ou /live/...
+// - En-têtes requis : Accept, Content-Type, auth-apiKey, auth-token, auth-timestamp,
+//   auth-signature, et "sandbox: true" (uniquement en mode test — absent en production).
+// - Signature = HMAC-SHA512(message = SK + AK + METHOD + URL + BODY + TIMESTAMP, clé = SK),
+//   URL = URL de base sans query string pour un POST, BODY = corps JSON brut.
+// - Webhooks signés séparément — en-tête X-Jemeni-Signature = HMAC-SHA512(corps brut, secret webhook).
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
@@ -18,29 +15,38 @@ function requireEnv(name: string): string {
   return v;
 }
 
-function baseUrl(): string {
-  const env = process.env.JEMENIPAY_ENV === "live" ? "live" : "sandbox";
-  // Domaine de base non confirmé publiquement — à corriger si différent de celui montré dans le
-  // tableau de bord Jemenipay (ex. Postman/exemples fournis avec le compte développeur).
-  return `${process.env.JEMENIPAY_API_BASE_URL ?? "https://api.jemeni.net"}/${env}`;
+function estSandbox(): boolean {
+  return process.env.JEMENIPAY_ENV !== "live";
 }
 
-function signerRequete(secretKey: string, method: string, url: string, body: string, timestamp: string): string {
-  return createHmac("sha512", secretKey).update(`${method}${url}${body}${timestamp}`).digest("hex");
+function baseUrl(): string {
+  const env = estSandbox() ? "sandbox" : "live";
+  return `${process.env.JEMENIPAY_API_BASE_URL ?? "https://jemeni.net/api"}/${env}`;
+}
+
+function signerRequete(secretKey: string, apiKey: string, method: string, url: string, body: string, timestamp: string): string {
+  return createHmac("sha512", secretKey).update(`${secretKey}${apiKey}${method}${url}${body}${timestamp}`).digest("hex");
 }
 
 export interface InitierPaiementInput {
   montant: number;
-  telephone: string;
+  telephone: string; // numéro sans indicatif pays — ex. "98745632"
   reference: string; // référence externe — on utilise le numéro d'affaire
   description?: string;
-  callbackUrl?: string;
+  returnUrl?: string;
 }
 
 export interface InitierPaiementResult {
   ok: boolean;
   transactionId?: string;
   error?: string;
+}
+
+// La doc Jemenipay attend le numéro "sans indicatif pays" (ex. "98745632") — on retire un
+// éventuel préfixe +223/223 et les espaces, le numéro complet reste inchangé partout ailleurs
+// dans l'app (clients.contact, etc.).
+function normaliserTelephoneMali(telephone: string): string {
+  return telephone.replace(/[\s-]/g, "").replace(/^\+?223/, "");
 }
 
 export async function initierPaiementJemenipay(input: InitierPaiementInput): Promise<InitierPaiementResult> {
@@ -50,27 +56,29 @@ export async function initierPaiementJemenipay(input: InitierPaiementInput): Pro
   const url = `${baseUrl()}/payments`;
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const body = JSON.stringify({
-    amount: input.montant,
-    phone: input.telephone,
+    customer_phone: normaliserTelephoneMali(input.telephone),
+    amount: Math.round(input.montant),
+    country_code: "ml",
+    notifiable: true,
+    lang: "fr",
     reference: input.reference,
-    description: input.description ?? "",
-    callback_url: input.callbackUrl,
+    ...(input.returnUrl ? { return_url: input.returnUrl } : {}),
   });
-  const signature = signerRequete(secretKey, "POST", url, body, timestamp);
+  const signature = signerRequete(secretKey, apiKey, "POST", url, body, timestamp);
+
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    "auth-apiKey": apiKey,
+    "auth-token": accessToken,
+    "auth-timestamp": timestamp,
+    "auth-signature": signature,
+  };
+  if (estSandbox()) headers.sandbox = "true";
 
   let res: Response;
   try {
-    res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Jemeni-Api-Key": apiKey,
-        "X-Jemeni-Access-Token": accessToken,
-        "X-Jemeni-Signature": signature,
-        "X-Jemeni-Timestamp": timestamp,
-      },
-      body,
-    });
+    res = await fetch(url, { method: "POST", headers, body });
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Erreur réseau." };
   }
@@ -79,8 +87,8 @@ export async function initierPaiementJemenipay(input: InitierPaiementInput): Pro
     const text = await res.text().catch(() => "");
     return { ok: false, error: `Jemenipay a répondu ${res.status} : ${text.slice(0, 300)}` };
   }
-  const data = (await res.json().catch(() => ({}))) as { id?: string; transaction_id?: string };
-  return { ok: true, transactionId: data.transaction_id ?? data.id };
+  const payload = (await res.json().catch(() => ({}))) as { data?: { id?: string } };
+  return { ok: true, transactionId: payload.data?.id };
 }
 
 // Vérifie la signature d'un webhook entrant — doit être appelée sur le corps BRUT (non re-sérialisé),

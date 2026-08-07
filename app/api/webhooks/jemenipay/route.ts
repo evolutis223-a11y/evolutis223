@@ -3,9 +3,11 @@
 // la vérification de signature HMAC-SHA512 (lib/jemenipay.ts). Aucune donnée ne bouge sans
 // signature valide.
 //
-// ATTENTION — noms de champs du payload non confirmés contre la doc réelle (voir lib/jemenipay.ts) :
-// plusieurs alias raisonnables sont essayés (event/type, data.reference/reference...). Le corps brut
-// est toujours conservé dans paiements_mobile_money.brut pour ajuster sans perte au premier vrai test.
+// Forme du payload confirmée contre la doc officielle (2026-08-07, https://jemeni.net/docs) :
+// { event: "payment.success" | "payment.failed" | "subscription....",
+//   data: { transaction_id, reference (généré par Jemenipay), external_reference (notre référence
+//   externe transmise à l'initiation — le numéro d'affaire), amount, state, state_label, ... } }
+// Le payload n'inclut pas le numéro de téléphone du payeur.
 
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
@@ -15,19 +17,14 @@ import { verifierSignatureWebhookJemenipay } from "@/lib/jemenipay";
 
 interface PayloadJemenipay {
   event?: string;
-  type?: string;
   data?: {
-    id?: string;
     transaction_id?: string;
     reference?: string;
+    external_reference?: string;
     amount?: number | string;
-    phone?: string;
+    state?: number;
+    state_label?: string;
   };
-  id?: string;
-  transaction_id?: string;
-  reference?: string;
-  amount?: number | string;
-  phone?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -53,20 +50,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Corps JSON invalide." }, { status: 400 });
   }
 
-  const evenement = payload.event ?? payload.type ?? "";
-  const donnees = payload.data ?? payload;
-  const reference = donnees.transaction_id ?? donnees.id ?? donnees.reference;
+  const evenement = payload.event ?? "";
+  const donnees = payload.data ?? {};
+  const transactionId = donnees.transaction_id;
   const montant = donnees.amount != null ? Number(donnees.amount) : null;
-  const telephone = donnees.phone ?? "";
 
-  if (!reference) {
+  if (!transactionId) {
     return NextResponse.json({ error: "Référence de transaction absente du payload." }, { status: 400 });
   }
 
   // Notre référence externe transmise à l'initiation (voir initierPaiementJemenipay) est le
   // numéro d'affaire — on retrouve l'affaire liée si elle existe encore (paiement "compte
   // d'attente" possible, comme pour les règlements manuels, si l'association a été perdue).
-  const referenceAffaire = payload.data?.reference ?? payload.reference ?? null;
+  const referenceAffaire = donnees.external_reference ?? null;
   let affaireId: number | null = null;
   if (referenceAffaire) {
     const [affaire] = await db.select({ id: affaires.id }).from(affaires).where(eq(affaires.numero, referenceAffaire)).limit(1);
@@ -76,7 +72,7 @@ export async function POST(request: NextRequest) {
   const [existant] = await db
     .select({ id: paiementsMobileMoney.id, statut: paiementsMobileMoney.statut })
     .from(paiementsMobileMoney)
-    .where(eq(paiementsMobileMoney.reference, reference))
+    .where(eq(paiementsMobileMoney.reference, transactionId))
     .limit(1);
 
   const estSucces = evenement === "payment.success";
@@ -97,9 +93,9 @@ export async function POST(request: NextRequest) {
         .insert(paiementsMobileMoney)
         .values({
           affaireId,
-          reference,
+          reference: transactionId,
           montant: (montant ?? 0).toFixed(2),
-          telephone,
+          telephone: "",
           statut: "EN_ATTENTE",
           brut: payload as unknown as Record<string, unknown>,
         })
@@ -114,8 +110,7 @@ export async function POST(request: NextRequest) {
           .insert(reglements)
           .values({
             affaireId,
-            payeurTelephone: telephone || null,
-            reference,
+            reference: transactionId,
             montant: montant.toFixed(2),
             mode: "MOBILE_MONEY",
             commentaire: "Paiement en ligne Jemenipay",
