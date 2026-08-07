@@ -30,24 +30,27 @@ async function requireAffairesAccess() {
   return session;
 }
 
+// Basé sur le MAX du suffixe numérique existant, pas un COUNT de lignes : un COUNT se dérègle
+// dès qu'une ligne a été supprimée (le compteur "recule" et régénère un numéro déjà pris plus
+// haut dans la séquence, provoquant "duplicate key value violates unique constraint").
 async function genererNumero(prefix: string): Promise<string> {
   const annee = new Date().getFullYear().toString().slice(-2);
   const like_ = `${prefix}-${annee}-%`;
-  const rows = await db
-    .select({ numero: affaires.numero })
+  const [row] = await db
+    .select({ max: sql<number>`coalesce(max(substring(${affaires.numero} from '[0-9]+$')::int), 0)` })
     .from(affaires)
     .where(like(affaires.numero, like_));
-  const seq = rows.length + 1;
+  const seq = (row?.max ?? 0) + 1;
   return `${prefix}-${annee}-${seq.toString().padStart(4, "0")}`;
 }
 
 async function genererNumeroLivraison(): Promise<string> {
   const annee = new Date().getFullYear().toString().slice(-2);
-  const rows = await db
-    .select({ numero: livraisons.numero })
+  const [row] = await db
+    .select({ max: sql<number>`coalesce(max(substring(${livraisons.numero} from '[0-9]+$')::int), 0)` })
     .from(livraisons)
     .where(like(livraisons.numero, `LIV-${annee}-%`));
-  const seq = rows.length + 1;
+  const seq = (row?.max ?? 0) + 1;
   return `LIV-${annee}-${seq.toString().padStart(4, "0")}`;
 }
 
@@ -171,8 +174,7 @@ export async function creerAffaireInterne(
     revalidatePath("/affaires");
     return { affaireId, numero };
   } catch (err) {
-    const cause = err instanceof Error && err.cause ? ` | cause: ${err.cause instanceof Error ? err.cause.stack ?? err.cause.message : String(err.cause)}` : "";
-    return { error: (err instanceof Error ? err.message : "Erreur inconnue.") + cause };
+    return { error: err instanceof Error ? err.message : "Erreur inconnue." };
   }
 }
 
