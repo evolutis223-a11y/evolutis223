@@ -28,7 +28,10 @@ export default async function CommandesPage() {
         statut: affaires.statut,
         modeFinalisation: affaires.modeFinalisation,
         montantTtc: affaires.montantTtc,
+        dateCreation: affaires.dateCreation,
+        objet: affaires.objet,
         clientNom: clients.nom,
+        clientContact: clients.contact,
       })
       .from(affaires)
       .innerJoin(clients, eq(clients.id, affaires.clientId))
