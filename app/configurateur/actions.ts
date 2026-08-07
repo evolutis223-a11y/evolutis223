@@ -241,7 +241,12 @@ export async function soumettreCommandePublique(payload: SoumissionConfigurateur
     payload.modeFinalisation,
     payload.adresseLivraison
   );
-  if (res.error || !res.affaireId) return { error: res.error ?? "Échec de création de la commande." };
+  if (res.error || !res.affaireId) {
+    // Le détail technique (requête SQL, etc.) ne doit jamais s'afficher sur l'écran public —
+    // on le garde dans les logs serveur pour le diagnostic, le client ne voit qu'un message générique.
+    console.error("soumettreCommandePublique — échec creerAffaireInterne :", res.error);
+    return { error: "Une erreur est survenue, merci de réessayer dans un instant." };
+  }
 
   revalidatePath("/affaires");
 
