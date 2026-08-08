@@ -23,8 +23,6 @@ export function buildShellModules(roleCode: string): ShellModule[] {
     hasModuleAccess(roleCode, "Commercial") && { key: "commercial", label: "Commercial", href: "/commercial" },
     hasModuleAccess(roleCode, "Fournisseurs") && { key: "fournisseurs", label: "Fournisseurs", href: "/fournisseurs" },
     hasModuleAccess(roleCode, "Achats") && { key: "achats", label: "Achats", href: "/achats" },
-    hasModuleAccess(roleCode, "Dépenses") && { key: "depenses", label: "Dépenses", href: "/depenses" },
-    hasModuleAccess(roleCode, "Charges") && { key: "charges", label: "Charges", href: "/charges" },
     hasModuleAccess(roleCode, "Trésorerie") && { key: "tresorerie", label: "Trésorerie", href: "/tresorerie" },
     hasModuleAccess(roleCode, "Rapports") && { key: "rapports", label: "Rapports", href: "/rapports" },
   ];

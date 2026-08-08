@@ -468,6 +468,10 @@ export const bonsDecaissement = pgTable(
       .notNull()
       .references(() => utilisateurs.id),
     validateurId: integer("validateur_id").references(() => utilisateurs.id), // requis (par un autre que l'auteur) si montant > seuil, §16.7
+    // AJOUT 2026-08-08 (fusion Trésorerie/Dépenses/Charges) : rattachement optionnel à une charge
+    // fixe de référence (loyer, électricité...) pour la répartition par type — uniquement pertinent
+    // pour la catégorie CHARGE_GENERAL, NULL sinon.
+    chargeFixeId: integer("charge_fixe_id").references(() => chargesFixes.id),
     dateCreation: timestamp("date_creation").notNull().defaultNow(),
   },
   (table) => [
@@ -477,6 +481,64 @@ export const bonsDecaissement = pgTable(
     ),
   ]
 );
+
+// AJOUT 2026-08-08 (Trésorerie — Objectifs & Prévisions) : liste libre de charges fixes mensuelles
+// estimées (loyer, électricité, frais agrégateurs...) — lignes ajoutées/supprimées librement par
+// l'utilisateur, sert de référence pour le budget mensuel et pour taguer les décaissements réels.
+export const chargesFixes = pgTable("charges_fixes", {
+  id: serial("id").primaryKey(),
+  nom: varchar("nom", { length: 100 }).notNull(),
+  montantEstime: numeric("montant_estime", { precision: 12, scale: 2 }).notNull().default("0"),
+  actif: boolean("actif").notNull().default(true),
+  creePar: integer("cree_par").references(() => utilisateurs.id),
+  dateCreation: timestamp("date_creation").notNull().defaultNow(),
+});
+
+// AJOUT 2026-08-08 (Trésorerie — Objectifs & Prévisions) : objectif de chiffre d'affaires fixé par
+// l'utilisateur pour une période — une seule valeur active par période (upsert).
+export const objectifsCa = pgTable(
+  "objectifs_ca",
+  {
+    id: serial("id").primaryKey(),
+    periode: varchar("periode", { length: 10 }).notNull().unique(),
+    montant: numeric("montant", { precision: 12, scale: 2 }).notNull().default("0"),
+    modifiePar: integer("modifie_par").references(() => utilisateurs.id),
+    dateModification: timestamp("date_modification").notNull().defaultNow(),
+  },
+  (table) => [check("objectifs_ca_periode_check", sql`${table.periode} in ('JOUR','SEMAINE','MOIS')`)]
+);
+
+// AJOUT 2026-08-08 (Trésorerie — Prêts) : prêt reçu par l'entreprise (bancaire, personnel, ou
+// avance du propriétaire) — strictement exclu du calcul chiffre d'affaires/bénéfice, suivi
+// uniquement comme mouvement de caisse à rembourser.
+export const prets = pgTable(
+  "prets",
+  {
+    id: serial("id").primaryKey(),
+    type: varchar("type", { length: 20 }).notNull(),
+    preteurNom: varchar("preteur_nom", { length: 150 }).notNull(),
+    montant: numeric("montant", { precision: 12, scale: 2 }).notNull(),
+    dateObtention: date("date_obtention").notNull(),
+    dateEcheance: date("date_echeance"),
+    statut: varchar("statut", { length: 20 }).notNull().default("EN_COURS"),
+    creePar: integer("cree_par").references(() => utilisateurs.id),
+    dateCreation: timestamp("date_creation").notNull().defaultNow(),
+  },
+  (table) => [
+    check("prets_type_check", sql`${table.type} in ('BANCAIRE','PERSONNEL','PROPRIETAIRE')`),
+    check("prets_statut_check", sql`${table.statut} in ('EN_COURS','REMBOURSE')`),
+  ]
+);
+
+export const pretsRemboursements = pgTable("prets_remboursements", {
+  id: serial("id").primaryKey(),
+  pretId: integer("pret_id")
+    .notNull()
+    .references(() => prets.id),
+  montant: numeric("montant", { precision: 12, scale: 2 }).notNull(),
+  auteurId: integer("auteur_id").references(() => utilisateurs.id),
+  dateRemboursement: timestamp("date_remboursement").notNull().defaultNow(),
+});
 
 // AJOUT 2026-07-28 (§16.7) : seuil de validation hiérarchique des bons de décaissement — table à
 // une seule ligne (singleton), modifiable par Admin/Super Admin. En dessous, l'auteur peut
