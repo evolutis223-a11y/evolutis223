@@ -33,7 +33,7 @@ async function requireAffairesAccess() {
 // Basé sur le MAX du suffixe numérique existant, pas un COUNT de lignes : un COUNT se dérègle
 // dès qu'une ligne a été supprimée (le compteur "recule" et régénère un numéro déjà pris plus
 // haut dans la séquence, provoquant "duplicate key value violates unique constraint").
-async function genererNumero(prefix: string): Promise<string> {
+export async function genererNumero(prefix: string): Promise<string> {
   const annee = new Date().getFullYear().toString().slice(-2);
   const like_ = `${prefix}-${annee}-%`;
   const [row] = await db

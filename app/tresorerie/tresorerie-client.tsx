@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import type { bonsDecaissement, cloturesCaisse, utilisateurs } from "@/db/schema";
 import {
   ajouterChargeFixe,
@@ -112,7 +113,24 @@ export function TresorerieClient(props: {
     <AppShell userName={props.userName} roleLibelle={props.roleLibelle} pageTitle="Trésorerie" modules={props.modules}>
       <div className="mx-auto max-w-5xl space-y-5 p-6">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Trésorerie</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold text-foreground">Trésorerie</h1>
+            <AideBulle titre="Comment utiliser Trésorerie">
+              <p>
+                <b>Vue d&apos;ensemble</b> — tes ventes et bénéfices du jour en temps réel, ton avancement vers l&apos;objectif du jour, et les paiements pas encore identifiés (compte d&apos;attente).
+              </p>
+              <p>
+                <b>Décaissements</b> — chaque sortie d&apos;argent (achat marchandise, charge générale, salaire) passe par un bon. En dessous du seuil, tu peux l&apos;auto-valider ; au-delà, une autre personne doit valider.
+                Exemple : un achat de tissu à 120 000 FCFA, catégorie &quot;Achat marchandise&quot;.
+              </p>
+              <p>
+                <b>Objectifs &amp; Prévisions</b> — liste tes charges fixes (loyer, électricité...) pour connaître ton budget mensuel, et fixe des objectifs de chiffre d&apos;affaires jour/semaine/mois.
+              </p>
+              <p>
+                <b>Prêts</b> — un prêt reçu (banque, ami, ou toi-même) n&apos;est jamais compté comme un revenu, et son remboursement n&apos;est jamais compté comme une charge — juste suivi ici séparément.
+              </p>
+            </AideBulle>
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Décaissements, clôtures de caisse, objectifs et prêts — un seul écran, une seule permission.
           </p>

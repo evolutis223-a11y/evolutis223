@@ -1070,6 +1070,43 @@ export const promotions = pgTable(
   ]
 );
 
+// AJOUT 2026-08-08 (Commercial — marketing d'affiliation) : lien de parrainage unique par
+// utilisateur. Le suivi réel des clics/conversions (parrainage_conversions) ne s'active qu'une
+// fois la vraie boutique en ligne construite — ces tables préparent le terrain sans rien casser
+// en attendant : rester vides est un état normal jusque-là.
+export const parrainageLiens = pgTable("parrainage_liens", {
+  id: serial("id").primaryKey(),
+  utilisateurId: integer("utilisateur_id")
+    .notNull()
+    .unique()
+    .references(() => utilisateurs.id),
+  code: varchar("code", { length: 20 }).notNull().unique(),
+  actif: boolean("actif").notNull().default(true),
+  dateCreation: timestamp("date_creation").notNull().defaultNow(),
+});
+
+// Une ligne par clic entrant via un lien (avant conversion) — permet le futur taux de
+// transformation clics -> ventes, pas seulement le comptage des ventes.
+export const parrainageClics = pgTable("parrainage_clics", {
+  id: serial("id").primaryKey(),
+  lienId: integer("lien_id")
+    .notNull()
+    .references(() => parrainageLiens.id),
+  dateClic: timestamp("date_clic").notNull().defaultNow(),
+});
+
+// Une vente devient "conversion" si elle a lieu pendant la fenêtre d'attribution (30j par défaut)
+// suivant un clic sur ce lien — affaireId nullable tant que la boutique n'existe pas.
+export const parrainageConversions = pgTable("parrainage_conversions", {
+  id: serial("id").primaryKey(),
+  lienId: integer("lien_id")
+    .notNull()
+    .references(() => parrainageLiens.id),
+  affaireId: integer("affaire_id").references(() => affaires.id),
+  montant: numeric("montant", { precision: 12, scale: 2 }).notNull().default("0"),
+  dateConversion: timestamp("date_conversion").notNull().defaultNow(),
+});
+
 // Bannière d'annonce affichée en haut de /boutique (soldes, nouveauté, message saisonnier) —
 // singleton, même esprit que parametres_marquage/parametres_tresorerie.
 export const parametresMarketing = pgTable("parametres_marketing", {

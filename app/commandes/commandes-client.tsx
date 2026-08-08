@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import type { livraisons as livraisonsTable } from "@/db/schema";
 import { assignerLivreur, avancerLivraison } from "./actions";
 import { marquerRetiree } from "../affaires/actions";
@@ -174,7 +175,20 @@ export function CommandesClient({
         {msg && <p className="text-sm text-destructive">{msg}</p>}
 
         <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3">
-          <h1 className="text-lg font-semibold text-foreground">Commandes</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-semibold text-foreground">Commandes</h1>
+            <AideBulle titre="Comment utiliser Commandes">
+              <p>
+                <b>Kanban</b> — chaque commande avance de colonne en colonne : Nouvelle (pas encore validée) → Prête → Pris en charge → En route → Clôturée. Une commande à retirer en boutique saute directement de &quot;Prête&quot; à &quot;Clôturée&quot;.
+              </p>
+              <p>
+                <b>Liste</b> — même contenu, en tableau — pratique pour scanner beaucoup de commandes d&apos;un coup.
+              </p>
+              <p>
+                <b>Fiche</b> — clique une commande : tu vois sa progression, tu assignes un livreur, et tu encaisses le solde en espèces à la livraison si besoin.
+              </p>
+            </AideBulle>
+          </div>
           <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
             <Input
               placeholder="Rechercher (n°, client...)"

@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import type { articles } from "@/db/schema";
 import {
   ajouterComposantKit,
@@ -466,7 +467,23 @@ export function StocksClient({
     <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Stocks" modules={modules}>
       <div className="flex h-full min-h-0 flex-col gap-4 p-6">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Stocks</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-semibold text-foreground">Stocks</h1>
+            <AideBulle titre="Comment utiliser Stocks">
+              <p>
+                <b>Filtres</b> — A (textile, vendu en douzaines), B (unité simple), E (kits, jamais approvisionnés directement, recalculés depuis leur recette), ou &quot;Alertes&quot; pour ne voir que ce qui manque d&apos;attention.
+              </p>
+              <p>
+                <b>Fiche article</b> — clique un article à gauche : tu vois le stock par variante (taille/couleur), et l&apos;historique des lots reçus (traçabilité).
+              </p>
+              <p>
+                <b>Approvisionner</b> — chaque approvisionnement crée un nouveau lot séparé. Exemple : 3 douzaines de Polo bleu marine à 6 000 FCFA/pièce, réparties automatiquement par taille.
+              </p>
+              <p>
+                <b>Kits</b> — leur stock n&apos;est jamais saisi : il se calcule tout seul selon le composant le plus limitant (ex. s&apos;il ne reste que 2 mugs, le kit &quot;Polo + mug&quot; ne peut se vendre que 2 fois, même si les polos sont disponibles).
+              </p>
+            </AideBulle>
+          </div>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Familles A (textile/douzaine) et B (unité) approvisionnées directement ici, chaque entrée trace un lot. Famille E (kits) recalculée depuis sa recette — pas de saisie directe.
           </p>
