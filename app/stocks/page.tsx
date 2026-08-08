@@ -1,7 +1,7 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { articles, variantes, vStockVariante, utilisateurs, roles } from "@/db/schema";
+import { articles, variantes, vStockVariante, utilisateurs, roles, lots, lotVariantes, fournisseurs } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 import { buildShellModules } from "@/lib/shell-modules";
@@ -19,7 +19,7 @@ export default async function StocksPage() {
     );
   }
 
-  const [[user], articleRows, variantRows, fournisseurRows] = await Promise.all([
+  const [[user], articleRows, variantRows, fournisseurRows, lotRows] = await Promise.all([
     db
       .select({ nom: utilisateurs.nom, roleLibelle: roles.libelle })
       .from(utilisateurs)
@@ -41,6 +41,21 @@ export default async function StocksPage() {
       .from(variantes)
       .leftJoin(vStockVariante, eq(vStockVariante.varianteId, variantes.id)),
     listerFournisseursActifs(),
+    db
+      .select({
+        id: lots.id,
+        articleId: lots.articleId,
+        dateReception: lots.dateReception,
+        prixAchatUnitaire: lots.prixAchatUnitaire,
+        fournisseurNom: fournisseurs.nom,
+        quantite: sql<number>`coalesce(sum(${lotVariantes.quantiteProduite}), 0)`,
+      })
+      .from(lots)
+      .leftJoin(fournisseurs, eq(fournisseurs.id, lots.fournisseurId))
+      .leftJoin(lotVariantes, eq(lotVariantes.lotId, lots.id))
+      .groupBy(lots.id, fournisseurs.nom)
+      .orderBy(desc(lots.dateReception))
+      .limit(300),
   ]);
 
   const kitArticles = articleRows.filter((a) => a.famille === "E");
@@ -61,6 +76,7 @@ export default async function StocksPage() {
       variantes={variantRows}
       kits={kits}
       fournisseurs={fournisseurRows}
+      lots={lotRows.map((l) => ({ ...l, prixAchatUnitaire: Number(l.prixAchatUnitaire), quantite: Number(l.quantite) }))}
     />
   );
 }
