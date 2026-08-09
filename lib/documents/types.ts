@@ -96,6 +96,42 @@ export interface AffaireDocumentData {
   qrPayload?: string;
 }
 
+export interface PointTendanceRapport {
+  label: string;
+  chiffreAffaires: number;
+  beneficeNet: number;
+}
+
+export interface RapportDocumentData {
+  periodeLabel: string;
+  dateEmission?: Date;
+  finance: {
+    chiffreAffaires: number;
+    coutAchatVentes: number;
+    beneficeBrut: number;
+    depensesCharges: number;
+    commissions: number;
+    beneficeNet: number;
+    nombreVentes: number;
+    variationCaPct: number | null;
+    variationBeneficeNetPct: number | null;
+  };
+  rh: {
+    effectifActif: number;
+    masseSalariale: number;
+    variationMassePct: number | null;
+    incidents: { type: string; nombre: number }[];
+    besoinsActifs: { titre: string; nombrePersonnesRequis: number; periodeDebut: string; periodeFin: string }[];
+  };
+  operations: {
+    totalLivraisons: number;
+    livraisonsParStatut: { statut: string; nombre: number }[];
+    ruptureActuelle: number;
+    stockFaibleActuel: number;
+  };
+  tendance: PointTendanceRapport[];
+}
+
 export interface BonLivraisonData {
   /** Numéro du bon lui-même, ex "BL-26-0001" (§13 — espace de numérotation propre au document imprimé,
    * distinct du numéro de l'affaire qu'il documente). */

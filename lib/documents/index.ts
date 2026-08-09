@@ -8,6 +8,7 @@ export { generateRecuCaissePdf, RecuCaisseDocument } from "./recu-caisse";
 export { generateBonLivraisonPdf, BonLivraisonDocument } from "./bon-livraison";
 export { generateFichePaiePdf, FichePaieDocument } from "./fiche-paie";
 export { generateAffaireDocumentPdf, AffaireDocumentDocument } from "./affaire-document";
+export { generateRapportPdf, RapportDocument } from "./rapport-document";
 export { ENTREPRISE, MENTIONS_LEGALES_TEXTE } from "./legal-mentions";
 export { sha256Hex } from "./hash";
 export { formatFcfa, formatDateHeure } from "./format";
@@ -39,4 +40,6 @@ export type {
   AffaireDocumentData,
   LigneAffaireDocument,
   TypeDocumentAffaire,
+  RapportDocumentData,
+  PointTendanceRapport,
 } from "./types";

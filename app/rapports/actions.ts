@@ -203,11 +203,10 @@ async function calculerFinance(debut: Date, fin: Date): Promise<FinanceBrute> {
   };
 }
 
-export async function chargerRapportFinance(frequence: Frequence): Promise<RapportFinance> {
+export async function chargerRapportFinance(frequence: Frequence, reference: Date = new Date()): Promise<RapportFinance> {
   await requireRapportsAccess();
-  const maintenant = new Date();
-  const { debut, fin } = bornesPeriode(frequence, maintenant);
-  const bornesPrecedentes = bornesPeriode(frequence, decalerReference(frequence, maintenant, 1));
+  const { debut, fin } = bornesPeriode(frequence, reference);
+  const bornesPrecedentes = bornesPeriode(frequence, decalerReference(frequence, reference, 1));
 
   const [actuel, precedent] = await Promise.all([
     calculerFinance(debut, fin),
@@ -225,12 +224,11 @@ export async function chargerRapportFinance(frequence: Frequence): Promise<Rappo
 
 // Plusieurs points dans le temps (6 par défaut) pour visualiser une tendance, quelle que soit la
 // fréquence choisie — ex. en "Mois", les 6 derniers mois ; en "Jour", les 7 derniers jours.
-export async function chargerTendanceFinance(frequence: Frequence, nbPoints = 6): Promise<PointTendanceFinance[]> {
+export async function chargerTendanceFinance(frequence: Frequence, nbPoints = 6, reference: Date = new Date()): Promise<PointTendanceFinance[]> {
   await requireRapportsAccess();
-  const maintenant = new Date();
   const points: PointTendanceFinance[] = [];
   for (let i = nbPoints - 1; i >= 0; i--) {
-    const ref = decalerReference(frequence, maintenant, i);
+    const ref = decalerReference(frequence, reference, i);
     const { debut, fin } = bornesPeriode(frequence, ref);
     const brut = await calculerFinance(debut, fin);
     points.push({ label: labelPointTendance(frequence, debut), chiffreAffaires: brut.chiffreAffaires, beneficeNet: brut.beneficeNet });
@@ -260,11 +258,10 @@ async function masseSalarialePeriode(debut: Date, fin: Date): Promise<number> {
 // pas financières. Incidents = maladie/blessure/décès/catastrophe naturelle/blocage de
 // recrutement touchant le personnel (`/rh`, onglet Incidents). Prévisions = besoins de personnel
 // à venir planifiés par RH (`/rh`, onglet Prévisions) — pas une prévision de chiffre d'affaires.
-export async function chargerRapportRh(frequence: Frequence): Promise<RapportRh> {
+export async function chargerRapportRh(frequence: Frequence, reference: Date = new Date()): Promise<RapportRh> {
   await requireRapportsAccess();
-  const maintenant = new Date();
-  const { debut, fin } = bornesPeriode(frequence, maintenant);
-  const bornesPrecedentes = bornesPeriode(frequence, decalerReference(frequence, maintenant, 1));
+  const { debut, fin } = bornesPeriode(frequence, reference);
+  const bornesPrecedentes = bornesPeriode(frequence, decalerReference(frequence, reference, 1));
   const debutStr = debut.toISOString().slice(0, 10);
   const finStr = fin.toISOString().slice(0, 10);
 
@@ -323,9 +320,9 @@ export interface RapportOperations {
 // db/schema.ts livraisons) ; rupture/stock faible sont un instantané actuel (état du stock, pas un
 // historique sur la période — le manque de couverture historique de vStockVariante ne change pas
 // ici).
-export async function chargerRapportOperations(frequence: Frequence): Promise<RapportOperations> {
+export async function chargerRapportOperations(frequence: Frequence, reference: Date = new Date()): Promise<RapportOperations> {
   await requireRapportsAccess();
-  const { debut, fin } = bornesPeriode(frequence, new Date());
+  const { debut, fin } = bornesPeriode(frequence, reference);
 
   const livraisonRows = await db
     .select({ statut: livraisons.statut, n: sql<number>`count(*)` })
@@ -405,9 +402,9 @@ export interface RapportDetailComplet {
 // Vue "Rapport détaillé" (2026-08-09) : liste ligne par ligne, pas seulement des totaux — pour
 // pouvoir vraiment détailler jour/semaine/mois/année comme demandé, sans dupliquer la logique
 // d'agrégation ci-dessus (les totaux restent calculés par les fonctions au-dessus).
-export async function chargerDetailComplet(frequence: Frequence): Promise<RapportDetailComplet> {
+export async function chargerDetailComplet(frequence: Frequence, reference: Date = new Date()): Promise<RapportDetailComplet> {
   await requireRapportsAccess();
-  const { debut, fin } = bornesPeriode(frequence, new Date());
+  const { debut, fin } = bornesPeriode(frequence, reference);
   const debutStr = debut.toISOString().slice(0, 10);
   const finStr = fin.toISOString().slice(0, 10);
 
