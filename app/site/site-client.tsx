@@ -926,5 +926,9 @@ footer p { color: var(--footer-muted); font-size: 13px; line-height: 1.6; max-wi
   .hero-tag b { font-size: 17px; }
   .vision-text { font-size: 14.5px; line-height: 1.55; margin-top: 14px; }
   .section { padding: 60px 6vw; }
+  /* Bandeau promo : l'étiquette et le message se partageaient une seule ligne étroite, texte
+     écrasé. Empilés, avec plus de place pour grandir et épaissir (demande du 2026-08-09). */
+  .banner-slide { flex-direction: column; gap: 6px; padding: 14px 16px; font-size: 14px; font-weight: 700; }
+  .banner-slide .tag { font-size: 10.5px; }
 }
 `;
