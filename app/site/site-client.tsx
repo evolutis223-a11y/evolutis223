@@ -135,12 +135,11 @@ export function SiteClient({
   const [vue, setVue] = useState<"grande" | "petite" | "liste" | "galerie">("grande");
   const [galerieIdx, setGalerieIdx] = useState(0);
   const [produitOuvert, setProduitOuvert] = useState<Produit | null>(null);
-  const [pleinEcran, setPleinEcran] = useState(false);
 
-  // Un panneau ouvert (fiche produit / galerie plein écran) ajoute une entrée d'historique — sur
-  // mobile, le bouton "retour" du téléphone doit d'abord refermer le panneau, jamais quitter le
-  // site directement (bug remonté le 2026-08-09).
-  const overlayOuvert = produitOuvert !== null || pleinEcran;
+  // Un panneau ouvert (fiche produit) ajoute une entrée d'historique — sur mobile, le bouton
+  // "retour" du téléphone doit d'abord refermer le panneau, jamais quitter le site directement
+  // (bug remonté le 2026-08-09).
+  const overlayOuvert = produitOuvert !== null;
   useEffect(() => {
     if (!overlayOuvert) return;
     window.history.pushState({ evolutis223Overlay: true }, "");
@@ -149,7 +148,6 @@ export function SiteClient({
   useEffect(() => {
     function onPopState() {
       setProduitOuvert(null);
-      setPleinEcran(false);
     }
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
@@ -438,14 +436,7 @@ export function SiteClient({
           )}
 
           {vue === "galerie" && (
-            <GalerieView
-              produits={produitsFiltres}
-              idx={galerieIdx}
-              setIdx={setGalerieIdx}
-              pleinEcran={pleinEcran}
-              setPleinEcran={setPleinEcran}
-              onAcheter={ouvrirFiche}
-            />
+            <GalerieView produits={produitsFiltres} idx={galerieIdx} setIdx={setGalerieIdx} onAcheter={ouvrirFiche} />
           )}
         </div>
       </section>
@@ -524,15 +515,11 @@ function GalerieView({
   produits,
   idx,
   setIdx,
-  pleinEcran,
-  setPleinEcran,
   onAcheter,
 }: {
   produits: Produit[];
   idx: number;
   setIdx: (i: number) => void;
-  pleinEcran: boolean;
-  setPleinEcran: (b: boolean) => void;
   onAcheter: (p: Produit) => void;
 }) {
   const i = idx >= produits.length ? 0 : idx;
@@ -555,11 +542,6 @@ function GalerieView({
       ) : (
         <span className="glyph">{p.glyph}</span>
       )}
-      <button className="galerie-fullscreen-btn" title="Plein écran" onClick={() => setPleinEcran(true)}>
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.2">
-          <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3" />
-        </svg>
-      </button>
       <div className="galerie-overlay">
         <div className="gv-left">
           <span className="eyebrow">{p.brancheNom}</span>
@@ -615,55 +597,7 @@ function GalerieView({
           </div>
         ))}
       </div>
-      <div className="swipe-hint">👆 Glissez, utilisez les flèches, ou passez en plein écran pour naviguer</div>
-
-      {pleinEcran && (
-        <div className="galerie-fullscreen-overlay open" onClick={(e) => e.target === e.currentTarget && setPleinEcran(false)}>
-          <div className="gfs-stage">
-            <button className="gfs-close" onClick={() => setPleinEcran(false)}>
-              ×
-            </button>
-            <button className="gfs-nav prev" onClick={() => avancer(-1)}>
-              ←
-            </button>
-            <button className="gfs-nav next" onClick={() => avancer(1)}>
-              →
-            </button>
-            <div className="gfs-media">
-              {p.photo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.photo} alt={p.article.nom} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                <span className="glyph">{p.glyph}</span>
-              )}
-            </div>
-            <div className="gfs-overlay-band">
-              <div className="gv-left">
-                <span className="eyebrow">{p.brancheNom}</span>
-                <h3>{p.article.nom}</h3>
-              </div>
-              <div className="gv-right">
-                <div className="price">{formatFcfa(p.prixEffectif)}</div>
-                <button className="btn-primary galerie-buy" onClick={() => onAcheter(p)}>
-                  Voir & acheter
-                </button>
-              </div>
-            </div>
-            <div className="gfs-filmstrip-top">
-              {produits.map((f, fi) => (
-                <div key={f.article.id} className={`film-thumb${fi === i ? " active" : ""}`} onClick={() => setIdx(fi)}>
-                  {f.photo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={f.photo} alt={f.article.nom} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  ) : (
-                    f.glyph
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="swipe-hint">👆 Glissez ou utilisez les flèches pour naviguer</div>
     </div>
   );
 }
@@ -897,7 +831,6 @@ a { cursor: pointer; }
 .galerie-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 999px; background: var(--bg); border: 1.5px solid var(--line); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .galerie-nav.prev { left: -22px; } .galerie-nav.next { right: -22px; }
 @media (max-width: 900px) { .galerie-nav.prev { left: 4px; } .galerie-nav.next { right: 4px; } }
-.galerie-fullscreen-btn { position: absolute; top: 14px; right: 14px; width: 38px; height: 38px; border-radius: 999px; background: rgba(255,255,255,0.85); color: var(--ink); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
 .galerie-overlay { position: absolute; left: 0; right: 0; bottom: 0; padding: 20px 24px; background: #0b0b0b; color: #fff; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
 .galerie-overlay .gv-left { text-align: left; min-width: 0; }
 .galerie-overlay .gv-right { text-align: right; flex-shrink: 0; }
@@ -909,23 +842,6 @@ a { cursor: pointer; }
 .film-thumb { width: 68px; height: 68px; flex-shrink: 0; background: var(--media-bg); box-shadow: var(--media-shadow); border: 2px solid transparent; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; opacity: 0.5; transition: all .25s ease; overflow: hidden; }
 .film-thumb.active { border-color: var(--accent); opacity: 1; }
 .swipe-hint { margin-top: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-
-.galerie-fullscreen-overlay { position: fixed; inset: 0; z-index: 400; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.gfs-stage { position: relative; width: min(78vw, 720px); aspect-ratio: 4/5; }
-.gfs-media { position: absolute; inset: 0; background: var(--media-bg); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.gfs-media .glyph { font-size: 180px; opacity: 0.45; }
-.gfs-close { position: fixed; top: 22px; right: 22px; z-index: 410; width: 46px; height: 46px; border-radius: 999px; background: #fff; color: #0b0b0b; border: none; font-size: 22px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 26px rgba(0,0,0,0.35); }
-.gfs-filmstrip-top { position: absolute; top: 0; left: 0; right: 0; display: flex; gap: 10px; overflow-x: auto; padding: 12px; background: #0b0b0b; }
-.gfs-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 46px; height: 46px; border-radius: 999px; background: rgba(255,255,255,0.14); color: #fff; border: none; font-size: 18px; cursor: pointer; }
-.gfs-nav.prev { left: -60px; } .gfs-nav.next { right: -60px; }
-@media (max-width: 900px) { .gfs-stage { width: 88vw; } .gfs-nav.prev { left: 4px; } .gfs-nav.next { right: 4px; } }
-.gfs-overlay-band { position: absolute; left: 0; right: 0; bottom: 0; padding: 20px 24px; background: #0b0b0b; color: #fff; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
-.gfs-overlay-band .gv-left { text-align: left; min-width: 0; }
-.gfs-overlay-band .gv-right { text-align: right; flex-shrink: 0; }
-.gfs-overlay-band .eyebrow { color: #d9b98a; }
-.gfs-overlay-band h3 { margin-top: 6px; font-size: 23px; color: #fff; }
-.gfs-overlay-band .price { font-size: 30px; font-weight: 800; color: #fff; }
-.gfs-overlay-band .galerie-buy { margin-top: 10px; padding: 12px 22px; }
 
 .detail-overlay { position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,0.4); display: flex; align-items: stretch; justify-content: flex-end; }
 .detail-panel { width: min(560px, 92vw); background: var(--bg); height: 100%; overflow-y: auto; box-shadow: -30px 0 60px rgba(0,0,0,0.15); }
