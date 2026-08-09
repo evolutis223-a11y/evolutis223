@@ -185,7 +185,7 @@ export function AppShell({
           <button onClick={() => router.push("/")} title="Tableau de bord" style={{ background: "none", border: "none", color: "#888", cursor: "pointer", display: "flex", alignItems: "center" }}>
             <Icon path={ICONS.dashboard} size={23} />
           </button>
-          <button onClick={() => router.push("/vente-comptoir")} title="Vendre — poste de vente comptoir" style={{ background: "none", border: "none", color: "#888", cursor: "pointer", display: "flex", alignItems: "center" }}>
+          <button onClick={() => router.push("/affaires?nouveau=1")} title="Nouvelle affaire" style={{ background: "none", border: "none", color: "#888", cursor: "pointer", display: "flex", alignItems: "center" }}>
             <Icon path={BANDEAU_ICONS.plus} size={23} />
           </button>
           <button onClick={() => router.push("/parametres")} title="Paramètres" style={{ background: "none", border: "none", color: "#888", cursor: "pointer", display: "flex", alignItems: "center" }}>

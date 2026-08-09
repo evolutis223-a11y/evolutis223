@@ -180,7 +180,7 @@ export default async function DashboardPage() {
   }[];
 
   const actionsRapides = [
-    peutAffaires && { label: "Nouvelle affaire", icone: "➕", href: "/vente-comptoir", primaire: true },
+    peutAffaires && { label: "Nouvelle affaire", icone: "➕", href: "/affaires?nouveau=1", primaire: true },
     peutAffaires && { label: "Règlement", icone: "💰", href: "/affaires", primaire: false },
     estAdminOuSuper && { label: "Tour de contrôle", icone: "👑", href: "/validations", primaire: false },
   ].filter(Boolean) as { label: string; icone: string; href: string; primaire: boolean }[];
