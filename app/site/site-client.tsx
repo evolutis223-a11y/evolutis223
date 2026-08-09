@@ -463,14 +463,14 @@ export function SiteClient({
 
       <footer>
         <div className="footer-grid">
-          <div>
+          <div className="footer-identity">
             <div className="footer-mark">
               EVOLUTIS<span>223</span>
             </div>
             <p>
               {contenu.footerTagline}
               <br />
-              Bamako, Mali.
+              Bamako, Mali
             </p>
           </div>
           <div className="footer-col">
@@ -866,14 +866,15 @@ a { cursor: pointer; }
 .vision-image { position: relative; aspect-ratio: 4/5; background: #1a1a18; border: 1px solid #2a2a28; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .vision-image .glyph { font-size: 90px; opacity: 0.35; }
 .vision-image-label { position: absolute; bottom: 18px; left: 18px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.55); }
-@media (max-width: 900px) { .vision-grid { grid-template-columns: 1fr; gap: 34px; } .vision-image { order: -1; aspect-ratio: 16/10; } }
+@media (max-width: 900px) { .vision-grid { grid-template-columns: 1fr; gap: 34px; } .vision-image { order: 1; aspect-ratio: 16/10; } }
 .vision-text { margin-top: 22px; font-size: 18px; line-height: 1.85; color: rgba(255,255,255,0.82); max-width: 680px; }
 
 footer { background: var(--footer-bg); color: var(--footer-ink); padding: 80px 5vw 34px; }
 .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px; }
+.footer-identity { text-align: center; }
 .footer-mark { font-size: 24px; font-weight: 800; }
 .footer-mark span { color: var(--accent); }
-footer p { color: var(--footer-muted); font-size: 13.5px; line-height: 1.8; max-width: 280px; margin-top: 14px; }
+footer p { color: var(--footer-muted); font-size: 13px; line-height: 1.6; max-width: 280px; margin: 6px auto 0; }
 .footer-col h4 { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--footer-muted); margin-bottom: 16px; }
 .footer-col a { display: block; color: var(--footer-ink); opacity: 0.9; text-decoration: none; font-size: 13.5px; margin-bottom: 11px; cursor: pointer; }
 .footer-bottom { margin-top: 60px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 11.5px; color: var(--footer-muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
@@ -911,5 +912,7 @@ footer p { color: var(--footer-muted); font-size: 13.5px; line-height: 1.8; max-
   .hero-dots, .banner-dots { display: none; }
   .hero-tag { left: 6vw; bottom: -14px; padding: 12px 16px; font-size: 11px; }
   .hero-tag b { font-size: 17px; }
+  .vision-text { font-size: 14.5px; line-height: 1.55; margin-top: 14px; }
+  .section { padding: 60px 6vw; }
 }
 `;

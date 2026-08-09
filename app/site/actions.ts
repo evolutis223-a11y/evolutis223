@@ -67,8 +67,7 @@ const SITE_CONTENU_DEFAUT: SiteContenu = {
   visionTitreLigne2: "à la hauteur du monde.",
   visionText:
     "Nous concevons des solutions pensées ici, au Mali, pour répondre aux réalités africaines : un « made in Afrique » exigeant, moderne et fiable. Chaque produit, chaque outil que nous créons vise à simplifier le quotidien, à faire gagner du temps et à créer de l'emploi local. Notre ambition : prouver que l'innovation textile, créative et numérique a toute sa place ici, portée par une équipe malienne.",
-  footerTagline:
-    "Tech · Com · Pub : agence créative et digitale basée à Bamako, au service de marques et de particuliers à travers le Mali et au-delà.",
+  footerTagline: "Tech · Com · Pub",
 };
 
 function fusionnerContenu(partiel: Partial<SiteContenu> | undefined): SiteContenu {
