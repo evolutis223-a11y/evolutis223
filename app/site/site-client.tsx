@@ -767,7 +767,7 @@ a { cursor: pointer; }
 
 .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 26px; }
 .grid.petite { grid-template-columns: repeat(9, 1fr); gap: 16px; }
-.card { grid-column: span 2; cursor: pointer; }
+.card { grid-column: span 2; cursor: pointer; min-width: 0; }
 .grid.petite .card { grid-column: span 3; }
 .card.wide { grid-column: span 3; }
 .card-media { position: relative; aspect-ratio: 4/5; background: var(--media-bg); overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: var(--media-shadow); border: 1.5px solid transparent; transition: border-color .25s ease; }
@@ -781,8 +781,9 @@ a { cursor: pointer; }
 .card-stock.rupture { background: var(--ink); color: var(--bg); }
 .card-promo { position: absolute; top: 12px; right: 12px; z-index: 3; font-size: 9.5px; font-weight: 800; letter-spacing: 0.05em; padding: 4px 9px; background: var(--accent); color: #fff; }
 .card-body { padding-top: 14px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.card-body > div:first-child { min-width: 0; }
 .card-branche { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
-.card-nom { margin-top: 4px; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+.card-nom { margin-top: 4px; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: break-word; }
 .grid.petite .card-nom { font-size: 15px; }
 .grid.petite .card-prix { font-size: 16px; }
 .card-prix { font-size: 19px; font-weight: 800; white-space: nowrap; }
