@@ -118,6 +118,19 @@ export function SiteClient({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  useEffect(() => {
+    const enregistre = window.localStorage.getItem("evolutis223_site_theme");
+    if (enregistre === "dark" || enregistre === "light") setTheme(enregistre);
+  }, []);
+  function basculerTheme() {
+    setTheme((t) => {
+      const suivant = t === "light" ? "dark" : "light";
+      window.localStorage.setItem("evolutis223_site_theme", suivant);
+      return suivant;
+    });
+  }
+
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   }
@@ -204,7 +217,7 @@ export function SiteClient({
   }
 
   return (
-    <div className="site-root" style={{ background: "#ffffff", color: "#0b0b0b" }}>
+    <div className="site-root" data-theme={theme} style={{ background: "var(--bg)", color: "var(--ink)" }}>
       <style dangerouslySetInnerHTML={{ __html: SITE_CSS }} />
 
       <nav className={`nav${scrolled ? " scrolled" : ""}`}>
@@ -225,6 +238,9 @@ export function SiteClient({
           <a onClick={() => scrollTo("catalogue")}>Catalogue</a>
         </div>
         <div className="nav-right">
+          <button className="theme-toggle" onClick={basculerTheme} title="Basculer clair/sombre" aria-label="Basculer clair/sombre">
+            <span className="theme-toggle-knob">{theme === "dark" ? "🌙" : "☀"}</span>
+          </button>
           <div className="nav-cart icon-zoom" onClick={() => scrollTo("catalogue")}>
             <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <circle cx="11" cy="11" r="7" />
@@ -254,9 +270,7 @@ export function SiteClient({
               <div className="hero-mobile-tagline">Tech · Com · Pub</div>
             </div>
             <p className="lead lead-desktop">{contenu.leadText}</p>
-            <p className="lead lead-mobile">
-              Nous concevons des solutions textiles, créatives et numériques sur mesure, pensées pour porter vos idées plus loin.
-            </p>
+            <p className="lead lead-mobile">Nous concevons des solutions et produits créatifs et numériques sur mesure, pensés pour vos idées.</p>
             <div className="hero-badge">
               <b>{contenu.badgeAnnees}</b> {contenu.badgeLabel}
             </div>
@@ -686,6 +700,13 @@ const SITE_CSS = `
   --footer-bg: #0b0b0b; --footer-ink: #ffffff; --footer-muted: #9c9a95;
   --media-bg: #ffffff; --media-shadow: 0 22px 40px -16px rgba(11,11,11,0.28);
 }
+.site-root[data-theme="dark"] {
+  --bg: #0a0a0a; --bg-soft: #151512; --catalogue-bg: #151512; --ink: #f5f3ee; --ink-soft: #c7c4bb;
+  --muted: #8b887f; --line: #2a2924; --accent: #d3a25c; --accent-soft: #2b2013;
+  --footer-bg: #000000; --footer-ink: #f5f3ee; --footer-muted: #77746c;
+  --media-bg: #ffffff; --media-shadow: 0 22px 44px -14px rgba(0,0,0,0.55);
+}
+.site-root { transition: background .4s ease, color .4s ease; }
 .site-root * { box-sizing: border-box; }
 html, body { overflow-x: hidden; max-width: 100%; }
 /* Sur mobile, un appui un peu long sur du texte le sélectionnait (surlignage bleu) au lieu de
@@ -714,6 +735,9 @@ a { cursor: pointer; }
 .nav-links { display: flex; align-items: center; gap: 34px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .nav-links a { color: var(--ink); text-decoration: none; position: relative; }
 .nav-right { display: flex; align-items: center; gap: 18px; }
+.theme-toggle { width: 40px; height: 23px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg-soft); position: relative; cursor: pointer; flex-shrink: 0; padding: 0; display: flex; align-items: center; }
+.theme-toggle-knob { position: absolute; top: 1.5px; left: 2px; width: 17px; height: 17px; border-radius: 999px; background: var(--ink); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 9px; transition: transform .3s cubic-bezier(.4,0,.2,1); }
+.site-root[data-theme="dark"] .theme-toggle-knob { transform: translateX(17px); }
 .nav-cart { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .icon-zoom { transition: transform .25s cubic-bezier(.4,0,.2,1); }
 .icon-zoom:hover { transform: scale(1.14); color: var(--accent); }
@@ -937,12 +961,12 @@ footer p { color: var(--footer-muted); font-size: 13px; line-height: 1.6; max-wi
      tranche, laisse tel quel pour l'instant. */
   .hero-h1-desktop, .lead-desktop { display: none; }
   .hero-h1-mobile, .lead-mobile { display: block; }
-  .hero-mobile-mark { margin-top: 10px; font-size: 42px; font-weight: 900; letter-spacing: -0.01em; }
+  .hero-mobile-mark { margin-top: 10px; font-size: 42px; font-weight: 900; letter-spacing: -0.01em; line-height: 1; }
   .hero-mobile-mark span { color: var(--accent); }
   /* Le sous-titre doit "peser" la meme largeur visuelle que EVOLUTIS223 au-dessus, comme un
      bloc-marque/logo — l'espacement des lettres l'etire pour approcher cette largeur. */
-  .hero-mobile-tagline { margin-top: 2px; font-size: 13px; font-weight: 800; letter-spacing: 0.42em; text-transform: uppercase; color: var(--muted); }
-  .hero p.lead, .lead-mobile { font-size: 14.5px; font-weight: 700; line-height: 1.35; margin-top: 14px; text-align: justify; hyphens: auto; }
+  .hero-mobile-tagline { margin-top: 0; font-size: 13px; font-weight: 900; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ink-soft); }
+  .hero p.lead, .lead-mobile { font-size: 14.5px; font-weight: 800; line-height: 1.35; margin-top: 14px; text-align: justify; hyphens: auto; }
   .hero-badge { margin-top: 12px; }
   .hero-cta { margin-top: 20px; }
   .hero-visual { aspect-ratio: 16/11; }
