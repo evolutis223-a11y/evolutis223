@@ -40,7 +40,7 @@ export interface SiteContenu {
   footerTagline: string;
 }
 
-export const SITE_CONTENU_DEFAUT: SiteContenu = {
+const SITE_CONTENU_DEFAUT: SiteContenu = {
   eyebrow: "Fabriqué à Bamako",
   leadText:
     "Tech · Com · Pub : EVOLUTIS223 conçoit des solutions textiles, créatives et numériques sur mesure, pensées pour porter vos idées plus loin.",
