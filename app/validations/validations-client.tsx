@@ -124,7 +124,10 @@ function formatRelatif(d: Date | string) {
 }
 
 const POLL_MS = 10_000;
-const BIP_MS = 30_000;
+// L'alerte sonne en boucle (pas un simple bip isolé) pendant CYCLE_BOUCLE_MS, marque un silence de
+// CYCLE_SILENCE_MS, puis recommence — volontairement insistant tant que rien n'est traité.
+const CYCLE_BOUCLE_MS = 30_000;
+const CYCLE_SILENCE_MS = 60_000;
 const PAUSES = [1, 5, 15] as const;
 
 // Plusieurs sonneries au choix — certaines nettement plus insistantes que le simple bip d'origine
@@ -188,6 +191,11 @@ function beep(sonnerie: SonnerieKey) {
   } catch {
     // AudioContext indisponible (ex. avant toute interaction utilisateur) — silencieux.
   }
+}
+
+function dureeSonnerie(sonnerie: SonnerieKey): number {
+  const config = SONNERIES[sonnerie] ?? SONNERIES[SONNERIE_DEFAUT];
+  return Math.max(...config.notes.map((n) => n.delay + n.dur));
 }
 
 type FluxRow =
@@ -436,11 +444,27 @@ export function ValidationsClient({
     if (enPause) return;
     if (pauseJusqua !== null && Date.now() >= pauseJusqua) setPauseJusqua(null);
 
-    beep(sonnerie);
+    let arretee = false;
+    const pas = (dureeSonnerie(sonnerie) + 0.25) * 1000;
+    const repetitionsParCycle = Math.max(1, Math.ceil(CYCLE_BOUCLE_MS / pas));
+
+    function sonnerCycle() {
+      for (let i = 0; i < repetitionsParCycle; i++) {
+        setTimeout(() => {
+          if (!arretee) beep(sonnerie);
+        }, i * pas);
+      }
+    }
+
+    sonnerCycle();
     const timer = setInterval(() => {
-      if (pauseJusqua === null || Date.now() >= pauseJusqua) beep(sonnerie);
-    }, BIP_MS);
-    return () => clearInterval(timer);
+      if (pauseJusqua === null || Date.now() >= pauseJusqua) sonnerCycle();
+    }, CYCLE_BOUCLE_MS + CYCLE_SILENCE_MS);
+
+    return () => {
+      arretee = true;
+      clearInterval(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alerteActive, totalEnAttente, pauseJusqua, sonnerie]);
 
@@ -499,7 +523,7 @@ export function ValidationsClient({
                   <b>Stock — Autoriser / Recharger</b> — &quot;Autoriser&quot; transfère juste le manque depuis la réserve gros vers le détail. &quot;Recharger&quot; transfère une quantité plus grande, pour couvrir aussi les prochaines ventes sans redemander.
                 </p>
                 <p>
-                  <b>Alerte sonore</b> — un bip toutes les 30s tant qu&apos;il reste au moins une demande en attente (stock, proforma ou maquette), pour ne rien laisser traîner. Mets en pause si tu es en pleine saisie ailleurs.
+                  <b>Alerte sonore</b> — sonne en boucle pendant 30s, puis silence 1 min, et recommence tant qu&apos;il reste au moins une demande en attente (stock, proforma ou maquette). Volontairement insistante pour ne rien laisser traîner. Mets en pause si tu es en pleine saisie ailleurs.
                 </p>
               </AideBulle>
             </div>
@@ -529,7 +553,7 @@ export function ValidationsClient({
                 setPauseJusqua(null);
               }}
             />
-            Alerte sonore (bip toutes les 30s tant qu&apos;une demande attend)
+            Alerte sonore (sonne en boucle 30s, silence 1 min, tant qu&apos;une demande attend)
           </label>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Sonnerie :</span>
