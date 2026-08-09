@@ -288,55 +288,7 @@ export function SiteClient({
         )}
       </div>
 
-      <section className="section reveal-in" id="marques">
-        <div className="section-head">
-          <div>
-            <div className="eyebrow">Nos univers</div>
-            <h2>
-              Trois savoir-faire,
-              <br />
-              une seule adresse.
-            </h2>
-          </div>
-        </div>
-        <div className="grid">
-          {contenu.universCards.map((u) => (
-            <div key={u.marque} className="card wide" onClick={() => appliquerFiltre(u.marque)}>
-              <div className="card-media">
-                <span className="glyph">{u.glyph}</span>
-              </div>
-              <div className="card-body">
-                <div>
-                  <div className="card-branche">{u.marque}</div>
-                  <div className="card-nom">{u.label}</div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="section reveal-in vision-section" id="vision">
-        <div className="vision-grid">
-          <div className="vision-image">
-            <span className="glyph">🧵</span>
-            <span className="vision-image-label">Photo à venir</span>
-          </div>
-          <div>
-            <div className="vision-inner">
-              <div className="eyebrow">Notre vision</div>
-              <h2 style={{ color: "var(--bg)" }}>
-                {contenu.visionTitreLigne1}
-                <br />
-                {contenu.visionTitreLigne2}
-              </h2>
-              <p className="vision-text">{contenu.visionText}</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="section reveal-in" id="catalogue" style={{ paddingTop: 0, background: "var(--catalogue-bg)" }}>
+      <section className="section reveal-in" id="catalogue" style={{ paddingTop: 60, background: "var(--catalogue-bg)" }}>
         <div style={{ paddingTop: 100 }}>
           <div className="section-head">
             <div>
@@ -466,6 +418,54 @@ export function SiteClient({
               onAcheter={ouvrirFiche}
             />
           )}
+        </div>
+      </section>
+
+      <section className="section reveal-in" id="marques">
+        <div className="section-head">
+          <div>
+            <div className="eyebrow">Nos univers</div>
+            <h2>
+              Trois savoir-faire,
+              <br />
+              une seule adresse.
+            </h2>
+          </div>
+        </div>
+        <div className="univers-grid">
+          {contenu.universCards.map((u) => (
+            <div key={u.marque} className="card" onClick={() => appliquerFiltre(u.marque)}>
+              <div className="card-media">
+                <span className="glyph">{u.glyph}</span>
+              </div>
+              <div className="card-body">
+                <div>
+                  <div className="card-branche">{u.marque}</div>
+                  <div className="card-nom">{u.label}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="section reveal-in vision-section" id="vision">
+        <div className="vision-grid">
+          <div className="vision-image">
+            <span className="glyph">🧵</span>
+            <span className="vision-image-label">Photo à venir</span>
+          </div>
+          <div>
+            <div className="vision-inner">
+              <div className="eyebrow">Notre vision</div>
+              <h2 style={{ color: "var(--bg)" }}>
+                {contenu.visionTitreLigne1}
+                <br />
+                {contenu.visionTitreLigne2}
+              </h2>
+              <p className="vision-text">{contenu.visionText}</p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -833,6 +833,12 @@ a { cursor: pointer; }
 .card-nom { margin-top: 4px; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
 .grid.petite .card-nom { font-size: 15px; }
 .card-prix { font-size: 14px; font-weight: 700; white-space: nowrap; }
+
+.univers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.univers-grid .card-media { aspect-ratio: 3/2; }
+.univers-grid .card-media .glyph { font-size: 40px; }
+.univers-grid .card-nom { font-size: 15px; }
+@media (max-width: 900px) { .univers-grid { grid-template-columns: 1fr; } }
 
 .ad-slot { grid-column: span 2; border: 1.5px dashed var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 22px; aspect-ratio: 4/5; gap: 8px; position: relative; overflow: hidden; background: linear-gradient(120deg, var(--bg-soft) 0%, var(--accent-soft) 50%, var(--bg-soft) 100%); }
 .grid.petite .ad-slot { grid-column: span 3; aspect-ratio: 1/1; }
