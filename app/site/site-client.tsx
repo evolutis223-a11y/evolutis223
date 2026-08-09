@@ -782,15 +782,17 @@ a { cursor: pointer; }
    haut à droite, prix en bas à gauche dans un cadre, promo en bas à droite si présente. */
 .card-stock { position: absolute; top: 10px; left: 10px; z-index: 3; font-size: 9.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; padding: 5px 10px; background: rgba(11,11,11,0.85); color: #fff; }
 .card-stock.rupture { background: rgba(122,31,31,0.9); }
-.card-branche { position: absolute; top: 10px; right: 10px; z-index: 3; font-size: 9px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 10px; background: rgba(11,11,11,0.85); color: var(--accent); }
-.card-prix { position: absolute; bottom: 10px; left: 10px; z-index: 3; font-size: 16px; font-weight: 800; padding: 7px 12px; background: rgba(11,11,11,0.85); color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* La marque (EvoluTex/EvoluCom/EvoluTech) est secondaire — juste un petit texte, pas un badge
+   encadré, quitte à se fondre dans la photo (demande du 2026-08-09). */
+.card-branche { position: absolute; top: 12px; right: 12px; z-index: 3; font-size: 8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.85); text-shadow: 0 1px 4px rgba(0,0,0,0.7); }
+.card-prix { position: absolute; bottom: 10px; left: 10px; z-index: 3; font-size: 18px; font-weight: 800; padding: 8px 13px; background: rgba(11,11,11,0.85); color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .card-promo { position: absolute; bottom: 10px; right: 10px; z-index: 3; font-size: 9.5px; font-weight: 800; letter-spacing: 0.05em; padding: 5px 10px; background: var(--accent); color: #fff; }
 .card-body { padding-top: 12px; }
 .card-nom { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: break-word; }
 .grid.petite .card-nom { font-size: 14px; }
-.grid.petite .card-prix { font-size: 13px; padding: 5px 9px; }
-.grid.petite .card-branche { font-size: 8px; padding: 4px 8px; }
-.grid.petite .card-stock { font-size: 8.5px; padding: 4px 8px; }
+.grid.petite .card-prix { font-size: 12px; padding: 4px 8px; }
+.grid.petite .card-branche { display: none; }
+.grid.petite .card-stock { font-size: 7px; padding: 3px 6px; letter-spacing: 0.03em; }
 
 .univers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .univers-grid .card-media { aspect-ratio: 3/2; }
