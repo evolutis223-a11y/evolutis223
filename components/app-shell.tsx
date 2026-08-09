@@ -9,6 +9,25 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { logout } from "@/app/actions";
 
+// Recherche globale (2026-08-09, l'utilisateur signalait qu'elle ne faisait rien) — pas une
+// recherche multi-tables construite en une fois : on la câble sur Documents, qui cherche déjà
+// affaires par n°/client/objet, le besoin le plus courant. À élargir plus tard si besoin.
+function BarreRecherche() {
+  const router = useRouter();
+  const [valeur, setValeur] = useState("");
+  return (
+    <input
+      value={valeur}
+      onChange={(e) => setValeur(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && valeur.trim()) router.push(`/documents?q=${encodeURIComponent(valeur.trim())}`);
+      }}
+      placeholder="Rechercher (n°, client, objet)... puis Entrée"
+      style={{ background: "#121212", border: "1px solid #333", color: "#e0e0e0", padding: "7px 14px", borderRadius: 20, width: 240, fontSize: 14, boxSizing: "border-box" }}
+    />
+  );
+}
+
 type IconKey =
   | "superadmin" | "dashboard" | "affaires" | "clients" | "catalogue" | "produits" | "marketing"
   | "rd" | "stock" | "livraisons" | "reglements" | "documents" | "rh" | "commercial" | "fournisseurs"
@@ -78,7 +97,7 @@ export function AppShell({
               onClick={() => router.push(m.href)}
               title={m.label}
               style={{
-                padding: "8px 12px",
+                padding: "9px 13px",
                 cursor: "pointer",
                 border: "none",
                 borderRadius: 6,
@@ -90,7 +109,7 @@ export function AppShell({
                 justifyContent: "center",
               }}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                 {ICONS[m.key]}
               </svg>
             </button>
@@ -105,7 +124,7 @@ export function AppShell({
             <button
               onClick={() => router.back()}
               title="Retour"
-              style={{ background: "none", border: "1px solid #333", color: "#e0e0e0", borderRadius: 20, width: 34, height: 34, fontSize: 16, cursor: "pointer", flexShrink: 0 }}
+              style={{ background: "none", border: "1px solid #333", color: "#e0e0e0", borderRadius: 20, width: 40, height: 40, fontSize: 19, cursor: "pointer", flexShrink: 0 }}
             >
               ←
             </button>
@@ -113,7 +132,7 @@ export function AppShell({
           <button
             onClick={() => router.push("/")}
             title="Accueil"
-            style={{ background: "none", border: "1px solid #333", color: "#e0e0e0", borderRadius: 20, width: 34, height: 34, fontSize: 15, cursor: "pointer", flexShrink: 0 }}
+            style={{ background: "none", border: "1px solid #333", color: "#e0e0e0", borderRadius: 20, width: 40, height: 40, fontSize: 18, cursor: "pointer", flexShrink: 0 }}
           >
             🏠
           </button>
@@ -129,37 +148,34 @@ export function AppShell({
           <div style={{ color: "#888", fontSize: 12 }}>{pageTitle}</div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => router.push("/")} title="Tableau de bord" style={{ background: "none", border: "none", color: "#888", fontSize: 19, cursor: "pointer" }}>
+          <button onClick={() => router.push("/")} title="Tableau de bord" style={{ background: "none", border: "none", color: "#888", fontSize: 23, cursor: "pointer" }}>
             📊
           </button>
-          <button onClick={() => router.push("/affaires?nouveau=1")} title="Nouvelle affaire" style={{ background: "none", border: "none", color: "#888", fontSize: 19, cursor: "pointer" }}>
+          <button onClick={() => router.push("/vente-comptoir")} title="Vendre — poste de vente comptoir" style={{ background: "none", border: "none", color: "#888", fontSize: 23, cursor: "pointer" }}>
             ➕
           </button>
-          <button onClick={() => router.push("/rapports")} title="Rapports" style={{ background: "none", border: "1px solid #333", color: "#888", fontSize: 12, padding: "5px 10px", borderRadius: 6, cursor: "pointer" }}>
+          <button onClick={() => router.push("/rapports")} title="Rapports" style={{ background: "none", border: "1px solid #333", color: "#888", fontSize: 13, padding: "6px 11px", borderRadius: 6, cursor: "pointer" }}>
             🖨️ Rapport
           </button>
-          <button onClick={() => router.push("/parametres")} title="Paramètres" style={{ background: "none", border: "none", color: "#888", fontSize: 19, cursor: "pointer" }}>
+          <button onClick={() => router.push("/parametres")} title="Paramètres" style={{ background: "none", border: "none", color: "#888", fontSize: 23, cursor: "pointer" }}>
             ⚙️
           </button>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
-          <input
-            placeholder="Rechercher..."
-            style={{ background: "#121212", border: "1px solid #333", color: "#e0e0e0", padding: "7px 14px", borderRadius: 20, width: 220, fontSize: 14, boxSizing: "border-box" }}
-          />
+          <BarreRecherche />
           <div
             onClick={() => logout()}
             title="Changer de profil"
             style={{ display: "flex", alignItems: "center", gap: 8, background: "#1e1e1e", border: "1px solid #333", borderRadius: 20, padding: "5px 12px 5px 6px", cursor: "pointer" }}
           >
-            <span style={{ fontSize: 18 }}>👤</span>
+            <span style={{ fontSize: 22 }}>👤</span>
             <div style={{ lineHeight: 1.2 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{userName}</div>
               <div style={{ fontSize: 10, color: "#888" }}>{roleLibelle}</div>
             </div>
           </div>
           <form action={logout}>
-            <button type="submit" title="Se déconnecter" style={{ background: "none", border: "1px solid #333", color: "#888", borderRadius: 20, width: 34, height: 34, fontSize: 14, cursor: "pointer" }}>
+            <button type="submit" title="Se déconnecter" style={{ background: "none", border: "1px solid #333", color: "#888", borderRadius: 20, width: 40, height: 40, fontSize: 17, cursor: "pointer" }}>
               ⎋
             </button>
           </form>

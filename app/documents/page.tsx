@@ -1,5 +1,6 @@
 import { desc, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { db } from "@/db";
 import { affaires, articles, clients, lignesAffaire, livraisons, reglements, roles, utilisateurs, variantes } from "@/db/schema";
 import { getSession } from "@/lib/auth";
@@ -68,18 +69,20 @@ export default async function DocumentsPage() {
   const varianteRows = await db.select().from(variantes);
 
   return (
-    <DocumentsClient
-      userName={user.nom}
-      roleLibelle={user.roleLibelle}
-      modules={buildShellModules(session.roleCode)}
-      affaires={affaireRows}
-      lignes={ligneRows}
-      reglements={reglementRows}
-      livraisons={livraisonRows}
-      articles={articleRows}
-      variantes={varianteRows}
-      masthead={masthead}
-      mentionsValidite={mentionsValidite}
-    />
+    <Suspense>
+      <DocumentsClient
+        userName={user.nom}
+        roleLibelle={user.roleLibelle}
+        modules={buildShellModules(session.roleCode)}
+        affaires={affaireRows}
+        lignes={ligneRows}
+        reglements={reglementRows}
+        livraisons={livraisonRows}
+        articles={articleRows}
+        variantes={varianteRows}
+        masthead={masthead}
+        mentionsValidite={mentionsValidite}
+      />
+    </Suspense>
   );
 }

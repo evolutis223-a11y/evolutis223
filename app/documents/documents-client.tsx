@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AppShell, type ShellModule } from "@/components/app-shell";
 import { formatFcfa } from "@/lib/format";
 import { DocumentPreview, type DocumentPreviewData } from "@/components/documents/document-preview";
@@ -71,7 +72,10 @@ export function DocumentsClient({
   masthead: string;
   mentionsValidite: Record<string, string>;
 }) {
-  const [search, setSearch] = useState("");
+  // Pré-rempli depuis la recherche globale de la barre du haut (components/app-shell.tsx),
+  // qui redirige ici avec ?q=... — un seul champ de recherche pour tout le monde en pratique.
+  const searchParams = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get("q") ?? "");
   const [typeFiltre, setTypeFiltre] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
