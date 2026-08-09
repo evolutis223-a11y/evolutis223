@@ -243,12 +243,21 @@ export function SiteClient({
               <span className="dot"></span>
               <span className="eyebrow">{contenu.eyebrow}</span>
             </div>
-            <h1>
+            <h1 className="hero-h1-desktop">
               Style qui
               <br />
               se <em>porte.</em>
             </h1>
-            <p className="lead">{contenu.leadText}</p>
+            <div className="hero-h1-mobile">
+              <div className="hero-mobile-mark">
+                EVOLUTIS<span>223</span>
+              </div>
+              <div className="hero-mobile-tagline">Tech · Com · Pub</div>
+            </div>
+            <p className="lead lead-desktop">{contenu.leadText}</p>
+            <p className="lead lead-mobile">
+              Nous concevons des solutions textiles, créatives et numériques sur mesure, pensées pour porter vos idées plus loin.
+            </p>
             <div className="hero-badge">
               <b>{contenu.badgeAnnees}</b> {contenu.badgeLabel}
             </div>
@@ -713,6 +722,8 @@ a { cursor: pointer; }
 .hero-eyebrow { display: flex; align-items: center; gap: 10px; }
 .hero-eyebrow .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent); }
 .hero h1 { margin-top: 18px; font-size: clamp(52px, 8.4vw, 118px); line-height: 0.92; letter-spacing: -0.03em; }
+.hero-h1-mobile { display: none; }
+.lead-mobile { display: none; }
 .hero h1 em { font-style: normal; color: transparent; -webkit-text-stroke: 1.5px var(--ink); }
 .hero p.lead { margin-top: 26px; max-width: 420px; font-size: 17px; line-height: 1.7; color: var(--ink-soft); font-weight: 400; text-align: left; }
 .hero-cta { margin-top: 38px; display: flex; align-items: center; gap: 22px; }
@@ -912,8 +923,15 @@ footer p { color: var(--footer-muted); font-size: 13px; line-height: 1.6; max-wi
 @media (max-width: 640px) {
   .hero { min-height: auto; padding: 90px 6vw 32px; }
   .hero-grid { gap: 22px; padding-top: 0; }
-  .hero h1 { font-size: 38px; margin-top: 10px; }
   .hero p.lead { font-size: 14.5px; margin-top: 14px; }
+  /* Titre "Style qui se porte" trop reducteur sur mobile (l'entreprise ne fait pas que du
+     textile) — remplace par la marque + Tech·Com·Pub, demande du 2026-08-09. PC pas encore
+     tranche, laisse tel quel pour l'instant. */
+  .hero-h1-desktop, .lead-desktop { display: none; }
+  .hero-h1-mobile, .lead-mobile { display: block; }
+  .hero-mobile-mark { margin-top: 10px; font-size: 42px; font-weight: 800; letter-spacing: -0.02em; }
+  .hero-mobile-mark span { color: var(--accent); }
+  .hero-mobile-tagline { margin-top: 6px; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
   .hero-badge { margin-top: 12px; }
   .hero-cta { margin-top: 20px; }
   .hero-visual { aspect-ratio: 16/11; }
