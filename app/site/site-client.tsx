@@ -680,7 +680,11 @@ html, body { overflow-x: hidden; max-width: 100%; }
    simplement naviguer — gênant, ça casse la sensation d'appli. Désactivé partout sur la page. */
 .site-root { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
 html { scroll-behavior: smooth; }
-.vision-text, footer p { text-align: left; hyphens: none; }
+footer p { text-align: left; hyphens: none; }
+/* Texte justifié (lignes droites à gauche ET à droite, comme un journal) — redemandé
+   explicitement le 2026-08-09 malgré l'abandon précédent (§ plus haut) : le risque des
+   espacements irréguliers ("traits") est connu, à revenir en arrière vite si ça se reproduit. */
+.vision-text { text-align: justify; hyphens: auto; }
 .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); }
 h1, h2, h3 { margin: 0; font-weight: 800; letter-spacing: -0.02em; }
 a { cursor: pointer; }
