@@ -947,7 +947,10 @@ footer p { color: var(--footer-muted); font-size: 13.5px; line-height: 1.8; max-
   .hero-grid { grid-template-columns: 1fr; }
   .hero-visual { order: -1; aspect-ratio: 16/10; }
   .grid, .grid.petite { grid-template-columns: repeat(2,1fr); }
-  .card, .card.wide, .ad-slot, .grid.petite .card, .grid.petite .ad-slot { grid-column: span 2; }
+  .card, .grid.petite .card { grid-column: span 1; }
+  .ad-slot, .grid.petite .ad-slot { grid-column: span 2; }
+  .card-media { aspect-ratio: 1/1; }
+  .card-media .glyph { font-size: 40px; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
 }
 
