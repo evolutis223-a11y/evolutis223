@@ -35,9 +35,9 @@ function BarreRecherche() {
       <button
         type="submit"
         title="Rechercher"
-        style={{ position: "absolute", right: 4, background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: 15, padding: 6 }}
+        style={{ position: "absolute", right: 4, background: "none", border: "none", color: "#888", cursor: "pointer", padding: 6, display: "flex", alignItems: "center" }}
       >
-        🔍
+        <Icon path={BANDEAU_ICONS.recherche} size={16} />
       </button>
     </form>
   );
@@ -69,6 +69,25 @@ const ICONS: Record<IconKey, ReactNode> = {
   rapports: <path d="M4 20V10M10 20V4M16 20v-7M21 20H3" />,
   parametres: <><circle cx="12" cy="12" r="3" /><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.5-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.3 2.6a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.6 7.6 0 0 0 1.7 1l.3 2.6h4l.3-2.6a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5z" /></>,
 };
+
+// Icônes du bandeau (2026-08-09) — remplacent les émojis (🏠📊➕👤⎋←🔍) jugés "bon marché" à côté
+// des icônes SVG dessinées du rail de modules ; même style trait/rond pour rester cohérent.
+const BANDEAU_ICONS = {
+  retour: <path d="M15 5l-7 7 7 7" />,
+  accueil: <><path d="M4 11.5L12 4l8 7.5" /><path d="M6 10v10h4v-6h4v6h4V10" /></>,
+  plus: <><path d="M12 5v14M5 12h14" /></>,
+  utilisateur: <><circle cx="12" cy="8" r="3.5" /><path d="M5 20c0-3.6 3-6.2 7-6.2s7 2.6 7 6.2" /></>,
+  deconnexion: <><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></>,
+  recherche: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="M20 20l-4.5-4.5" /></>,
+} as const;
+
+function Icon({ path, size = 20, strokeWidth = 1.8 }: { path: ReactNode; size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      {path}
+    </svg>
+  );
+}
 
 export interface ShellModule {
   key: IconKey;
@@ -139,17 +158,17 @@ export function AppShell({
             <button
               onClick={() => router.back()}
               title="Retour"
-              style={{ background: "none", border: "1px solid #333", color: "#e0e0e0", borderRadius: 20, width: 40, height: 40, fontSize: 19, cursor: "pointer", flexShrink: 0 }}
+              style={{ background: "none", border: "1px solid #333", color: "#e0e0e0", borderRadius: 20, width: 40, height: 40, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
             >
-              ←
+              <Icon path={BANDEAU_ICONS.retour} />
             </button>
           )}
           <button
             onClick={() => router.push("/")}
             title="Accueil"
-            style={{ background: "none", border: "1px solid #333", color: "#e0e0e0", borderRadius: 20, width: 40, height: 40, fontSize: 18, cursor: "pointer", flexShrink: 0 }}
+            style={{ background: "none", border: "1px solid #333", color: "#e0e0e0", borderRadius: 20, width: 40, height: 40, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
           >
-            🏠
+            <Icon path={BANDEAU_ICONS.accueil} />
           </button>
         </div>
         <div
@@ -162,18 +181,15 @@ export function AppShell({
           <div style={{ fontSize: 19, fontWeight: 700, color: "#fff" }}>EVOLUTIS223</div>
           <div style={{ color: "#888", fontSize: 12 }}>{pageTitle}</div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => router.push("/")} title="Tableau de bord" style={{ background: "none", border: "none", color: "#888", fontSize: 23, cursor: "pointer" }}>
-            📊
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={() => router.push("/")} title="Tableau de bord" style={{ background: "none", border: "none", color: "#888", cursor: "pointer", display: "flex", alignItems: "center" }}>
+            <Icon path={ICONS.dashboard} size={23} />
           </button>
-          <button onClick={() => router.push("/vente-comptoir")} title="Vendre — poste de vente comptoir" style={{ background: "none", border: "none", color: "#888", fontSize: 23, cursor: "pointer" }}>
-            ➕
+          <button onClick={() => router.push("/vente-comptoir")} title="Vendre — poste de vente comptoir" style={{ background: "none", border: "none", color: "#888", cursor: "pointer", display: "flex", alignItems: "center" }}>
+            <Icon path={BANDEAU_ICONS.plus} size={23} />
           </button>
-          <button onClick={() => router.push("/rapports")} title="Rapports" style={{ background: "none", border: "1px solid #333", color: "#888", fontSize: 13, padding: "6px 11px", borderRadius: 6, cursor: "pointer" }}>
-            🖨️ Rapport
-          </button>
-          <button onClick={() => router.push("/parametres")} title="Paramètres" style={{ background: "none", border: "none", color: "#888", fontSize: 23, cursor: "pointer" }}>
-            ⚙️
+          <button onClick={() => router.push("/parametres")} title="Paramètres" style={{ background: "none", border: "none", color: "#888", cursor: "pointer", display: "flex", alignItems: "center" }}>
+            <Icon path={ICONS.parametres} size={23} />
           </button>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
@@ -183,15 +199,15 @@ export function AppShell({
             title="Changer de profil"
             style={{ display: "flex", alignItems: "center", gap: 8, background: "#1e1e1e", border: "1px solid #333", borderRadius: 20, padding: "5px 12px 5px 6px", cursor: "pointer" }}
           >
-            <span style={{ fontSize: 22 }}>👤</span>
+            <Icon path={BANDEAU_ICONS.utilisateur} size={21} />
             <div style={{ lineHeight: 1.2 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{userName}</div>
               <div style={{ fontSize: 10, color: "#888" }}>{roleLibelle}</div>
             </div>
           </div>
           <form action={logout}>
-            <button type="submit" title="Se déconnecter" style={{ background: "none", border: "1px solid #333", color: "#888", borderRadius: 20, width: 40, height: 40, fontSize: 17, cursor: "pointer" }}>
-              ⎋
+            <button type="submit" title="Se déconnecter" style={{ background: "none", border: "1px solid #333", color: "#888", borderRadius: 20, width: 40, height: 40, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Icon path={BANDEAU_ICONS.deconnexion} size={18} />
             </button>
           </form>
         </div>
