@@ -818,10 +818,11 @@ a { cursor: pointer; }
 @media (max-width: 640px) {
   /* La ligne entière est déjà cliquable — le bouton "Voir" ne fait que voler de la place au nom
      du produit, qui se retrouvait compressé sur quelques caractères de large. */
-  .list-row { gap: 12px; padding: 14px 4px; }
-  .list-thumb { width: 50px; height: 50px; font-size: 22px; }
-  .list-nom { font-size: 15px; }
-  .list-prix { font-size: 14px; }
+  .list-row { gap: 10px; padding: 8px 4px; }
+  .list-thumb { width: 44px; height: 44px; font-size: 20px; }
+  .list-nom { font-size: 14px; }
+  .list-branche { margin-top: 0; }
+  .list-prix { font-size: 13px; }
   .list-buy { display: none; }
 }
 
@@ -880,11 +881,17 @@ footer p { color: var(--footer-muted); font-size: 13.5px; line-height: 1.8; max-
 @media (max-width: 900px) {
   .hero-grid { grid-template-columns: 1fr; }
   .hero-visual { order: -1; aspect-ratio: 16/10; }
-  .grid, .grid.petite { grid-template-columns: repeat(2,1fr); }
+  /* "Grandes vignettes" = une seule, en pleine largeur, par ligne sur mobile ; "Petites
+     vignettes" = deux par ligne, plus compactes (distinction demandée le 2026-08-09). */
+  .grid { grid-template-columns: repeat(1,1fr); }
+  .grid.petite { grid-template-columns: repeat(2,1fr); }
   .card, .grid.petite .card { grid-column: span 1; }
-  .ad-slot, .grid.petite .ad-slot { grid-column: span 2; }
-  .card-media { aspect-ratio: 1/1; }
-  .card-media .glyph { font-size: 40px; }
+  .ad-slot { grid-column: span 1; }
+  .grid.petite .ad-slot { grid-column: span 2; }
+  .card-media { aspect-ratio: 5/4; }
+  .grid.petite .card-media { aspect-ratio: 1/1; }
+  .card-media .glyph { font-size: 56px; }
+  .grid.petite .card-media .glyph { font-size: 40px; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
 }
 
