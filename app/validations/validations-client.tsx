@@ -127,20 +127,64 @@ const POLL_MS = 10_000;
 const BIP_MS = 30_000;
 const PAUSES = [1, 5, 15] as const;
 
-function beep() {
+// Plusieurs sonneries au choix — certaines nettement plus insistantes que le simple bip d'origine
+// (l'utilisateur a signalé que celui-ci n'attirait pas assez l'attention).
+const SONNERIES = {
+  classique: { label: "Classique", notes: [{ freq: 880, dur: 0.25, gain: 0.16, delay: 0 }] },
+  grave: {
+    label: "Grave insistant",
+    notes: [
+      { freq: 320, dur: 0.18, gain: 0.22, delay: 0 },
+      { freq: 320, dur: 0.18, gain: 0.22, delay: 0.26 },
+    ],
+  },
+  aigu: {
+    label: "Aigu urgent",
+    notes: [
+      { freq: 1500, dur: 0.09, gain: 0.18, delay: 0 },
+      { freq: 1500, dur: 0.09, gain: 0.18, delay: 0.14 },
+      { freq: 1500, dur: 0.09, gain: 0.18, delay: 0.28 },
+    ],
+  },
+  sirene: {
+    label: "Sirène",
+    notes: [
+      { freq: 700, dur: 0.3, gain: 0.2, delay: 0 },
+      { freq: 1150, dur: 0.3, gain: 0.2, delay: 0.32 },
+    ],
+  },
+  alterne: {
+    label: "Grave/aigu alterné",
+    notes: [
+      { freq: 420, dur: 0.16, gain: 0.2, delay: 0 },
+      { freq: 1300, dur: 0.16, gain: 0.2, delay: 0.2 },
+      { freq: 420, dur: 0.16, gain: 0.2, delay: 0.4 },
+      { freq: 1300, dur: 0.16, gain: 0.2, delay: 0.6 },
+    ],
+  },
+} satisfies Record<string, { label: string; notes: { freq: number; dur: number; gain: number; delay: number }[] }>;
+
+type SonnerieKey = keyof typeof SONNERIES;
+const SONNERIE_DEFAUT: SonnerieKey = "classique";
+
+function beep(sonnerie: SonnerieKey) {
   try {
     const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.frequency.value = 880;
-    gain.gain.value = 0.15;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    setTimeout(() => {
-      osc.stop();
-      ctx.close();
-    }, 250);
+    const config = SONNERIES[sonnerie] ?? SONNERIES[SONNERIE_DEFAUT];
+    let finDerniereNote = 0;
+    config.notes.forEach((note) => {
+      const debut = note.delay;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = note.freq;
+      gain.gain.value = note.gain;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + debut);
+      osc.stop(ctx.currentTime + debut + note.dur);
+      finDerniereNote = Math.max(finDerniereNote, debut + note.dur);
+    });
+    setTimeout(() => ctx.close(), (finDerniereNote + 0.1) * 1000);
   } catch {
     // AudioContext indisponible (ex. avant toute interaction utilisateur) — silencieux.
   }
@@ -350,6 +394,7 @@ export function ValidationsClient({
 
   const [onglet, setOnglet] = useState<"attente" | "historique">("attente");
   const [alerteActive, setAlerteActive] = useState(false);
+  const [sonnerie, setSonnerie] = useState<SonnerieKey>(SONNERIE_DEFAUT);
   const [pauseJusqua, setPauseJusqua] = useState<number | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [rechargeSaisie, setRechargeSaisie] = useState<Record<number, string>>({});
@@ -359,11 +404,17 @@ export function ValidationsClient({
   useEffect(() => {
     const stored = window.localStorage.getItem("evolutis223_alerte_stock");
     if (stored === "1") setAlerteActive(true);
+    const sonnerieStockee = window.localStorage.getItem("evolutis223_sonnerie_stock");
+    if (sonnerieStockee && sonnerieStockee in SONNERIES) setSonnerie(sonnerieStockee as SonnerieKey);
   }, []);
 
   useEffect(() => {
     window.localStorage.setItem("evolutis223_alerte_stock", alerteActive ? "1" : "0");
   }, [alerteActive]);
+
+  useEffect(() => {
+    window.localStorage.setItem("evolutis223_sonnerie_stock", sonnerie);
+  }, [sonnerie]);
 
   useEffect(() => {
     const poll = setInterval(async () => {
@@ -385,13 +436,13 @@ export function ValidationsClient({
     if (enPause) return;
     if (pauseJusqua !== null && Date.now() >= pauseJusqua) setPauseJusqua(null);
 
-    beep();
+    beep(sonnerie);
     const timer = setInterval(() => {
-      if (pauseJusqua === null || Date.now() >= pauseJusqua) beep();
+      if (pauseJusqua === null || Date.now() >= pauseJusqua) beep(sonnerie);
     }, BIP_MS);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alerteActive, totalEnAttente, pauseJusqua]);
+  }, [alerteActive, totalEnAttente, pauseJusqua, sonnerie]);
 
   const refDemandes = useRef(enAttente);
   refDemandes.current = enAttente;
@@ -480,6 +531,27 @@ export function ValidationsClient({
             />
             Alerte sonore (bip toutes les 30s tant qu&apos;une demande attend)
           </label>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Sonnerie :</span>
+            <select
+              value={sonnerie}
+              onChange={(e) => setSonnerie(e.target.value as SonnerieKey)}
+              className="rounded border border-input bg-background px-2 py-1 text-sm text-foreground"
+            >
+              {(Object.keys(SONNERIES) as SonnerieKey[]).map((key) => (
+                <option key={key} value={key}>
+                  {SONNERIES[key].label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="rounded border border-border px-2 py-0.5 hover:bg-muted"
+              onClick={() => beep(sonnerie)}
+            >
+              Tester ▶
+            </button>
+          </div>
           {alerteActive && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Mettre en pause :</span>
