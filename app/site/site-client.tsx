@@ -710,6 +710,7 @@ const SITE_CSS = `
   --media-bg: #ffffff; --media-shadow: 0 22px 40px -16px rgba(11,11,11,0.28);
 }
 .site-root * { box-sizing: border-box; }
+html, body { overflow-x: hidden; max-width: 100%; }
 html { scroll-behavior: smooth; }
 .vision-text, footer p { text-align: left; hyphens: none; }
 .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); }
