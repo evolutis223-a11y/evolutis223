@@ -206,7 +206,7 @@ export function SiteClient({
   }
 
   return (
-    <div style={{ background: "#ffffff", color: "#0b0b0b" }}>
+    <div className="site-root" style={{ background: "#ffffff", color: "#0b0b0b" }}>
       <style dangerouslySetInnerHTML={{ __html: SITE_CSS }} />
 
       <nav className={`nav${scrolled ? " scrolled" : ""}`}>
@@ -310,7 +310,7 @@ export function SiteClient({
         )}
       </div>
 
-      <section className="section reveal-in" id="catalogue" style={{ paddingTop: 90, background: "var(--catalogue-bg)" }}>
+      <section className="section reveal-in catalogue-section" id="catalogue" style={{ background: "var(--catalogue-bg)" }}>
         <div>
           <div className="section-head">
             <div>
@@ -326,7 +326,7 @@ export function SiteClient({
               </button>
               {contenu.universCards.map((u) => (
                 <button key={u.marque} className={`filter-pill${filtre === u.marque ? " active" : ""}`} onClick={() => appliquerFiltre(u.marque)}>
-                  {u.glyph} {u.marque}
+                  <span className="filter-pill-glyph">{u.glyph}</span> {u.marque}
                 </button>
               ))}
             </div>
@@ -743,6 +743,9 @@ const SITE_CSS = `
 }
 .site-root * { box-sizing: border-box; }
 html, body { overflow-x: hidden; max-width: 100%; }
+/* Sur mobile, un appui un peu long sur du texte le sélectionnait (surlignage bleu) au lieu de
+   simplement naviguer — gênant, ça casse la sensation d'appli. Désactivé partout sur la page. */
+.site-root { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
 html { scroll-behavior: smooth; }
 .vision-text, footer p { text-align: left; hyphens: none; }
 .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); }
@@ -805,6 +808,7 @@ a { cursor: pointer; }
 .section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 44px; }
 .section-head h2 { font-size: clamp(34px, 4vw, 52px); }
 
+.catalogue-section { padding-top: 90px; }
 .controls-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 30px; }
 .filters { display: flex; flex-wrap: wrap; gap: 10px; }
 .filter-pill { display: flex; align-items: center; gap: 9px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); padding: 11px 20px; border-radius: 999px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; transition: all .25s ease; }
@@ -816,7 +820,11 @@ a { cursor: pointer; }
 .view-btn.active { background: var(--ink); color: var(--bg); }
 .view-btn-label-short { display: none; }
 @media (max-width: 640px) {
-  .filter-pill { padding: 7px 12px; font-size: 10.5px; gap: 5px; }
+  .catalogue-section { padding-top: 46px; }
+  .controls-row { gap: 10px; margin-bottom: 20px; }
+  .filters { gap: 6px; }
+  .filter-pill { padding: 6px 10px; font-size: 9.5px; gap: 0; }
+  .filter-pill-glyph { display: none; }
   .view-btn { padding: 8px 9px; font-size: 9.5px; gap: 4px; }
   .view-btn-icon { font-size: 12px; }
   .view-btn-label-full { display: none; }
@@ -872,6 +880,15 @@ a { cursor: pointer; }
 .list-branche { font-size: 11px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
 .list-prix { font-size: 18px; font-weight: 800; white-space: nowrap; }
 .list-buy { background: var(--ink); color: var(--bg); border: none; padding: 9px 16px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
+@media (max-width: 640px) {
+  /* La ligne entière est déjà cliquable — le bouton "Voir" ne fait que voler de la place au nom
+     du produit, qui se retrouvait compressé sur quelques caractères de large. */
+  .list-row { gap: 12px; padding: 14px 4px; }
+  .list-thumb { width: 50px; height: 50px; font-size: 22px; }
+  .list-nom { font-size: 15px; }
+  .list-prix { font-size: 14px; }
+  .list-buy { display: none; }
+}
 
 .galerie-view { display: flex; flex-direction: column; align-items: center; gap: 30px; }
 .galerie-stage { position: relative; width: 100%; max-width: 620px; }
