@@ -982,5 +982,10 @@ footer p { color: var(--footer-muted); font-size: 13.5px; line-height: 1.8; max-
   .hero-visual { aspect-ratio: 16/11; }
   .hero-frame .glyph { font-size: 80px; }
   .scroll-cue { display: none; }
+  /* Le diaporama et le bandeau promo sont figés sur mobile (un seul visuel) : les points de
+     navigation ne servent plus à rien et gênaient la vue. */
+  .hero-dots, .banner-dots { display: none; }
+  .hero-tag { left: 6vw; bottom: -14px; padding: 12px 16px; font-size: 11px; }
+  .hero-tag b { font-size: 17px; }
 }
 `;
