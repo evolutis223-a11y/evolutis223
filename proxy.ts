@@ -23,16 +23,21 @@ async function verifierVerrouPublic(request: NextRequest): Promise<NextResponse 
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (token && (await verifySessionToken(token))) return null;
 
-  const motDePasse = process.env.SITE_MOT_DE_PASSE_APERCU;
-  if (!motDePasse) return null; // pas configuré (ex. dev local) = pas de verrou
+  // Mot de passe garanti par le code (2026-08-09) : ne dépend d'aucune variable Vercel à
+  // configurer correctement (case à cocher "Production", redéploiement...). Reste valable même
+  // si SITE_MOT_DE_PASSE_APERCU n'est pas défini ou mal renseigné sur Vercel.
+  const MOT_DE_PASSE_GARANTI = "evolutis223";
+  const motDePasseEnv = process.env.SITE_MOT_DE_PASSE_APERCU;
+  const motsDePasseValides = [MOT_DE_PASSE_GARANTI, ...(motDePasseEnv ? [motDePasseEnv] : [])];
 
   const codeFourni = searchParams.get("apercu");
-  const dejaDeverrouille = request.cookies.get(COOKIE_APERCU)?.value === motDePasse;
+  const cookieApercu = request.cookies.get(COOKIE_APERCU)?.value;
+  const dejaDeverrouille = cookieApercu != null && motsDePasseValides.includes(cookieApercu);
 
-  if (codeFourni === motDePasse || dejaDeverrouille) {
+  if ((codeFourni != null && motsDePasseValides.includes(codeFourni)) || dejaDeverrouille) {
     const response = NextResponse.next();
-    if (codeFourni === motDePasse) {
-      response.cookies.set(COOKIE_APERCU, motDePasse, {
+    if (codeFourni != null && motsDePasseValides.includes(codeFourni)) {
+      response.cookies.set(COOKIE_APERCU, codeFourni, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         maxAge: 60 * 60 * 24 * 30,
