@@ -65,10 +65,11 @@ function calculerDispo(article: Article, variantesArticle: VarianteRow[], kitSto
   return null;
 }
 
-function StockBadge({ dispo }: { dispo: number | null }) {
+function StockBadge({ dispo, inline }: { dispo: number | null; inline?: boolean }) {
   if (dispo === null) return null;
-  if (dispo <= 0) return <span className="card-stock rupture">Rupture</span>;
-  return <span className="card-stock">En stock</span>;
+  const cls = inline ? "stock-pill" : "card-stock";
+  if (dispo <= 0) return <span className={`${cls} rupture`}>Rupture</span>;
+  return <span className={cls}>En stock</span>;
 }
 
 export function SiteClient({
@@ -364,6 +365,8 @@ export function SiteClient({
                   <div className="card" onClick={() => ouvrirFiche(p)}>
                     <div className="card-media">
                       <StockBadge dispo={p.dispo} />
+                      {p.brancheNom && <span className="card-branche">{p.brancheNom}</span>}
+                      <span className="card-prix">{formatFcfa(p.prixEffectif)}</span>
                       {p.promo && <span className="card-promo">Promo</span>}
                       {p.photo ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -373,11 +376,7 @@ export function SiteClient({
                       )}
                     </div>
                     <div className="card-body">
-                      <div>
-                        <div className="card-branche">{p.brancheNom}</div>
-                        <div className="card-nom">{p.article.nom}</div>
-                      </div>
-                      <div className="card-prix">{formatFcfa(p.prixEffectif)}</div>
+                      <div className="card-nom">{p.article.nom}</div>
                     </div>
                   </div>
                   {i === 3 && (
@@ -635,7 +634,7 @@ function DetailPanel({ produit, onClose }: { produit: Produit; onClose: () => vo
           <div className="eyebrow">{produit.brancheNom}</div>
           <h2 style={{ marginTop: 8, fontSize: 28 }}>{produit.article.nom}</h2>
           <div className="detail-price">{formatFcfa(produit.prixEffectif)}</div>
-          <StockBadge dispo={produit.dispo} />
+          <StockBadge dispo={produit.dispo} inline />
           {tailles.length > 0 && (
             <div className="swatches">
               {tailles.map((t) => {
@@ -754,7 +753,7 @@ a { cursor: pointer; }
 .view-btn.active { background: var(--ink); color: var(--bg); }
 .view-btn-label-short { display: none; }
 @media (max-width: 640px) {
-  .catalogue-section { padding-top: 46px; }
+  .catalogue-section { padding-top: 22px; }
   .controls-row { gap: 10px; margin-bottom: 20px; }
   .filters { gap: 6px; }
   .filter-pill { padding: 6px 10px; font-size: 9.5px; gap: 0; }
@@ -777,16 +776,21 @@ a { cursor: pointer; }
 .card-media .glyph { font-size: 64px; opacity: 0.5; transition: transform .6s cubic-bezier(.16,1,.3,1); }
 .grid.petite .card-media .glyph { font-size: 38px; }
 .card:hover .card-media .glyph { transform: scale(1.12) rotate(-3deg); }
-.card-stock { position: absolute; top: 12px; left: 12px; font-size: 9.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; padding: 4px 9px; background: var(--bg); color: var(--ink); z-index: 3; }
-.card-stock.rupture { background: var(--ink); color: var(--bg); }
-.card-promo { position: absolute; top: 12px; right: 12px; z-index: 3; font-size: 9.5px; font-weight: 800; letter-spacing: 0.05em; padding: 4px 9px; background: var(--accent); color: #fff; }
-.card-body { padding-top: 14px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-.card-body > div:first-child { min-width: 0; }
-.card-branche { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
-.card-nom { margin-top: 4px; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: break-word; }
-.grid.petite .card-nom { font-size: 15px; }
-.grid.petite .card-prix { font-size: 16px; }
-.card-prix { font-size: 19px; font-weight: 800; white-space: nowrap; }
+/* Badges directement sur la vignette (photo ou fond uni) : fond sombre uniforme partout, pour
+   rester lisibles quel que soit le contenu derrière (le badge "En stock" blanc sur fond blanc
+   était invisible — signalé le 2026-08-09). Un coin chacun : stock en haut à gauche, marque en
+   haut à droite, prix en bas à gauche dans un cadre, promo en bas à droite si présente. */
+.card-stock { position: absolute; top: 10px; left: 10px; z-index: 3; font-size: 9.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; padding: 5px 10px; background: rgba(11,11,11,0.85); color: #fff; }
+.card-stock.rupture { background: rgba(122,31,31,0.9); }
+.card-branche { position: absolute; top: 10px; right: 10px; z-index: 3; font-size: 9px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 10px; background: rgba(11,11,11,0.85); color: var(--accent); }
+.card-prix { position: absolute; bottom: 10px; left: 10px; z-index: 3; font-size: 16px; font-weight: 800; padding: 7px 12px; background: rgba(11,11,11,0.85); color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.card-promo { position: absolute; bottom: 10px; right: 10px; z-index: 3; font-size: 9.5px; font-weight: 800; letter-spacing: 0.05em; padding: 5px 10px; background: var(--accent); color: #fff; }
+.card-body { padding-top: 12px; }
+.card-nom { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: break-word; }
+.grid.petite .card-nom { font-size: 14px; }
+.grid.petite .card-prix { font-size: 13px; padding: 5px 9px; }
+.grid.petite .card-branche { font-size: 8px; padding: 4px 8px; }
+.grid.petite .card-stock { font-size: 8.5px; padding: 4px 8px; }
 
 .univers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .univers-grid .card-media { aspect-ratio: 3/2; }
@@ -852,6 +856,8 @@ a { cursor: pointer; }
 .detail-close { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; border-radius: 999px; background: var(--bg); color: var(--ink); border: none; font-size: 18px; cursor: pointer; }
 .detail-body { padding: 34px 36px 44px; }
 .detail-price { margin-top: 14px; font-size: 30px; font-weight: 800; }
+.stock-pill { display: inline-block; margin-top: 10px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; padding: 5px 11px; background: rgba(11,11,11,0.85); color: #fff; }
+.stock-pill.rupture { background: rgba(122,31,31,0.9); }
 .swatches { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 8px; }
 .swatch { padding: 9px 16px; border: 1.5px solid var(--line); font-size: 12.5px; font-weight: 700; cursor: pointer; color: var(--ink); background: var(--bg); }
 .swatch.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
