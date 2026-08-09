@@ -23,13 +23,22 @@ function BarreRecherche() {
         e.preventDefault();
         if (valeur.trim()) router.push(`/documents?q=${encodeURIComponent(valeur.trim())}`);
       }}
+      style={{ display: "flex", alignItems: "center", position: "relative" }}
     >
       <input
         value={valeur}
         onChange={(e) => setValeur(e.target.value)}
-        placeholder="Rechercher (n°, client, objet)... puis Entrée"
-        style={{ background: "#121212", border: "1px solid #333", color: "#e0e0e0", padding: "7px 14px", borderRadius: 20, width: 240, fontSize: 14, boxSizing: "border-box" }}
+        placeholder="Rechercher (n°, client, objet)..."
+        style={{ background: "#121212", border: "1px solid #333", color: "#e0e0e0", padding: "7px 34px 7px 14px", borderRadius: 20, width: 240, fontSize: 14, boxSizing: "border-box" }}
       />
+      {/* Bouton visible en plus de la touche Entrée — utile aussi sur tablette/mobile. */}
+      <button
+        type="submit"
+        title="Rechercher"
+        style={{ position: "absolute", right: 4, background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: 15, padding: 6 }}
+      >
+        🔍
+      </button>
     </form>
   );
 }
