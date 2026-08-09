@@ -188,14 +188,13 @@ export function SiteClient({
   // ---------------- BANNER CAROUSEL ----------------
   const bannerSlides = useMemo(() => {
     if (banniere.active && banniere.message) {
-      return [{ tag: "Annonce", texte: banniere.message, bg: "#0b0b0b" }, ...contenu.bannerSlides];
+      return [{ tag: "Bientôt", texte: banniere.message, bg: "#0b0b0b" }, ...contenu.bannerSlides];
     }
     return contenu.bannerSlides;
   }, [banniere, contenu.bannerSlides]);
   const [bannerIdx, setBannerIdx] = useState(0);
   useEffect(() => {
     if (bannerSlides.length <= 1) return;
-    if (typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches) return;
     const t = setInterval(() => setBannerIdx((i) => (i + 1) % bannerSlides.length), 4500);
     return () => clearInterval(t);
   }, [bannerSlides.length]);
@@ -263,7 +262,7 @@ export function SiteClient({
             </div>
             <div className="hero-cta">
               <button className="btn-primary" onClick={() => scrollTo("catalogue")}>
-                Découvrir la collection →
+                Découvrez nos produits →
               </button>
             </div>
           </div>
@@ -472,22 +471,26 @@ export function SiteClient({
       <footer>
         <div className="footer-grid">
           <div className="footer-identity">
-            <div className="footer-mark">
-              EVOLUTIS<span>223</span>
+            <div className="footer-logo-frame">
+              <span className="footer-logo-label">Logo</span>
             </div>
-            <p>
-              {contenu.footerTagline}
-              <br />
-              Bamako, Mali
-            </p>
-          </div>
-          <div className="footer-col">
-            <h4>Univers</h4>
-            {contenu.universCards.map((u) => (
-              <a key={u.marque} onClick={() => appliquerFiltre(u.marque)}>
-                {u.marque}
-              </a>
-            ))}
+            <div className="footer-identity-text">
+              <div className="footer-mark">
+                EVOLUTIS<span>223</span>
+              </div>
+              <div className="footer-subbrands">
+                {contenu.universCards.map((u) => (
+                  <span key={u.marque} onClick={() => appliquerFiltre(u.marque)}>
+                    {u.marque}
+                  </span>
+                ))}
+              </div>
+              <p>
+                {contenu.footerTagline}
+                <br />
+                Bamako, Mali
+              </p>
+            </div>
           </div>
           <div className="footer-col">
             <h4>Boutique</h4>
@@ -768,7 +771,8 @@ a { cursor: pointer; }
 .view-btn.active { background: var(--ink); color: var(--bg); }
 .view-btn-label-short { display: none; }
 @media (max-width: 640px) {
-  .catalogue-section { padding-top: 22px; }
+  .catalogue-section { padding-top: 8px; }
+  .section-head { margin-bottom: 18px; }
   .controls-row { gap: 10px; margin-bottom: 20px; }
   .filters { gap: 6px; }
   .filter-pill { padding: 6px 10px; font-size: 9.5px; gap: 0; }
@@ -893,11 +897,17 @@ a { cursor: pointer; }
 .vision-text { margin-top: 22px; font-size: 18px; line-height: 1.85; color: rgba(255,255,255,0.82); max-width: 680px; }
 
 footer { background: var(--footer-bg); color: var(--footer-ink); padding: 60px 5vw 26px; }
-.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px; align-items: start; }
-.footer-identity { text-align: center; }
+.footer-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 40px; align-items: start; }
+/* Cadre logo (l'utilisateur ajoutera l'image lui-meme) a gauche du bloc marque, le tout aligne
+   a gauche comme les colonnes Boutique/Contact (demande du 2026-08-09). */
+.footer-identity { display: flex; gap: 16px; text-align: left; }
+.footer-logo-frame { flex-shrink: 0; width: 56px; height: 56px; border: 1.5px dashed rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; }
+.footer-logo-label { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--footer-muted); }
 .footer-mark { font-size: 24px; font-weight: 800; }
 .footer-mark span { color: var(--accent); }
-footer p { color: var(--footer-muted); font-size: 13px; line-height: 1.6; max-width: 280px; margin: 6px auto 0; }
+.footer-subbrands { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; max-width: 220px; }
+.footer-subbrands span { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--footer-ink); opacity: 0.85; cursor: pointer; text-align: center; }
+footer p { color: var(--footer-muted); font-size: 13px; line-height: 1.6; max-width: 280px; margin: 8px 0 0; }
 .footer-col h4 { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--footer-muted); margin-bottom: 8px; }
 .footer-col a { display: block; color: var(--footer-ink); opacity: 0.9; text-decoration: none; font-size: 13px; margin-bottom: 6px; cursor: pointer; }
 .footer-bottom { margin-top: 24px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 11.5px; color: var(--footer-muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
@@ -916,22 +926,24 @@ footer p { color: var(--footer-muted); font-size: 13px; line-height: 1.6; max-wi
   .grid.petite .card-media { aspect-ratio: 1/1; }
   .card-media .glyph { font-size: 56px; }
   .grid.petite .card-media .glyph { font-size: 40px; }
-  .footer-grid { grid-template-columns: 1fr 1fr; }
+  .footer-grid { grid-template-columns: 1fr; gap: 26px; }
 }
 
 /* Hero compact sur mobile (demande du 2026-08-09) : occupait tout l'écran, texte trop grand. */
 @media (max-width: 640px) {
   .hero { min-height: auto; padding: 90px 6vw 32px; }
   .hero-grid { gap: 22px; padding-top: 0; }
-  .hero p.lead { font-size: 14.5px; margin-top: 14px; }
   /* Titre "Style qui se porte" trop reducteur sur mobile (l'entreprise ne fait pas que du
      textile) — remplace par la marque + Tech·Com·Pub, demande du 2026-08-09. PC pas encore
      tranche, laisse tel quel pour l'instant. */
   .hero-h1-desktop, .lead-desktop { display: none; }
   .hero-h1-mobile, .lead-mobile { display: block; }
-  .hero-mobile-mark { margin-top: 10px; font-size: 42px; font-weight: 800; letter-spacing: -0.02em; }
+  .hero-mobile-mark { margin-top: 10px; font-size: 42px; font-weight: 900; letter-spacing: -0.01em; }
   .hero-mobile-mark span { color: var(--accent); }
-  .hero-mobile-tagline { margin-top: 6px; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  /* Le sous-titre doit "peser" la meme largeur visuelle que EVOLUTIS223 au-dessus, comme un
+     bloc-marque/logo — l'espacement des lettres l'etire pour approcher cette largeur. */
+  .hero-mobile-tagline { margin-top: 2px; font-size: 13px; font-weight: 800; letter-spacing: 0.42em; text-transform: uppercase; color: var(--muted); }
+  .hero p.lead, .lead-mobile { font-size: 14.5px; font-weight: 700; line-height: 1.35; margin-top: 14px; text-align: justify; hyphens: auto; }
   .hero-badge { margin-top: 12px; }
   .hero-cta { margin-top: 20px; }
   .hero-visual { aspect-ratio: 16/11; }
@@ -946,7 +958,7 @@ footer p { color: var(--footer-muted); font-size: 13px; line-height: 1.6; max-wi
   .section { padding: 60px 6vw; }
   /* Bandeau promo : l'étiquette et le message se partageaient une seule ligne étroite, texte
      écrasé. Empilés, avec plus de place pour grandir et épaissir (demande du 2026-08-09). */
-  .banner-slide { flex-direction: column; gap: 6px; padding: 14px 16px; font-size: 14px; font-weight: 700; }
+  .banner-slide { gap: 10px; padding: 14px 16px; font-size: 13.5px; font-weight: 700; }
   .banner-slide .tag { font-size: 10.5px; }
 }
 `;
