@@ -16,15 +16,21 @@ function BarreRecherche() {
   const router = useRouter();
   const [valeur, setValeur] = useState("");
   return (
-    <input
-      value={valeur}
-      onChange={(e) => setValeur(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" && valeur.trim()) router.push(`/documents?q=${encodeURIComponent(valeur.trim())}`);
+    // <form onSubmit> plutôt qu'un onKeyDown manuel sur "Enter" — la soumission de formulaire au
+    // clavier est un comportement natif du navigateur, plus fiable qu'une détection de touche.
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (valeur.trim()) router.push(`/documents?q=${encodeURIComponent(valeur.trim())}`);
       }}
-      placeholder="Rechercher (n°, client, objet)... puis Entrée"
-      style={{ background: "#121212", border: "1px solid #333", color: "#e0e0e0", padding: "7px 14px", borderRadius: 20, width: 240, fontSize: 14, boxSizing: "border-box" }}
-    />
+    >
+      <input
+        value={valeur}
+        onChange={(e) => setValeur(e.target.value)}
+        placeholder="Rechercher (n°, client, objet)... puis Entrée"
+        style={{ background: "#121212", border: "1px solid #333", color: "#e0e0e0", padding: "7px 14px", borderRadius: 20, width: 240, fontSize: 14, boxSizing: "border-box" }}
+      />
+    </form>
   );
 }
 
