@@ -137,20 +137,44 @@ export function SiteClient({
   const [produitOuvert, setProduitOuvert] = useState<Produit | null>(null);
   const [pleinEcran, setPleinEcran] = useState(false);
 
+  // Un panneau ouvert (fiche produit / galerie plein écran) ajoute une entrée d'historique — sur
+  // mobile, le bouton "retour" du téléphone doit d'abord refermer le panneau, jamais quitter le
+  // site directement (bug remonté le 2026-08-09).
+  const overlayOuvert = produitOuvert !== null || pleinEcran;
+  useEffect(() => {
+    if (!overlayOuvert) return;
+    window.history.pushState({ evolutis223Overlay: true }, "");
+  }, [overlayOuvert]);
+
+  useEffect(() => {
+    function onPopState() {
+      setProduitOuvert(null);
+      setPleinEcran(false);
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  function fermerOverlay() {
+    if (overlayOuvert) window.history.back();
+  }
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
-      setPleinEcran(false);
-      setProduitOuvert(null);
+      fermerOverlay();
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  }, [overlayOuvert]);
 
   // ---------------- HERO DIAPORAMA ----------------
+  // Sur mobile, le défilement automatique est desactivé (demande explicite du 2026-08-09) : on
+  // garde uniquement le premier visuel, fixe, plus lisible et plus sobre sur petit écran.
   const [heroIdx, setHeroIdx] = useState(0);
   const [heroFading, setHeroFading] = useState(false);
   useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches) return;
     const t = setInterval(() => {
       setHeroFading(true);
       setTimeout(() => {
@@ -172,6 +196,7 @@ export function SiteClient({
   const [bannerIdx, setBannerIdx] = useState(0);
   useEffect(() => {
     if (bannerSlides.length <= 1) return;
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches) return;
     const t = setInterval(() => setBannerIdx((i) => (i + 1) % bannerSlides.length), 4500);
     return () => clearInterval(t);
   }, [bannerSlides.length]);
@@ -285,8 +310,8 @@ export function SiteClient({
         )}
       </div>
 
-      <section className="section reveal-in" id="catalogue" style={{ paddingTop: 60, background: "var(--catalogue-bg)" }}>
-        <div style={{ paddingTop: 100 }}>
+      <section className="section reveal-in" id="catalogue" style={{ paddingTop: 90, background: "var(--catalogue-bg)" }}>
+        <div>
           <div className="section-head">
             <div>
               <div className="eyebrow">Catalogue</div>
@@ -308,11 +333,13 @@ export function SiteClient({
             <div className="view-switch">
               <button className={`view-btn${vue === "grande" ? " active" : ""}`} onClick={() => setVue("grande")} title="Grandes vignettes">
                 <span className="view-btn-icon">▦</span>
-                <span className="view-btn-label">Grandes vignettes</span>
+                <span className="view-btn-label-full">Grandes vignettes</span>
+                <span className="view-btn-label-short">Grandes</span>
               </button>
               <button className={`view-btn${vue === "petite" ? " active" : ""}`} onClick={() => setVue("petite")} title="Petites vignettes">
                 <span className="view-btn-icon">▪▪</span>
-                <span className="view-btn-label">Petites vignettes</span>
+                <span className="view-btn-label-full">Petites vignettes</span>
+                <span className="view-btn-label-short">Petites</span>
               </button>
               <button className={`view-btn${vue === "liste" ? " active" : ""}`} onClick={() => setVue("liste")} title="Liste">
                 <span className="view-btn-icon">☰</span>
@@ -784,14 +811,16 @@ a { cursor: pointer; }
 .filter-pill:hover { border-color: var(--ink); }
 .filter-pill.active { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 .view-switch { display: flex; border: 1.5px solid var(--line); border-radius: 10px; overflow: hidden; flex-shrink: 0; }
-.view-btn { display: flex; align-items: center; gap: 7px; background: var(--bg); color: var(--muted); border: none; padding: 10px 16px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border-right: 1.5px solid var(--line); white-space: nowrap; }
+.view-btn { display: flex; align-items: center; gap: 6px; background: var(--bg); color: var(--muted); border: none; padding: 10px 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; border-right: 1.5px solid var(--line); white-space: nowrap; }
 .view-btn:last-child { border-right: none; }
 .view-btn.active { background: var(--ink); color: var(--bg); }
+.view-btn-label-short { display: none; }
 @media (max-width: 640px) {
-  .filter-pill { padding: 8px 13px; font-size: 11px; gap: 5px; }
-  .view-btn { padding: 10px 12px; }
-  .view-btn-label { display: none; }
-  .view-btn-icon { font-size: 14px; }
+  .filter-pill { padding: 7px 12px; font-size: 10.5px; gap: 5px; }
+  .view-btn { padding: 8px 9px; font-size: 9.5px; gap: 4px; }
+  .view-btn-icon { font-size: 12px; }
+  .view-btn-label-full { display: none; }
+  .view-btn-label-short { display: inline; }
 }
 
 .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 26px; }
@@ -920,5 +949,18 @@ footer p { color: var(--footer-muted); font-size: 13.5px; line-height: 1.8; max-
   .grid, .grid.petite { grid-template-columns: repeat(2,1fr); }
   .card, .card.wide, .ad-slot, .grid.petite .card, .grid.petite .ad-slot { grid-column: span 2; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* Hero compact sur mobile (demande du 2026-08-09) : occupait tout l'écran, texte trop grand. */
+@media (max-width: 640px) {
+  .hero { min-height: auto; padding: 90px 6vw 32px; }
+  .hero-grid { gap: 22px; padding-top: 0; }
+  .hero h1 { font-size: 38px; margin-top: 10px; }
+  .hero p.lead { font-size: 14.5px; margin-top: 14px; }
+  .hero-badge { margin-top: 12px; }
+  .hero-cta { margin-top: 20px; }
+  .hero-visual { aspect-ratio: 16/11; }
+  .hero-frame .glyph { font-size: 80px; }
+  .scroll-cue { display: none; }
 }
 `;
