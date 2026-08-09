@@ -306,14 +306,17 @@ export function SiteClient({
               ))}
             </div>
             <div className="view-switch">
-              <button className={`view-btn${vue === "grande" ? " active" : ""}`} onClick={() => setVue("grande")}>
-                ▦ Grandes vignettes
+              <button className={`view-btn${vue === "grande" ? " active" : ""}`} onClick={() => setVue("grande")} title="Grandes vignettes">
+                <span className="view-btn-icon">▦</span>
+                <span className="view-btn-label">Grandes vignettes</span>
               </button>
-              <button className={`view-btn${vue === "petite" ? " active" : ""}`} onClick={() => setVue("petite")}>
-                ▪▪ Petites vignettes
+              <button className={`view-btn${vue === "petite" ? " active" : ""}`} onClick={() => setVue("petite")} title="Petites vignettes">
+                <span className="view-btn-icon">▪▪</span>
+                <span className="view-btn-label">Petites vignettes</span>
               </button>
-              <button className={`view-btn${vue === "liste" ? " active" : ""}`} onClick={() => setVue("liste")}>
-                ☰ Liste
+              <button className={`view-btn${vue === "liste" ? " active" : ""}`} onClick={() => setVue("liste")} title="Liste">
+                <span className="view-btn-icon">☰</span>
+                <span className="view-btn-label">Liste</span>
               </button>
               <button
                 className={`view-btn${vue === "galerie" ? " active" : ""}`}
@@ -321,8 +324,10 @@ export function SiteClient({
                   setGalerieIdx(0);
                   setVue("galerie");
                 }}
+                title="Galerie"
               >
-                ◧ Galerie
+                <span className="view-btn-icon">◧</span>
+                <span className="view-btn-label">Galerie</span>
               </button>
             </div>
           </div>
@@ -779,9 +784,15 @@ a { cursor: pointer; }
 .filter-pill:hover { border-color: var(--ink); }
 .filter-pill.active { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 .view-switch { display: flex; border: 1.5px solid var(--line); border-radius: 10px; overflow: hidden; flex-shrink: 0; }
-.view-btn { display: flex; align-items: center; gap: 7px; background: var(--bg); color: var(--muted); border: none; padding: 10px 16px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border-right: 1.5px solid var(--line); }
+.view-btn { display: flex; align-items: center; gap: 7px; background: var(--bg); color: var(--muted); border: none; padding: 10px 16px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border-right: 1.5px solid var(--line); white-space: nowrap; }
 .view-btn:last-child { border-right: none; }
 .view-btn.active { background: var(--ink); color: var(--bg); }
+@media (max-width: 640px) {
+  .filter-pill { padding: 8px 13px; font-size: 11px; gap: 5px; }
+  .view-btn { padding: 10px 12px; }
+  .view-btn-label { display: none; }
+  .view-btn-icon { font-size: 14px; }
+}
 
 .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 26px; }
 .grid.petite { grid-template-columns: repeat(9, 1fr); gap: 16px; }
