@@ -11,6 +11,7 @@ import { ASSET_BUFFERS } from "./assets";
 import { formatFcfa } from "./format";
 import { sha256Hex } from "./hash";
 import { MENTIONS_LEGALES_TEXTE } from "./legal-mentions";
+import { commentaireFinance, commentaireOperations } from "./rapport-commentaires";
 import type { DocumentGenere, RapportDocumentData } from "./types";
 
 const LIVRAISON_STATUT_LABELS: Record<string, string> = {
@@ -88,25 +89,6 @@ function BarChart({ points, width = 500, height = 90 }: { points: { label: strin
       </View>
     </View>
   );
-}
-
-function commentaireFinance(f: RapportDocumentData["finance"]): string {
-  if (f.beneficeNet < 0) {
-    return `La période affiche un résultat net négatif de ${formatFcfa(Math.abs(f.beneficeNet))} : les achats, charges et commissions ont dépassé le chiffre d'affaires réalisé.`;
-  }
-  if (f.variationBeneficeNetPct !== null && f.variationBeneficeNetPct >= 10) {
-    return `Le bénéfice net progresse de ${f.variationBeneficeNetPct}% par rapport à la période précédente, une évolution favorable.`;
-  }
-  if (f.variationBeneficeNetPct !== null && f.variationBeneficeNetPct <= -10) {
-    return `Le bénéfice net recule de ${Math.abs(f.variationBeneficeNetPct)}% par rapport à la période précédente — à surveiller.`;
-  }
-  return `Le résultat net de la période est positif et globalement stable par rapport à la période précédente.`;
-}
-
-function commentaireOperations(o: RapportDocumentData["operations"]): string {
-  if (o.ruptureActuelle === 0) return "Aucune rupture de stock n'est constatée à la date d'émission de ce rapport.";
-  if (o.ruptureActuelle <= 2) return `${o.ruptureActuelle} article(s) sont actuellement en rupture de stock — point de vigilance.`;
-  return `${o.ruptureActuelle} articles sont actuellement en rupture de stock — un réapprovisionnement rapide est recommandé.`;
 }
 
 export function RapportDocument({ data }: { data: RapportDocumentData }) {

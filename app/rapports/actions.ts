@@ -19,6 +19,7 @@ import {
 } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import type { RapportDocumentData } from "@/lib/documents/types";
 
 async function requireRapportsAccess() {
   const session = await getSession();
@@ -503,5 +504,60 @@ export async function chargerDetailComplet(frequence: Frequence, reference: Date
       periodeFin: b.periodeFin,
       statut: b.statut,
     })),
+  };
+}
+
+const MOIS_LONGS = [
+  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
+];
+
+// Données du "Rapport officiel" pour un mois donné (annee/mois) — forme unique partagée entre
+// l'aperçu HTML (Archive, clic sur un mois) et le générateur PDF (route API "Imprimer"), pour ne
+// jamais avoir deux calculs différents du même rapport.
+export async function chargerRapportDocumentData(annee: number, mois: number): Promise<RapportDocumentData> {
+  await requireRapportsAccess();
+  const reference = new Date(annee, mois - 1, 15); // milieu du mois — évite tout effet de bord de fuseau sur le 1er/dernier jour
+
+  const [finance, rh, operations, tendance] = await Promise.all([
+    chargerRapportFinance("MOIS", reference),
+    chargerRapportRh("MOIS", reference),
+    chargerRapportOperations("MOIS", reference),
+    chargerTendanceFinance("MOIS", 6, reference),
+  ]);
+
+  return {
+    periodeLabel: `${MOIS_LONGS[mois - 1]} ${annee}`,
+    dateEmission: new Date(),
+    finance: {
+      chiffreAffaires: finance.chiffreAffaires,
+      coutAchatVentes: finance.coutAchatVentes,
+      beneficeBrut: finance.beneficeBrut,
+      depensesCharges: finance.depensesCharges,
+      commissions: finance.commissions,
+      beneficeNet: finance.beneficeNet,
+      nombreVentes: finance.nombreVentes,
+      variationCaPct: finance.variationCaPct,
+      variationBeneficeNetPct: finance.variationBeneficeNetPct,
+    },
+    rh: {
+      effectifActif: rh.effectifActif,
+      masseSalariale: rh.masseSalariale,
+      variationMassePct: rh.variationMassePct,
+      incidents: rh.incidents,
+      besoinsActifs: rh.besoinsActifs.map((b) => ({
+        titre: b.titre,
+        nombrePersonnesRequis: b.nombrePersonnesRequis,
+        periodeDebut: b.periodeDebut,
+        periodeFin: b.periodeFin,
+      })),
+    },
+    operations: {
+      totalLivraisons: operations.totalLivraisons,
+      livraisonsParStatut: operations.livraisonsParStatut,
+      ruptureActuelle: operations.ruptureActuelle,
+      stockFaibleActuel: operations.stockFaibleActuel,
+    },
+    tendance,
   };
 }
