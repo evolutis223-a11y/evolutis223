@@ -1,15 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/auth";
 
-const PUBLIC_PATHS = ["/login", "/boutique", "/suivi", "/maquette", "/configurateur"];
+const PUBLIC_PATHS = ["/login", "/boutique", "/suivi", "/maquette", "/configurateur", "/site"];
 
 // Verrou d'accès public — demandé par l'utilisateur (2026-08-02) : à la mise en ligne, les
-// parcours publics (boutique, maquette, configurateur, suivi) ne doivent pas être visibles du
+// parcours publics (boutique, maquette, configurateur, suivi, site) ne doivent pas être visibles du
 // grand public tant que tout n'est pas ajusté (images, contenus). Basculer
 // SITE_OUVERT_AU_PUBLIC=true dans les variables d'environnement Vercel quand on est prêt à
 // ouvrir — aucun changement de code nécessaire. Le back-office reste protégé par la session
 // normale ci-dessous, indépendamment de ce verrou.
-const CHEMINS_GRAND_PUBLIC = ["/boutique", "/maquette", "/configurateur", "/suivi"];
+const CHEMINS_GRAND_PUBLIC = ["/boutique", "/maquette", "/configurateur", "/suivi", "/site"];
 const COOKIE_APERCU = "evolutis223_apercu";
 
 async function verifierVerrouPublic(request: NextRequest): Promise<NextResponse | null> {
