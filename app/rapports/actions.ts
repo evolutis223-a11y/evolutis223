@@ -10,7 +10,10 @@ import {
   bulletinsPaie,
   incidentsPersonnel,
   lignesAffaire,
+  livraisons,
   personnel,
+  variantes,
+  vStockVariante,
 } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
@@ -66,8 +69,57 @@ const LABELS_FREQUENCE: Record<Frequence, string> = {
   ANNEE: "Cette année",
 };
 
+// Décale une date de référence de n périodes en arrière — sert à la fois au comparatif
+// (n=1 : période précédente) et à la tendance (n=0..5 : plusieurs points dans le temps).
+function decalerReference(frequence: Frequence, reference: Date, n: number): Date {
+  const r = new Date(reference);
+  if (frequence === "JOUR") r.setDate(r.getDate() - n);
+  else if (frequence === "SEMAINE") r.setDate(r.getDate() - n * 7);
+  else if (frequence === "MOIS") r.setMonth(r.getMonth() - n);
+  else if (frequence === "SEMESTRE") r.setMonth(r.getMonth() - n * 6);
+  else r.setFullYear(r.getFullYear() - n);
+  return r;
+}
+
+const MOIS_COURTS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"];
+const JOURS_COURTS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+
+function labelPointTendance(frequence: Frequence, debut: Date): string {
+  if (frequence === "JOUR") return `${JOURS_COURTS[debut.getDay()]} ${String(debut.getDate()).padStart(2, "0")}`;
+  if (frequence === "SEMAINE") return `Sem. ${String(debut.getDate()).padStart(2, "0")}/${String(debut.getMonth() + 1).padStart(2, "0")}`;
+  if (frequence === "MOIS") return MOIS_COURTS[debut.getMonth()];
+  if (frequence === "SEMESTRE") return `S${debut.getMonth() < 6 ? 1 : 2} ${debut.getFullYear()}`;
+  return String(debut.getFullYear());
+}
+
+// Variation en % entre deux valeurs — null si la base de comparaison est nulle (rien à comparer,
+// pas une variation de 0% ni de +∞%).
+function variationPct(actuel: number, precedent: number): number | null {
+  if (precedent === 0) return null;
+  return Math.round(((actuel - precedent) / Math.abs(precedent)) * 1000) / 10;
+}
+
 export interface RapportFinance {
   periodeLabel: string;
+  chiffreAffaires: number;
+  coutAchatVentes: number;
+  beneficeBrut: number;
+  depensesCharges: number;
+  commissions: number;
+  beneficeNet: number;
+  nombreVentes: number;
+  precedent: { chiffreAffaires: number; beneficeNet: number };
+  variationCaPct: number | null;
+  variationBeneficeNetPct: number | null;
+}
+
+export interface PointTendanceFinance {
+  label: string;
+  chiffreAffaires: number;
+  beneficeNet: number;
+}
+
+interface FinanceBrute {
   chiffreAffaires: number;
   coutAchatVentes: number;
   beneficeBrut: number;
@@ -78,19 +130,15 @@ export interface RapportFinance {
 }
 
 // §7 — "Rapport : Bénéfice brut = CA − coût d'achat des ventes ; bénéfice net = brut −
-// dépenses/charges/commissions. Toujours recalculé, jamais saisi à la main." Dimension Finance
-// uniquement pour cette passe : RH/Incidents/Prévisions ne sont pas spécifiées dans le cahier des
-// charges (quel indicateur exact pour "Incidents" ? quel modèle pour "Prévisions" ?) — non
-// construites, à clarifier avant de deviner une forme.
+// dépenses/charges/commissions. Toujours recalculé, jamais saisi à la main." Extrait en fonction
+// pure (bornes en paramètre) pour être réutilisée par la période courante, la période précédente
+// (comparatif) et chaque point de la tendance — même calcul partout, jamais dupliqué.
 //
 // Limitation assumée : le coût d'achat des ventes utilise le PMP courant de l'article
 // (articles.pmp), pas un PMP historique au moment de la vente — le schéma ne conserve pas de
 // PMP figé par ligne d'affaire. Pour un article dont le prix d'achat a beaucoup varié depuis la
 // vente, ce chiffre est une approximation, pas un historique exact.
-export async function chargerRapportFinance(frequence: Frequence): Promise<RapportFinance> {
-  await requireRapportsAccess();
-  const { debut, fin } = bornesPeriode(frequence, new Date());
-
+async function calculerFinance(debut: Date, fin: Date): Promise<FinanceBrute> {
   const [venteRow] = await db
     .select({
       ca: sql<string>`coalesce(sum(${affaires.montantTtc}), 0)`,
@@ -143,7 +191,6 @@ export async function chargerRapportFinance(frequence: Frequence): Promise<Rappo
   const beneficeNet = beneficeBrut - depensesCharges - commissions;
 
   return {
-    periodeLabel: LABELS_FREQUENCE[frequence],
     chiffreAffaires,
     coutAchatVentes,
     beneficeBrut,
@@ -154,12 +201,57 @@ export async function chargerRapportFinance(frequence: Frequence): Promise<Rappo
   };
 }
 
+export async function chargerRapportFinance(frequence: Frequence): Promise<RapportFinance> {
+  await requireRapportsAccess();
+  const maintenant = new Date();
+  const { debut, fin } = bornesPeriode(frequence, maintenant);
+  const bornesPrecedentes = bornesPeriode(frequence, decalerReference(frequence, maintenant, 1));
+
+  const [actuel, precedent] = await Promise.all([
+    calculerFinance(debut, fin),
+    calculerFinance(bornesPrecedentes.debut, bornesPrecedentes.fin),
+  ]);
+
+  return {
+    periodeLabel: LABELS_FREQUENCE[frequence],
+    ...actuel,
+    precedent: { chiffreAffaires: precedent.chiffreAffaires, beneficeNet: precedent.beneficeNet },
+    variationCaPct: variationPct(actuel.chiffreAffaires, precedent.chiffreAffaires),
+    variationBeneficeNetPct: variationPct(actuel.beneficeNet, precedent.beneficeNet),
+  };
+}
+
+// Plusieurs points dans le temps (6 par défaut) pour visualiser une tendance, quelle que soit la
+// fréquence choisie — ex. en "Mois", les 6 derniers mois ; en "Jour", les 7 derniers jours.
+export async function chargerTendanceFinance(frequence: Frequence, nbPoints = 6): Promise<PointTendanceFinance[]> {
+  await requireRapportsAccess();
+  const maintenant = new Date();
+  const points: PointTendanceFinance[] = [];
+  for (let i = nbPoints - 1; i >= 0; i--) {
+    const ref = decalerReference(frequence, maintenant, i);
+    const { debut, fin } = bornesPeriode(frequence, ref);
+    const brut = await calculerFinance(debut, fin);
+    points.push({ label: labelPointTendance(frequence, debut), chiffreAffaires: brut.chiffreAffaires, beneficeNet: brut.beneficeNet });
+  }
+  return points;
+}
+
 export interface RapportRh {
   periodeLabel: string;
   effectifActif: number;
   masseSalariale: number;
+  masseSalarialePrecedente: number;
+  variationMassePct: number | null;
   incidents: { type: string; nombre: number }[];
   besoinsActifs: { titre: string; fonction: string | null; nombrePersonnesRequis: number; periodeDebut: string; periodeFin: string; statut: string }[];
+}
+
+async function masseSalarialePeriode(debut: Date, fin: Date): Promise<number> {
+  const [row] = await db
+    .select({ total: sql<string>`coalesce(sum(${bulletinsPaie.netAPayer}), 0)` })
+    .from(bulletinsPaie)
+    .where(and(eq(bulletinsPaie.statut, "PAYE"), gte(bulletinsPaie.datePaiement, debut), lt(bulletinsPaie.datePaiement, fin)));
+  return Number(row.total);
 }
 
 // §7 — dimensions RH/Incidents/Prévisions, clarifiées par l'utilisateur (2026-08-02) : humaines,
@@ -168,7 +260,9 @@ export interface RapportRh {
 // à venir planifiés par RH (`/rh`, onglet Prévisions) — pas une prévision de chiffre d'affaires.
 export async function chargerRapportRh(frequence: Frequence): Promise<RapportRh> {
   await requireRapportsAccess();
-  const { debut, fin } = bornesPeriode(frequence, new Date());
+  const maintenant = new Date();
+  const { debut, fin } = bornesPeriode(frequence, maintenant);
+  const bornesPrecedentes = bornesPeriode(frequence, decalerReference(frequence, maintenant, 1));
   const debutStr = debut.toISOString().slice(0, 10);
   const finStr = fin.toISOString().slice(0, 10);
 
@@ -177,10 +271,10 @@ export async function chargerRapportRh(frequence: Frequence): Promise<RapportRh>
     .from(personnel)
     .where(eq(personnel.actif, true));
 
-  const [masseRow] = await db
-    .select({ total: sql<string>`coalesce(sum(${bulletinsPaie.netAPayer}), 0)` })
-    .from(bulletinsPaie)
-    .where(and(eq(bulletinsPaie.statut, "PAYE"), gte(bulletinsPaie.datePaiement, debut), lt(bulletinsPaie.datePaiement, fin)));
+  const [masseSalariale, masseSalarialePrecedente] = await Promise.all([
+    masseSalarialePeriode(debut, fin),
+    masseSalarialePeriode(bornesPrecedentes.debut, bornesPrecedentes.fin),
+  ]);
 
   const incidentRows = await db
     .select({ type: incidentsPersonnel.type, n: sql<number>`count(*)` })
@@ -198,7 +292,9 @@ export async function chargerRapportRh(frequence: Frequence): Promise<RapportRh>
   return {
     periodeLabel: LABELS_FREQUENCE[frequence],
     effectifActif: Number(effectifRow.n),
-    masseSalariale: Number(masseRow.total),
+    masseSalariale,
+    masseSalarialePrecedente,
+    variationMassePct: variationPct(masseSalariale, masseSalarialePrecedente),
     incidents: incidentRows.map((r) => ({ type: r.type, nombre: Number(r.n) })),
     besoinsActifs: besoinRows.map((b) => ({
       titre: b.titre,
@@ -208,5 +304,56 @@ export async function chargerRapportRh(frequence: Frequence): Promise<RapportRh>
       periodeFin: b.periodeFin,
       statut: b.statut,
     })),
+  };
+}
+
+export interface RapportOperations {
+  periodeLabel: string;
+  livraisonsParStatut: { statut: string; nombre: number }[];
+  totalLivraisons: number;
+  ruptureActuelle: number;
+  stockFaibleActuel: number;
+}
+
+// "Opérations" — livraisons et état du stock, demandés par l'utilisateur (2026-08-09) en plus de
+// Finance/RH pour que le rapport couvre "tout, les livraisons, les soucis". Les livraisons sont
+// comptées sur leur dateCreation (pas de date de livraison effective distincte en base — voir
+// db/schema.ts livraisons) ; rupture/stock faible sont un instantané actuel (état du stock, pas un
+// historique sur la période — le manque de couverture historique de vStockVariante ne change pas
+// ici).
+export async function chargerRapportOperations(frequence: Frequence): Promise<RapportOperations> {
+  await requireRapportsAccess();
+  const { debut, fin } = bornesPeriode(frequence, new Date());
+
+  const livraisonRows = await db
+    .select({ statut: livraisons.statut, n: sql<number>`count(*)` })
+    .from(livraisons)
+    .where(and(gte(livraisons.dateCreation, debut), lt(livraisons.dateCreation, fin)))
+    .groupBy(livraisons.statut);
+
+  const stockRows = await db
+    .select({
+      stockDetail: vStockVariante.stockDetail,
+      seuilAlerte: variantes.seuilAlerte,
+    })
+    .from(variantes)
+    .leftJoin(vStockVariante, eq(vStockVariante.varianteId, variantes.id));
+
+  let ruptureActuelle = 0;
+  let stockFaibleActuel = 0;
+  for (const row of stockRows) {
+    const stock = row.stockDetail ?? 0;
+    if (stock <= 0) ruptureActuelle++;
+    else if (stock <= row.seuilAlerte) stockFaibleActuel++;
+  }
+
+  const livraisonsParStatut = livraisonRows.map((r) => ({ statut: r.statut, nombre: Number(r.n) }));
+
+  return {
+    periodeLabel: LABELS_FREQUENCE[frequence],
+    livraisonsParStatut,
+    totalLivraisons: livraisonsParStatut.reduce((s, r) => s + r.nombre, 0),
+    ruptureActuelle,
+    stockFaibleActuel,
   };
 }

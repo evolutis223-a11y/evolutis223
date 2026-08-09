@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 import { buildShellModules } from "@/lib/shell-modules";
 import { chargerUtilisateurAffiche } from "@/lib/session-user";
-import { chargerRapportFinance, chargerRapportRh } from "./actions";
+import { chargerRapportFinance, chargerRapportOperations, chargerRapportRh, chargerTendanceFinance } from "./actions";
 import { RapportsClient } from "./rapports-client";
 
 export default async function RapportsPage() {
@@ -16,9 +16,11 @@ export default async function RapportsPage() {
       </main>
     );
   }
-  const [initialFinance, initialRh, user] = await Promise.all([
+  const [initialFinance, initialRh, initialOperations, initialTendance, user] = await Promise.all([
     chargerRapportFinance("MOIS"),
     chargerRapportRh("MOIS"),
+    chargerRapportOperations("MOIS"),
+    chargerTendanceFinance("MOIS"),
     chargerUtilisateurAffiche(session.userId),
   ]);
   return (
@@ -28,6 +30,8 @@ export default async function RapportsPage() {
       modules={buildShellModules(session.roleCode)}
       initialFinance={initialFinance}
       initialRh={initialRh}
+      initialOperations={initialOperations}
+      initialTendance={initialTendance}
     />
   );
 }
