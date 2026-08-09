@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import {
   autoriserDemande,
   listerDemandesEnAttente,
@@ -112,6 +113,16 @@ function formatFcfa(v: string | number) {
   return `${Math.round(Number(v)).toLocaleString("fr-FR")} FCFA`;
 }
 
+function formatRelatif(d: Date | string) {
+  const date = new Date(d);
+  const min = Math.floor((Date.now() - date.getTime()) / 60_000);
+  if (min < 1) return "à l'instant";
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `il y a ${h} h`;
+  return `il y a ${Math.floor(h / 24)} j`;
+}
+
 const POLL_MS = 10_000;
 const BIP_MS = 30_000;
 const PAUSES = [1, 5, 15] as const;
@@ -135,6 +146,183 @@ function beep() {
   }
 }
 
+type FluxRow =
+  | { kind: "stock"; key: string; dateCreation: Date; data: Demande }
+  | { kind: "proforma"; key: string; dateCreation: Date; data: Proforma }
+  | { kind: "maquette"; key: string; dateCreation: Date; data: DemandeMaquette };
+
+const KIND_LABEL: Record<FluxRow["kind"], { label: string; cls: string }> = {
+  stock: { label: "Stock", cls: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" },
+  proforma: { label: "Proforma", cls: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300" },
+  maquette: { label: "Maquette", cls: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300" },
+};
+
+function KindBadge({ kind }: { kind: FluxRow["kind"] }) {
+  const m = KIND_LABEL[kind];
+  return <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold ${m.cls}`}>{m.label}</span>;
+}
+
+function rowTitre(row: FluxRow): string {
+  if (row.kind === "stock") {
+    const d = row.data;
+    return d.articleNom + (d.taille || d.couleur ? ` (${[d.taille, d.couleur].filter(Boolean).join(" / ")})` : "");
+  }
+  return row.data.numero;
+}
+
+function rowSousTitre(row: FluxRow): string {
+  if (row.kind === "stock") return `Affaire ${row.data.affaireNumero} · manque ${row.data.manque}`;
+  if (row.kind === "proforma") return `${row.data.clientNom} — ${formatFcfa(row.data.montantTtc)}`;
+  const d = row.data;
+  return `${d.nomClient}${d.forfaitNom ? " — " + d.forfaitNom : ""}`;
+}
+
+function Stat({ label, value, accent }: { label: string; value: string; accent?: "warning" }) {
+  const color = accent === "warning" ? "text-amber-500" : "text-foreground";
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`mt-1.5 text-xl font-bold tabular-nums ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+function DetailPanel({
+  row,
+  isPending,
+  rechargeSaisie,
+  setRechargeSaisie,
+  traiter,
+}: {
+  row: FluxRow;
+  isPending: boolean;
+  rechargeSaisie: Record<number, string>;
+  setRechargeSaisie: React.Dispatch<React.SetStateAction<Record<number, string>>>;
+  traiter: (action: () => Promise<{ error?: string }>) => void;
+}) {
+  if (row.kind === "stock") {
+    const d = row.data;
+    return (
+      <div>
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
+          <div>
+            <div className="text-lg font-bold text-foreground">
+              {d.articleNom}
+              {d.taille || d.couleur ? ` (${[d.taille, d.couleur].filter(Boolean).join(" / ")})` : ""}
+            </div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              Affaire {d.affaireNumero} · canal {d.canal}
+            </div>
+          </div>
+          <KindBadge kind="stock" />
+        </div>
+        <p className="mt-4 text-sm text-muted-foreground">
+          Demandé : <b className="text-foreground">{d.quantiteDemandee}</b> — Manque : <b className="text-foreground">{d.manque}</b>
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Button size="sm" disabled={isPending} onClick={() => traiter(() => autoriserDemande(d.id))}>
+            Autoriser ({d.manque})
+          </Button>
+          <input
+            type="number"
+            min={d.manque}
+            placeholder={`≥ ${d.manque}`}
+            value={rechargeSaisie[d.id] ?? ""}
+            onChange={(e) => setRechargeSaisie((prev) => ({ ...prev, [d.id]: e.target.value }))}
+            className="w-24 rounded border border-input bg-background px-2 py-1 text-sm"
+          />
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={isPending}
+            onClick={() => traiter(() => rechargerDemande(d.id, Number(rechargeSaisie[d.id] ?? d.manque)))}
+          >
+            Recharger
+          </Button>
+          <Button size="sm" variant="outline" disabled={isPending} onClick={() => traiter(() => refuserDemande(d.id))}>
+            Refuser
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (row.kind === "proforma") {
+    const p = row.data;
+    return (
+      <div>
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
+          <div>
+            <div className="text-lg font-bold text-foreground">{p.numero}</div>
+            <div className="mt-0.5 text-xs text-muted-foreground">par {p.auteurNom}</div>
+          </div>
+          <KindBadge kind="proforma" />
+        </div>
+        <p className="mt-4 text-sm text-muted-foreground">
+          {p.clientNom} — <b className="text-foreground">{formatFcfa(p.montantTtc)}</b>
+        </p>
+        <div className="mt-4 flex gap-2">
+          <Button size="sm" disabled={isPending} onClick={() => traiter(() => validerProforma(p.id))}>
+            Valider
+          </Button>
+          <Button size="sm" variant="outline" disabled={isPending} onClick={() => traiter(() => refuserProforma(p.id))}>
+            Refuser
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const d = row.data;
+  return (
+    <div>
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
+        <div>
+          <div className="text-lg font-bold text-foreground">{d.numero}</div>
+          <div className="mt-0.5 text-xs text-muted-foreground">
+            {d.intent === "pagne" ? "Commander un pagne" : "Créer une maquette"}
+          </div>
+        </div>
+        <KindBadge kind="maquette" />
+      </div>
+      <p className="mt-4 text-sm text-muted-foreground">
+        {d.nomClient} — {d.telephoneClient}
+        {d.forfaitNom && (
+          <>
+            {" — "}
+            <b className="text-foreground">
+              {d.forfaitNom} ({formatFcfa(d.forfaitPrix ?? 0)})
+            </b>
+          </>
+        )}
+      </p>
+      <div className="mt-4 flex gap-2">
+        <Button size="sm" disabled={isPending} onClick={() => traiter(() => validerDemandeMaquette(d.id))}>
+          Valider (crée l&apos;affaire)
+        </Button>
+        <Button size="sm" variant="outline" disabled={isPending} onClick={() => traiter(() => refuserDemandeMaquette(d.id))}>
+          Refuser
+        </Button>
+      </div>
+      <DemandeMaquetteDetail details={d.details} />
+    </div>
+  );
+}
+
+function HistoriqueRow({ row }: { row: FluxRow }) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-md border border-border/60 px-3 py-2 text-xs text-muted-foreground">
+      <div className="flex min-w-0 items-center gap-2">
+        <KindBadge kind={row.kind} />
+        <span className="truncate">
+          {rowTitre(row)} — {rowSousTitre(row)}
+        </span>
+      </div>
+      <span className="flex-shrink-0">{row.data.statut}</span>
+    </div>
+  );
+}
+
 export function ValidationsClient({
   userName,
   roleLibelle,
@@ -154,18 +342,19 @@ export function ValidationsClient({
   const [enAttente, setEnAttente] = useState<Demande[]>(
     initial.filter((d) => d.statut === "EN_ATTENTE")
   );
-  const historique = initial.filter((d) => d.statut !== "EN_ATTENTE").slice(0, 30);
+  const historiqueStock = initial.filter((d) => d.statut !== "EN_ATTENTE").slice(0, 30);
   const proformasEnAttente = proformas.filter((p) => p.statut === "EN_ATTENTE");
   const proformasHistorique = proformas.filter((p) => p.statut !== "EN_ATTENTE").slice(0, 30);
   const maquetteEnAttente = demandesMaquette.filter((d) => d.statut === "EN_ATTENTE");
   const maquetteHistorique = demandesMaquette.filter((d) => d.statut !== "EN_ATTENTE").slice(0, 30);
-  const [maquetteOuverte, setMaquetteOuverte] = useState<number | null>(null);
 
+  const [onglet, setOnglet] = useState<"attente" | "historique">("attente");
   const [alerteActive, setAlerteActive] = useState(false);
   const [pauseJusqua, setPauseJusqua] = useState<number | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [rechargeSaisie, setRechargeSaisie] = useState<Record<number, string>>({});
   const [isPending, startTransition] = useTransition();
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("evolutis223_alerte_stock");
@@ -188,8 +377,10 @@ export function ValidationsClient({
     return () => clearInterval(poll);
   }, []);
 
+  const totalEnAttente = enAttente.length + proformasEnAttente.length + maquetteEnAttente.length;
+
   useEffect(() => {
-    if (!alerteActive || enAttente.length === 0) return;
+    if (!alerteActive || totalEnAttente === 0) return;
     const enPause = pauseJusqua !== null && Date.now() < pauseJusqua;
     if (enPause) return;
     if (pauseJusqua !== null && Date.now() >= pauseJusqua) setPauseJusqua(null);
@@ -200,7 +391,7 @@ export function ValidationsClient({
     }, BIP_MS);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alerteActive, enAttente.length, pauseJusqua]);
+  }, [alerteActive, totalEnAttente, pauseJusqua]);
 
   const refDemandes = useRef(enAttente);
   refDemandes.current = enAttente;
@@ -220,21 +411,62 @@ export function ValidationsClient({
     });
   }
 
+  const fluxEnAttente: FluxRow[] = useMemo(() => {
+    const rows: FluxRow[] = [
+      ...enAttente.map((d) => ({ kind: "stock" as const, key: `stock-${d.id}`, dateCreation: d.dateCreation, data: d })),
+      ...proformasEnAttente.map((p) => ({ kind: "proforma" as const, key: `proforma-${p.id}`, dateCreation: p.dateCreation, data: p })),
+      ...maquetteEnAttente.map((d) => ({ kind: "maquette" as const, key: `maquette-${d.id}`, dateCreation: d.dateCreation, data: d })),
+    ];
+    return rows.sort((a, b) => new Date(a.dateCreation).getTime() - new Date(b.dateCreation).getTime());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enAttente, proformasEnAttente.length, maquetteEnAttente.length]);
+
+  const fluxHistorique: FluxRow[] = useMemo(() => {
+    const rows: FluxRow[] = [
+      ...historiqueStock.map((d) => ({ kind: "stock" as const, key: `stock-${d.id}`, dateCreation: d.dateTraitement ?? d.dateCreation, data: d })),
+      ...proformasHistorique.map((p) => ({ kind: "proforma" as const, key: `proforma-${p.id}`, dateCreation: p.dateCreation, data: p })),
+      ...maquetteHistorique.map((d) => ({ kind: "maquette" as const, key: `maquette-${d.id}`, dateCreation: d.dateCreation, data: d })),
+    ];
+    return rows.sort((a, b) => new Date(b.dateCreation).getTime() - new Date(a.dateCreation).getTime()).slice(0, 60);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historiqueStock, proformasHistorique, maquetteHistorique]);
+
+  const selected = fluxEnAttente.find((r) => r.key === selectedKey);
+
   return (
     <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Tour de contrôle — Validations" modules={modules}>
-    <div className="min-h-screen p-6">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <header className="flex items-center justify-between">
+      <div className="flex h-full min-h-0 flex-col gap-4 p-6">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <h1 className="text-lg font-semibold text-foreground">Validations stock (§9)</h1>
-            <p className="text-sm text-muted-foreground">
-              Ventes au détail bloquées par manque de réserve — décision Admin/Super Admin.
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-semibold text-foreground">Tour de contrôle</h1>
+              <AideBulle titre="Comment utiliser Tour de contrôle">
+                <p>
+                  <b>Ce que tu vois ici</b> — toutes les décisions qui attendent Admin/Super Admin : ventes bloquées par manque de stock détail (§9), proformas à valider avant envoi (§12), et demandes de maquette venues du site public (§10ter).
+                </p>
+                <p>
+                  <b>Stock — Autoriser / Recharger</b> — &quot;Autoriser&quot; transfère juste le manque depuis la réserve gros vers le détail. &quot;Recharger&quot; transfère une quantité plus grande, pour couvrir aussi les prochaines ventes sans redemander.
+                </p>
+                <p>
+                  <b>Alerte sonore</b> — un bip toutes les 30s tant qu&apos;il reste au moins une demande en attente (stock, proforma ou maquette), pour ne rien laisser traîner. Mets en pause si tu es en pleine saisie ailleurs.
+                </p>
+              </AideBulle>
+            </div>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              Ventes bloquées, proformas et demandes maquette — tout ce qui attend une décision Admin/Super Admin, au même endroit.
             </p>
           </div>
           <a href="/" className="text-sm text-muted-foreground hover:underline">
             ← Tableau de bord
           </a>
-        </header>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Total en attente" value={String(totalEnAttente)} accent={totalEnAttente > 0 ? "warning" : undefined} />
+          <Stat label="Stock détail (§9)" value={String(enAttente.length)} />
+          <Stat label="Proformas (§12)" value={String(proformasEnAttente.length)} />
+          <Stat label="Maquettes (§10ter)" value={String(maquetteEnAttente.length)} />
+        </div>
 
         <section className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-card p-3">
           <label className="flex items-center gap-2 text-sm">
@@ -246,7 +478,7 @@ export function ValidationsClient({
                 setPauseJusqua(null);
               }}
             />
-            Alerte sonore (bip toutes les 30s tant qu'une demande attend)
+            Alerte sonore (bip toutes les 30s tant qu&apos;une demande attend)
           </label>
           {alerteActive && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -262,231 +494,81 @@ export function ValidationsClient({
                 </button>
               ))}
               {pauseJusqua && pauseJusqua > Date.now() && (
-                <span>
-                  (en pause jusqu'à {new Date(pauseJusqua).toLocaleTimeString("fr-FR")})
-                </span>
+                <span>(en pause jusqu&apos;à {new Date(pauseJusqua).toLocaleTimeString("fr-FR")})</span>
               )}
             </div>
           )}
         </section>
 
         {erreur && (
-          <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-sm text-destructive">
-            {erreur}
-          </p>
+          <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-sm text-destructive">{erreur}</p>
         )}
 
-        <section className="space-y-3">
-          <h2 className="text-sm font-medium text-muted-foreground">
-            En attente ({enAttente.length})
-          </h2>
-          {enAttente.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucune demande en attente.</p>
-          ) : (
-            enAttente.map((d) => (
-              <div key={d.id} className="rounded-md border border-border bg-card p-3 text-sm">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="font-medium text-card-foreground">
-                    {d.articleNom}
-                    {d.taille || d.couleur
-                      ? ` (${[d.taille, d.couleur].filter(Boolean).join(" / ")})`
-                      : ""}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Affaire {d.affaireNumero} · {d.canal}
-                  </span>
-                </div>
-                <p className="mt-1 text-muted-foreground">
-                  Demandé : {d.quantiteDemandee} — Manque : <strong>{d.manque}</strong>
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Button
-                    size="sm"
-                    disabled={isPending}
-                    onClick={() => traiter(() => autoriserDemande(d.id))}
-                  >
-                    Autoriser ({d.manque})
-                  </Button>
-                  <input
-                    type="number"
-                    min={d.manque}
-                    placeholder={`≥ ${d.manque}`}
-                    value={rechargeSaisie[d.id] ?? ""}
-                    onChange={(e) =>
-                      setRechargeSaisie((prev) => ({ ...prev, [d.id]: e.target.value }))
-                    }
-                    className="w-24 rounded border border-input bg-background px-2 py-1 text-sm"
-                  />
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={isPending}
-                    onClick={() =>
-                      traiter(() =>
-                        rechargerDemande(d.id, Number(rechargeSaisie[d.id] ?? d.manque))
-                      )
-                    }
-                  >
-                    Recharger
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={isPending}
-                    onClick={() => traiter(() => refuserDemande(d.id))}
-                  >
-                    Refuser
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
-        </section>
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => setOnglet("attente")}
+            className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${onglet === "attente" ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
+          >
+            En attente ({totalEnAttente})
+          </button>
+          <button
+            onClick={() => setOnglet("historique")}
+            className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${onglet === "historique" ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
+          >
+            Historique
+          </button>
+        </div>
 
-        <section className="space-y-3">
-          <h2 className="text-sm font-medium text-muted-foreground">
-            Proformas en attente (§12) — {proformasEnAttente.length}
-          </h2>
-          {proformasEnAttente.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucune proforma en attente.</p>
-          ) : (
-            proformasEnAttente.map((p) => (
-              <div key={p.id} className="rounded-md border border-border bg-card p-3 text-sm">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="font-medium text-card-foreground">{p.numero}</span>
-                  <span className="text-xs text-muted-foreground">par {p.auteurNom}</span>
-                </div>
-                <p className="mt-1 text-muted-foreground">
-                  {p.clientNom} — <strong>{formatFcfa(p.montantTtc)}</strong>
+        {onglet === "attente" ? (
+          <div className="flex min-h-0 flex-1 gap-4">
+            <div className="flex w-80 flex-shrink-0 flex-col gap-2 overflow-y-auto">
+              {fluxEnAttente.length === 0 && (
+                <p className="rounded-md border border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                  Aucune demande en attente. 🎉
                 </p>
-                <div className="mt-2 flex gap-2">
-                  <Button size="sm" disabled={isPending} onClick={() => traiter(() => validerProforma(p.id))}>
-                    Valider
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={isPending}
-                    onClick={() => traiter(() => refuserProforma(p.id))}
-                  >
-                    Refuser
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="text-sm font-medium text-muted-foreground">
-            Demandes maquette publiques (§10ter) — {maquetteEnAttente.length}
-          </h2>
-          {maquetteEnAttente.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucune demande en attente.</p>
-          ) : (
-            maquetteEnAttente.map((d) => (
-              <div key={d.id} className="rounded-md border border-border bg-card p-3 text-sm">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="font-medium text-card-foreground">{d.numero}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {d.intent === "pagne" ? "Commander un pagne" : "Créer une maquette"}
-                  </span>
-                </div>
-                <p className="mt-1 text-muted-foreground">
-                  {d.nomClient} — {d.telephoneClient}
-                  {d.forfaitNom && (
-                    <>
-                      {" — "}
-                      <strong>
-                        {d.forfaitNom} ({formatFcfa(d.forfaitPrix ?? 0)})
-                      </strong>
-                    </>
-                  )}
-                </p>
-                <div className="mt-2 flex gap-2">
-                  <Button size="sm" disabled={isPending} onClick={() => traiter(() => validerDemandeMaquette(d.id))}>
-                    Valider (crée l&apos;affaire)
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={isPending}
-                    onClick={() => traiter(() => refuserDemandeMaquette(d.id))}
-                  >
-                    Refuser
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setMaquetteOuverte(maquetteOuverte === d.id ? null : d.id)}
-                  >
-                    {maquetteOuverte === d.id ? "Masquer les détails" : "Voir les détails"}
-                  </Button>
-                </div>
-                {maquetteOuverte === d.id && <DemandeMaquetteDetail details={d.details} />}
-              </div>
-            ))
-          )}
-        </section>
-
-        {maquetteHistorique.length > 0 && (
-          <section className="space-y-2">
-            <h2 className="text-sm font-medium text-muted-foreground">Demandes maquette traitées récemment</h2>
-            <div className="space-y-1">
-              {maquetteHistorique.map((d) => (
-                <div
-                  key={d.id}
-                  className="flex items-center justify-between rounded-md border border-border/60 px-3 py-1.5 text-xs text-muted-foreground"
+              )}
+              {fluxEnAttente.map((row) => (
+                <button
+                  key={row.key}
+                  onClick={() => setSelectedKey(row.key)}
+                  className={`rounded-lg border p-3 text-left transition-colors ${row.key === selectedKey ? "border-primary bg-primary/10" : "border-border bg-card hover:border-border/70"}`}
                 >
-                  <span>
-                    {d.numero} — {d.nomClient}
-                  </span>
-                  <span>{d.statut}</span>
-                </div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-foreground">{rowTitre(row)}</div>
+                      <div className="mt-0.5 truncate text-xs text-muted-foreground">{rowSousTitre(row)}</div>
+                    </div>
+                    <KindBadge kind={row.kind} />
+                  </div>
+                  <div className="mt-2 text-[10.5px] text-muted-foreground">{formatRelatif(row.dateCreation)}</div>
+                </button>
               ))}
             </div>
-          </section>
-        )}
 
-        {proformasHistorique.length > 0 && (
-          <section className="space-y-2">
-            <h2 className="text-sm font-medium text-muted-foreground">Proformas traitées récemment</h2>
-            <div className="space-y-1">
-              {proformasHistorique.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between rounded-md border border-border/60 px-3 py-1.5 text-xs text-muted-foreground"
-                >
-                  <span>
-                    {p.numero} — {p.clientNom} — {formatFcfa(p.montantTtc)}
-                  </span>
-                  <span>{p.statut}</span>
-                </div>
-              ))}
+            <div className="min-w-0 flex-1 overflow-y-auto rounded-xl border border-border bg-card p-6">
+              {!selected ? (
+                <p className="text-sm text-muted-foreground">Cliquez un élément à gauche pour voir sa fiche et décider.</p>
+              ) : (
+                <DetailPanel
+                  row={selected}
+                  isPending={isPending}
+                  rechargeSaisie={rechargeSaisie}
+                  setRechargeSaisie={setRechargeSaisie}
+                  traiter={traiter}
+                />
+              )}
             </div>
-          </section>
-        )}
-
-        {historique.length > 0 && (
-          <section className="space-y-2">
-            <h2 className="text-sm font-medium text-muted-foreground">Historique récent</h2>
-            <div className="space-y-1">
-              {historique.map((d) => (
-                <div
-                  key={d.id}
-                  className="flex items-center justify-between rounded-md border border-border/60 px-3 py-1.5 text-xs text-muted-foreground"
-                >
-                  <span>
-                    {d.articleNom} — Affaire {d.affaireNumero} — manque {d.manque}
-                  </span>
-                  <span>{d.statut}</span>
-                </div>
-              ))}
-            </div>
-          </section>
+          </div>
+        ) : (
+          <div className="flex-1 space-y-1 overflow-y-auto">
+            {fluxHistorique.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucun historique pour le moment.</p>
+            ) : (
+              fluxHistorique.map((row) => <HistoriqueRow key={row.key} row={row} />)
+            )}
+          </div>
         )}
       </div>
-    </div>
     </AppShell>
   );
 }
