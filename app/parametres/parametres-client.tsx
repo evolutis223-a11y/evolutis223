@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { AppShell, type ShellModule } from "@/components/app-shell";
 import { DocumentPreview } from "@/components/documents/document-preview";
 import { enregistrerMastheadTexte, type ExempleDocument } from "./actions";
+import { enregistrerContenuSiteWeb, type SiteBannerSlide, type SiteContenu, type SiteHeroSlide } from "@/app/site/actions";
 
 const TABS = [
   { key: "apparence", label: "Général" },
@@ -39,6 +40,7 @@ export function ParametresClient({
   roleCode,
   masthead,
   exemples,
+  contenuSite,
 }: {
   userName: string;
   roleLibelle: string;
@@ -46,6 +48,7 @@ export function ParametresClient({
   roleCode: string;
   masthead: string;
   exemples: { facture: ExempleDocument | null; devis: ExempleDocument | null; proforma: ExempleDocument | null; bc: ExempleDocument | null; bl: ExempleDocument | null };
+  contenuSite: SiteContenu;
 }) {
   const [tab, setTab] = useState<TabKey>("modeles");
 
@@ -67,6 +70,8 @@ export function ParametresClient({
 
         {tab === "modeles" ? (
           <ModelesDeDocuments roleCode={roleCode} mastheadInitial={masthead} exemples={exemples} />
+        ) : tab === "site" ? (
+          <SiteWebEditor contenuInitial={contenuSite} />
         ) : (
           <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 20, color: "#888", fontSize: 13.5 }}>
             Onglet pas encore construit.
@@ -76,6 +81,205 @@ export function ParametresClient({
     </AppShell>
   );
 }
+
+function SiteWebEditor({ contenuInitial }: { contenuInitial: SiteContenu }) {
+  const [contenu, setContenu] = useState<SiteContenu>(contenuInitial);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  function set<K extends keyof SiteContenu>(key: K, value: SiteContenu[K]) {
+    setContenu((c) => ({ ...c, [key]: value }));
+    setSaved(false);
+  }
+
+  function updateHeroSlide(i: number, patch: Partial<SiteHeroSlide>) {
+    setContenu((c) => ({ ...c, heroSlides: c.heroSlides.map((s, si) => (si === i ? { ...s, ...patch } : s)) }));
+    setSaved(false);
+  }
+
+  function updateUniversCard(i: number, patch: { glyph?: string; label?: string }) {
+    setContenu((c) => ({ ...c, universCards: c.universCards.map((u, ui) => (ui === i ? { ...u, ...patch } : u)) }));
+    setSaved(false);
+  }
+
+  function updateBannerSlide(i: number, patch: Partial<SiteBannerSlide>) {
+    setContenu((c) => ({ ...c, bannerSlides: c.bannerSlides.map((s, si) => (si === i ? { ...s, ...patch } : s)) }));
+    setSaved(false);
+  }
+
+  function ajouterBanniere() {
+    setContenu((c) => ({ ...c, bannerSlides: [...c.bannerSlides, { tag: "Annonce", texte: "", bg: "#0b0b0b" }] }));
+    setSaved(false);
+  }
+
+  function retirerBanniere(i: number) {
+    setContenu((c) => ({ ...c, bannerSlides: c.bannerSlides.filter((_, si) => si !== i) }));
+    setSaved(false);
+  }
+
+  async function enregistrer() {
+    setSaving(true);
+    setErreur(null);
+    const res = await enregistrerContenuSiteWeb(contenu);
+    setSaving(false);
+    if (res.error) {
+      setErreur(res.error);
+    } else {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    }
+  }
+
+  return (
+    <div style={{ maxWidth: 860 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, gap: 16, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>Site web public (evolutis223.com/site)</div>
+          <div style={{ fontSize: 12.5, color: "#888", marginTop: 3 }}>
+            Modifiez les textes affichés sur le site sans toucher au code. Les produits affichés viennent automatiquement du catalogue.
+          </div>
+        </div>
+        <a
+          href="/site"
+          target="_blank"
+          rel="noreferrer"
+          style={{ fontSize: 12.5, fontWeight: 700, color: "#3b82f6", textDecoration: "none", border: "1px solid #3b82f6", padding: "8px 14px", borderRadius: 6, whiteSpace: "nowrap" }}
+        >
+          Voir le site ↗
+        </a>
+      </div>
+
+      <SiteSection titre="Accroche">
+        <SiteChamp label="Texte au-dessus du titre (ex. Fabriqué à Bamako)">
+          <input style={siteInputStyle} value={contenu.eyebrow} onChange={(e) => set("eyebrow", e.target.value)} />
+        </SiteChamp>
+        <SiteChamp label="Texte d'introduction (sous le titre)">
+          <textarea style={{ ...siteInputStyle, height: 70, resize: "vertical" }} value={contenu.leadText} onChange={(e) => set("leadText", e.target.value)} />
+        </SiteChamp>
+        <div style={{ display: "flex", gap: 12 }}>
+          <SiteChamp label="Chiffre (ex. 10+)" style={{ flex: 1 }}>
+            <input style={siteInputStyle} value={contenu.badgeAnnees} onChange={(e) => set("badgeAnnees", e.target.value)} />
+          </SiteChamp>
+          <SiteChamp label="Légende (ex. ans d'expérience)" style={{ flex: 2 }}>
+            <input style={siteInputStyle} value={contenu.badgeLabel} onChange={(e) => set("badgeLabel", e.target.value)} />
+          </SiteChamp>
+        </div>
+      </SiteSection>
+
+      <SiteSection titre="Diaporama d'accueil (défile automatiquement)">
+        {contenu.heroSlides.map((s, i) => (
+          <div
+            key={i}
+            style={{ display: "flex", gap: 10, alignItems: "flex-end", marginBottom: 10, paddingBottom: 10, borderBottom: i < contenu.heroSlides.length - 1 ? "1px solid #2a2a2a" : "none" }}
+          >
+            <SiteChamp label="Icône" style={{ width: 70 }}>
+              <input style={siteInputStyle} value={s.glyph} onChange={(e) => updateHeroSlide(i, { glyph: e.target.value })} />
+            </SiteChamp>
+            <SiteChamp label="Étiquette" style={{ flex: 1 }}>
+              <input style={siteInputStyle} value={s.tag} onChange={(e) => updateHeroSlide(i, { tag: e.target.value })} />
+            </SiteChamp>
+            <SiteChamp label="Texte en gras" style={{ flex: 2 }}>
+              <input style={siteInputStyle} value={s.bold} onChange={(e) => updateHeroSlide(i, { bold: e.target.value })} />
+            </SiteChamp>
+          </div>
+        ))}
+      </SiteSection>
+
+      <SiteSection titre="Bandeau promo (défile automatiquement)">
+        {contenu.bannerSlides.map((s, i) => (
+          <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-end", marginBottom: 10, paddingBottom: 10, borderBottom: "1px solid #2a2a2a" }}>
+            <SiteChamp label="Étiquette" style={{ width: 110 }}>
+              <input style={siteInputStyle} value={s.tag} onChange={(e) => updateBannerSlide(i, { tag: e.target.value })} />
+            </SiteChamp>
+            <SiteChamp label="Message" style={{ flex: 1 }}>
+              <input style={siteInputStyle} value={s.texte} onChange={(e) => updateBannerSlide(i, { texte: e.target.value })} />
+            </SiteChamp>
+            <SiteChamp label="Couleur" style={{ width: 60 }}>
+              <input type="color" style={{ ...siteInputStyle, padding: 2, height: 34 }} value={s.bg} onChange={(e) => updateBannerSlide(i, { bg: e.target.value })} />
+            </SiteChamp>
+            <button
+              onClick={() => retirerBanniere(i)}
+              title="Retirer ce message"
+              style={{ background: "none", border: "1px solid #444", color: "#f87171", borderRadius: 6, width: 34, height: 34, cursor: "pointer", flexShrink: 0 }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        <button onClick={ajouterBanniere} style={{ background: "none", border: "1px dashed #444", color: "#93c5fd", borderRadius: 6, padding: "8px 14px", fontSize: 12.5, cursor: "pointer" }}>
+          + Ajouter un message
+        </button>
+      </SiteSection>
+
+      <SiteSection titre="Nos univers">
+        {contenu.universCards.map((u, i) => (
+          <div key={u.marque} style={{ display: "flex", gap: 10, alignItems: "flex-end", marginBottom: 10 }}>
+            <div style={{ width: 90, fontSize: 12.5, fontWeight: 700, color: "#ccc", paddingBottom: 9, flexShrink: 0 }}>{u.marque}</div>
+            <SiteChamp label="Icône" style={{ width: 70 }}>
+              <input style={siteInputStyle} value={u.glyph} onChange={(e) => updateUniversCard(i, { glyph: e.target.value })} />
+            </SiteChamp>
+            <SiteChamp label="Description" style={{ flex: 1 }}>
+              <input style={siteInputStyle} value={u.label} onChange={(e) => updateUniversCard(i, { label: e.target.value })} />
+            </SiteChamp>
+          </div>
+        ))}
+      </SiteSection>
+
+      <SiteSection titre="Notre vision">
+        <div style={{ display: "flex", gap: 12 }}>
+          <SiteChamp label="Titre — 1ère ligne" style={{ flex: 1 }}>
+            <input style={siteInputStyle} value={contenu.visionTitreLigne1} onChange={(e) => set("visionTitreLigne1", e.target.value)} />
+          </SiteChamp>
+          <SiteChamp label="Titre — 2e ligne" style={{ flex: 1 }}>
+            <input style={siteInputStyle} value={contenu.visionTitreLigne2} onChange={(e) => set("visionTitreLigne2", e.target.value)} />
+          </SiteChamp>
+        </div>
+        <SiteChamp label="Texte">
+          <textarea style={{ ...siteInputStyle, height: 110, resize: "vertical" }} value={contenu.visionText} onChange={(e) => set("visionText", e.target.value)} />
+        </SiteChamp>
+      </SiteSection>
+
+      <SiteSection titre="Pied de page">
+        <SiteChamp label="Texte de présentation">
+          <textarea style={{ ...siteInputStyle, height: 70, resize: "vertical" }} value={contenu.footerTagline} onChange={(e) => set("footerTagline", e.target.value)} />
+        </SiteChamp>
+      </SiteSection>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 6 }}>
+        <button
+          onClick={enregistrer}
+          disabled={saving}
+          style={{ background: "#3b82f6", color: "#fff", border: "none", padding: "11px 22px", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1 }}
+        >
+          {saving ? "Enregistrement…" : "Enregistrer les modifications"}
+        </button>
+        {saved && <span style={{ color: "#34d399", fontSize: 13, fontWeight: 700 }}>✓ Enregistré</span>}
+        {erreur && <span style={{ color: "#f87171", fontSize: 13 }}>{erreur}</span>}
+      </div>
+    </div>
+  );
+}
+
+function SiteSection({ titre, children }: { titre: string; children: ReactNode }) {
+  return (
+    <div style={{ background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 18, marginBottom: 16 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.04em" }}>{titre}</div>
+      {children}
+    </div>
+  );
+}
+
+function SiteChamp({ label, children, style }: { label: string; children: ReactNode; style?: CSSProperties }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 10, ...style }}>
+      <label style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+const siteInputStyle: CSSProperties = { background: "#141414", border: "1px solid #3a3a3a", color: "#eee", borderRadius: 6, padding: "8px 10px", fontSize: 13, fontFamily: "inherit" };
 
 function ModelesDeDocuments({
   roleCode,

@@ -4,6 +4,7 @@ import { hasModuleAccess } from "@/lib/permissions";
 import { buildShellModules } from "@/lib/shell-modules";
 import { chargerUtilisateurAffiche } from "@/lib/session-user";
 import { chargerModelesData } from "./actions";
+import { chargerContenuSiteWeb } from "@/app/site/actions";
 import { ParametresClient } from "./parametres-client";
 
 export default async function ParametresPage() {
@@ -17,7 +18,11 @@ export default async function ParametresPage() {
     );
   }
 
-  const [user, modelesData] = await Promise.all([chargerUtilisateurAffiche(session.userId), chargerModelesData()]);
+  const [user, modelesData, contenuSite] = await Promise.all([
+    chargerUtilisateurAffiche(session.userId),
+    chargerModelesData(),
+    chargerContenuSiteWeb(),
+  ]);
 
   return (
     <ParametresClient
@@ -27,6 +32,7 @@ export default async function ParametresPage() {
       roleCode={session.roleCode}
       masthead={modelesData.masthead}
       exemples={modelesData.exemples}
+      contenuSite={contenuSite}
     />
   );
 }
