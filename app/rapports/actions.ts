@@ -8,10 +8,12 @@ import {
   besoinsSaisonniers,
   bonsDecaissement,
   bulletinsPaie,
+  clients,
   incidentsPersonnel,
   lignesAffaire,
   livraisons,
   personnel,
+  utilisateurs,
   variantes,
   vStockVariante,
 } from "@/db/schema";
@@ -355,5 +357,154 @@ export async function chargerRapportOperations(frequence: Frequence): Promise<Ra
     totalLivraisons: livraisonsParStatut.reduce((s, r) => s + r.nombre, 0),
     ruptureActuelle,
     stockFaibleActuel,
+  };
+}
+
+export interface VenteDetail {
+  numero: string;
+  clientNom: string;
+  montantTtc: number;
+  dateCreation: Date;
+  statut: string;
+}
+export interface DecaissementDetail {
+  motif: string;
+  categorie: string;
+  montant: number;
+  dateCreation: Date;
+  auteurNom: string;
+}
+export interface LivraisonDetail {
+  numero: string;
+  affaireNumero: string;
+  statut: string;
+  dateCreation: Date;
+}
+export interface RuptureDetail {
+  articleNom: string;
+  taille: string | null;
+  couleur: string | null;
+}
+export interface IncidentDetail {
+  type: string;
+  dateIncident: string;
+  personnelNom: string;
+  description: string | null;
+}
+
+export interface RapportDetailComplet {
+  periodeLabel: string;
+  ventes: VenteDetail[];
+  decaissements: DecaissementDetail[];
+  livraisons: LivraisonDetail[];
+  ruptures: RuptureDetail[];
+  incidents: IncidentDetail[];
+  besoinsActifs: RapportRh["besoinsActifs"];
+}
+
+// Vue "Rapport détaillé" (2026-08-09) : liste ligne par ligne, pas seulement des totaux — pour
+// pouvoir vraiment détailler jour/semaine/mois/année comme demandé, sans dupliquer la logique
+// d'agrégation ci-dessus (les totaux restent calculés par les fonctions au-dessus).
+export async function chargerDetailComplet(frequence: Frequence): Promise<RapportDetailComplet> {
+  await requireRapportsAccess();
+  const { debut, fin } = bornesPeriode(frequence, new Date());
+  const debutStr = debut.toISOString().slice(0, 10);
+  const finStr = fin.toISOString().slice(0, 10);
+
+  const [venteRows, decaissementRows, livraisonRows, incidentRows, besoinRows, stockRows] = await Promise.all([
+    db
+      .select({
+        numero: affaires.numero,
+        clientNom: clients.nom,
+        montantTtc: affaires.montantTtc,
+        dateCreation: affaires.dateCreation,
+        statut: affaires.statut,
+      })
+      .from(affaires)
+      .innerJoin(clients, eq(clients.id, affaires.clientId))
+      .where(
+        and(
+          inArray(affaires.statut, ["VALIDEE", "CLOTUREE"]),
+          gte(affaires.dateCreation, debut),
+          lt(affaires.dateCreation, fin)
+        )
+      )
+      .orderBy(sql`${affaires.dateCreation} desc`)
+      .limit(200),
+    db
+      .select({
+        motif: bonsDecaissement.motif,
+        categorie: bonsDecaissement.categorie,
+        montant: bonsDecaissement.montant,
+        dateCreation: bonsDecaissement.dateCreation,
+        auteurNom: utilisateurs.nom,
+      })
+      .from(bonsDecaissement)
+      .innerJoin(utilisateurs, eq(utilisateurs.id, bonsDecaissement.auteurId))
+      .where(
+        and(
+          isNotNull(bonsDecaissement.validateurId),
+          gte(bonsDecaissement.dateCreation, debut),
+          lt(bonsDecaissement.dateCreation, fin)
+        )
+      )
+      .orderBy(sql`${bonsDecaissement.dateCreation} desc`)
+      .limit(200),
+    db
+      .select({
+        numero: livraisons.numero,
+        affaireNumero: affaires.numero,
+        statut: livraisons.statut,
+        dateCreation: livraisons.dateCreation,
+      })
+      .from(livraisons)
+      .innerJoin(affaires, eq(affaires.id, livraisons.affaireId))
+      .where(and(gte(livraisons.dateCreation, debut), lt(livraisons.dateCreation, fin)))
+      .orderBy(sql`${livraisons.dateCreation} desc`)
+      .limit(200),
+    db
+      .select({
+        type: incidentsPersonnel.type,
+        dateIncident: incidentsPersonnel.dateIncident,
+        personnelNom: personnel.nom,
+        description: incidentsPersonnel.description,
+      })
+      .from(incidentsPersonnel)
+      .innerJoin(personnel, eq(personnel.id, incidentsPersonnel.personnelId))
+      .where(and(gte(incidentsPersonnel.dateIncident, debutStr), lt(incidentsPersonnel.dateIncident, finStr)))
+      .orderBy(sql`${incidentsPersonnel.dateIncident} desc`),
+    db
+      .select()
+      .from(besoinsSaisonniers)
+      .where(and(lte(besoinsSaisonniers.periodeDebut, finStr), gte(besoinsSaisonniers.periodeFin, debutStr))),
+    db
+      .select({
+        articleNom: articles.nom,
+        taille: variantes.taille,
+        couleur: variantes.couleur,
+        stockDetail: vStockVariante.stockDetail,
+      })
+      .from(variantes)
+      .innerJoin(articles, eq(articles.id, variantes.articleId))
+      .leftJoin(vStockVariante, eq(vStockVariante.varianteId, variantes.id)),
+  ]);
+
+  return {
+    periodeLabel: LABELS_FREQUENCE[frequence],
+    ventes: venteRows.map((v) => ({ ...v, montantTtc: Number(v.montantTtc) })),
+    decaissements: decaissementRows.map((d) => ({ ...d, montant: Number(d.montant) })),
+    livraisons: livraisonRows,
+    ruptures: stockRows
+      .filter((s) => (s.stockDetail ?? 0) <= 0)
+      .map((s) => ({ articleNom: s.articleNom, taille: s.taille, couleur: s.couleur })),
+    incidents: incidentRows,
+    besoinsActifs: besoinRows.map((b) => ({
+      titre: b.titre,
+      fonction: b.fonction,
+      nombrePersonnesRequis: b.nombrePersonnesRequis,
+      periodeDebut: b.periodeDebut,
+      periodeFin: b.periodeFin,
+      statut: b.statut,
+    })),
   };
 }
