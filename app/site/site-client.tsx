@@ -232,9 +232,6 @@ export function SiteClient({
               <button className="btn-primary" onClick={() => scrollTo("catalogue")}>
                 Découvrir la collection →
               </button>
-              <a className="btn-ghost" onClick={() => scrollTo("marques")}>
-                Nos univers
-              </a>
             </div>
           </div>
           <div className="hero-visual">
@@ -418,34 +415,6 @@ export function SiteClient({
               onAcheter={ouvrirFiche}
             />
           )}
-        </div>
-      </section>
-
-      <section className="section reveal-in" id="marques">
-        <div className="section-head">
-          <div>
-            <div className="eyebrow">Nos univers</div>
-            <h2>
-              Trois savoir-faire,
-              <br />
-              une seule adresse.
-            </h2>
-          </div>
-        </div>
-        <div className="univers-grid">
-          {contenu.universCards.map((u) => (
-            <div key={u.marque} className="card" onClick={() => appliquerFiltre(u.marque)}>
-              <div className="card-media">
-                <span className="glyph">{u.glyph}</span>
-              </div>
-              <div className="card-body">
-                <div>
-                  <div className="card-branche">{u.marque}</div>
-                  <div className="card-nom">{u.label}</div>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 
