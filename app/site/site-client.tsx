@@ -832,7 +832,8 @@ a { cursor: pointer; }
 .card-branche { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
 .card-nom { margin-top: 4px; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
 .grid.petite .card-nom { font-size: 15px; }
-.card-prix { font-size: 14px; font-weight: 700; white-space: nowrap; }
+.grid.petite .card-prix { font-size: 16px; }
+.card-prix { font-size: 19px; font-weight: 800; white-space: nowrap; }
 
 .univers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .univers-grid .card-media { aspect-ratio: 3/2; }
@@ -859,7 +860,7 @@ a { cursor: pointer; }
 .list-info { flex: 1; min-width: 0; }
 .list-nom { font-size: 18px; font-weight: 700; }
 .list-branche { font-size: 11px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
-.list-prix { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.list-prix { font-size: 18px; font-weight: 800; white-space: nowrap; }
 .list-buy { background: var(--ink); color: var(--bg); border: none; padding: 9px 16px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
 
 .galerie-view { display: flex; flex-direction: column; align-items: center; gap: 30px; }
