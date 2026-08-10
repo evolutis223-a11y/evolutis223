@@ -4,7 +4,7 @@ import { useState, type CSSProperties, type ReactNode } from "react";
 import { AppShell, type ShellModule } from "@/components/app-shell";
 import { DocumentPreview } from "@/components/documents/document-preview";
 import { enregistrerMastheadTexte, type ExempleDocument } from "./actions";
-import { enregistrerContenuSiteWeb, type SiteBannerSlide, type SiteContenu, type SiteHeroSlide } from "@/app/site/actions";
+import { enregistrerContenuSiteWeb, uploaderImageHeroSite, type SiteBannerSlide, type SiteContenu, type SiteHeroSlide } from "@/app/site/actions";
 
 const TABS = [
   { key: "apparence", label: "Général" },
@@ -96,6 +96,25 @@ function SiteWebEditor({ contenuInitial }: { contenuInitial: SiteContenu }) {
   function updateHeroSlide(i: number, patch: Partial<SiteHeroSlide>) {
     setContenu((c) => ({ ...c, heroSlides: c.heroSlides.map((s, si) => (si === i ? { ...s, ...patch } : s)) }));
     setSaved(false);
+  }
+
+  function ajouterHeroSlide() {
+    setContenu((c) => ({ ...c, heroSlides: [...c.heroSlides, { glyph: "🆕", tag: "", bold: "" }] }));
+    setSaved(false);
+  }
+
+  function retirerHeroSlide(i: number) {
+    setContenu((c) => ({ ...c, heroSlides: c.heroSlides.filter((_, si) => si !== i) }));
+    setSaved(false);
+  }
+
+  const [envoiEnCours, setEnvoiEnCours] = useState<number | null>(null);
+  async function handleUploadHeroImage(i: number, file: File) {
+    setEnvoiEnCours(i);
+    const res = await uploaderImageHeroSite(file);
+    setEnvoiEnCours(null);
+    if (res.url) updateHeroSlide(i, { imageUrl: res.url });
+    else if (res.error) setErreur(res.error);
   }
 
   function updateUniversCard(i: number, patch: { glyph?: string; label?: string }) {
@@ -235,23 +254,79 @@ function SiteWebEditor({ contenuInitial }: { contenuInitial: SiteContenu }) {
         </div>
       </SiteSection>
 
-      <SiteSection titre="Diaporama d'accueil (défile automatiquement)">
+      <SiteSection titre="Diaporama d'accueil">
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+          <span style={{ fontSize: 12.5, color: "#ccc" }}>Après la dernière image :</span>
+          <button
+            onClick={() => set("heroBoucle", true)}
+            style={{ background: contenu.heroBoucle ? "#3b82f6" : "none", color: contenu.heroBoucle ? "#fff" : "#93c5fd", border: "1px solid #3b82f6", padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+          >
+            🔁 Boucle
+          </button>
+          <button
+            onClick={() => set("heroBoucle", false)}
+            style={{ background: !contenu.heroBoucle ? "#3b82f6" : "none", color: !contenu.heroBoucle ? "#fff" : "#93c5fd", border: "1px solid #3b82f6", padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+          >
+            ⏹ Une seule fois
+          </button>
+        </div>
         {contenu.heroSlides.map((s, i) => (
           <div
             key={i}
-            style={{ display: "flex", gap: 10, alignItems: "flex-end", marginBottom: 10, paddingBottom: 10, borderBottom: i < contenu.heroSlides.length - 1 ? "1px solid #2a2a2a" : "none" }}
+            style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid #2a2a2a" }}
           >
-            <SiteChamp label="Icône" style={{ width: 70 }}>
-              <input style={siteInputStyle} value={s.glyph} onChange={(e) => updateHeroSlide(i, { glyph: e.target.value })} />
-            </SiteChamp>
+            <div style={{ display: "flex", flexDirection: "column", gap: 5, width: 90 }}>
+              <label style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: "0.04em" }}>Image</label>
+              <div
+                style={{
+                  width: 90,
+                  height: 70,
+                  borderRadius: 6,
+                  border: "1px solid #3a3a3a",
+                  background: s.imageUrl ? `#000 url(${s.imageUrl}) center/cover no-repeat` : "#141414",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 26,
+                  color: "#666",
+                }}
+              >
+                {!s.imageUrl && s.glyph}
+              </div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "#93c5fd", cursor: "pointer", textAlign: "center" }}>
+                {envoiEnCours === i ? "Envoi…" : s.imageUrl ? "Remplacer" : "Importer"}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  style={{ display: "none" }}
+                  disabled={envoiEnCours !== null}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadHeroImage(i, file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
             <SiteChamp label="Étiquette" style={{ flex: 1 }}>
               <input style={siteInputStyle} value={s.tag} onChange={(e) => updateHeroSlide(i, { tag: e.target.value })} />
             </SiteChamp>
             <SiteChamp label="Texte en gras" style={{ flex: 2 }}>
               <input style={siteInputStyle} value={s.bold} onChange={(e) => updateHeroSlide(i, { bold: e.target.value })} />
             </SiteChamp>
+            <button
+              onClick={() => retirerHeroSlide(i)}
+              title="Retirer cette image"
+              disabled={contenu.heroSlides.length <= 1}
+              style={{ background: "none", border: "1px solid #444", color: contenu.heroSlides.length <= 1 ? "#555" : "#f87171", borderRadius: 6, width: 34, height: 34, cursor: contenu.heroSlides.length <= 1 ? "default" : "pointer", flexShrink: 0 }}
+            >
+              ×
+            </button>
           </div>
         ))}
+        <button onClick={ajouterHeroSlide} style={{ background: "none", border: "1px dashed #444", color: "#93c5fd", borderRadius: 6, padding: "8px 14px", fontSize: 12.5, cursor: "pointer" }}>
+          + Ajouter une image
+        </button>
       </SiteSection>
 
       <SiteSection titre="Bandeau promo (défile automatiquement)">

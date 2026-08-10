@@ -172,21 +172,25 @@ export function SiteClient({
   }, [overlayOuvert]);
 
   // ---------------- HERO DIAPORAMA ----------------
-  // Sur mobile, le défilement automatique est desactivé (demande explicite du 2026-08-09) : on
-  // garde uniquement le premier visuel, fixe, plus lisible et plus sobre sur petit écran.
+  // Entête standard (2026-08-10) : plusieurs images avec transition + flash, boucle ou une seule
+  // fois selon le réglage du propriétaire (contenu.heroBoucle, dans Paramètres).
   const [heroIdx, setHeroIdx] = useState(0);
   const [heroFading, setHeroFading] = useState(false);
+  const [heroFlash, setHeroFlash] = useState(false);
+  const heroTermine = heroIdx >= contenu.heroSlides.length - 1 && !contenu.heroBoucle;
   useEffect(() => {
-    if (typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches) return;
+    if (contenu.heroSlides.length <= 1 || heroTermine) return;
     const t = setInterval(() => {
       setHeroFading(true);
       setTimeout(() => {
-        setHeroIdx((i) => (i + 1) % contenu.heroSlides.length);
+        setHeroIdx((i) => (contenu.heroBoucle ? (i + 1) % contenu.heroSlides.length : Math.min(i + 1, contenu.heroSlides.length - 1)));
         setHeroFading(false);
+        setHeroFlash(true);
+        setTimeout(() => setHeroFlash(false), 260);
       }, 400);
     }, 4200);
     return () => clearInterval(t);
-  }, [contenu.heroSlides.length]);
+  }, [contenu.heroSlides.length, contenu.heroBoucle, heroTermine]);
   const heroSlide = contenu.heroSlides[heroIdx] ?? contenu.heroSlides[0];
 
   // ---------------- BANNER CAROUSEL ----------------
@@ -270,7 +274,13 @@ export function SiteClient({
           </div>
           <div className="hero-visual">
             <div className="hero-frame">
-              <span className={`glyph${heroFading ? " fading" : ""}`}>{heroSlide.glyph}</span>
+              {heroSlide.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={heroSlide.imageUrl} alt="" className={`hero-frame-img${heroFading ? " fading" : ""}`} />
+              ) : (
+                <span className={`glyph${heroFading ? " fading" : ""}`}>{heroSlide.glyph}</span>
+              )}
+              <div className={`hero-flash${heroFlash ? " on" : ""}`} />
               <div className="hero-dots">
                 {contenu.heroSlides.map((_, i) => (
                   <span
@@ -753,6 +763,11 @@ a { cursor: pointer; }
 .hero-visual { position: relative; aspect-ratio: 3/4; }
 .hero-frame { position: absolute; inset: 0; background: linear-gradient(155deg, var(--bg-soft), var(--accent-soft)); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .hero-frame .glyph { font-size: 140px; opacity: 0.22; transition: opacity .5s ease; }
+.hero-frame-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity .5s ease; }
+.hero-frame-img.fading { opacity: 0; }
+/* Léger flash blanc au moment du changement d'image, discret (demande du 2026-08-10). */
+.hero-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity .18s ease-out; z-index: 2; }
+.hero-flash.on { opacity: 0.35; transition: opacity .06s ease-in; }
 .hero-frame .glyph.fading, .hero-tag.fading { opacity: 0; }
 .hero-tag { position: absolute; bottom: -18px; left: -18px; background: var(--ink); color: var(--bg); padding: 16px 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; box-shadow: 0 20px 40px rgba(0,0,0,0.18); transition: opacity .4s ease; }
 .hero-tag b { display: block; font-size: 20px; color: var(--accent); margin-top: 2px; letter-spacing: 0; }

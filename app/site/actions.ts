@@ -5,11 +5,13 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { parametresDocuments } from "@/db/schema";
 import { getSession } from "@/lib/auth";
+import { uploadFichier } from "@/lib/blob";
 
 const TYPE_DOCUMENT = "SITE_WEB_CONTENU";
 
 export interface SiteHeroSlide {
   glyph: string;
+  imageUrl?: string;
   tag: string;
   bold: string;
 }
@@ -34,6 +36,7 @@ export interface SiteContenu {
   badgeAnnees: string;
   badgeLabel: string;
   heroSlides: SiteHeroSlide[];
+  heroBoucle: boolean;
   bannerSlides: SiteBannerSlide[];
   universCards: SiteUniversCard[];
   visionTitreLigne1: string;
@@ -56,6 +59,7 @@ const SITE_CONTENU_DEFAUT: SiteContenu = {
     { glyph: "🎒", tag: "Bientôt la rentrée", bold: "Polos scolaires personnalisés" },
     { glyph: "🧣", tag: "Sur mesure", bold: "Pagne & textile personnalisés" },
   ],
+  heroBoucle: true,
   bannerSlides: [
     { tag: "Soldes", texte: "Jusqu'à -20% sur une sélection cette semaine", bg: "#0b0b0b" },
     { tag: "Livraison", texte: "Livraison offerte à Bamako dès 3 pièces achetées", bg: "#a8763e" },
@@ -117,5 +121,15 @@ export async function enregistrerContenuSiteWeb(contenu: SiteContenu): Promise<{
     return {};
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Erreur." };
+  }
+}
+
+export async function uploaderImageHeroSite(file: File): Promise<{ url?: string; error?: string }> {
+  try {
+    await requireAdminAccess();
+    const { url } = await uploadFichier(file, "site-hero");
+    return { url };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur d'envoi." };
   }
 }
