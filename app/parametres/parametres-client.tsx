@@ -188,6 +188,34 @@ function SiteWebEditor({ contenuInitial }: { contenuInitial: SiteContenu }) {
             🌙 Sombre
           </button>
         </div>
+        <div style={{ fontSize: 12.5, color: "#888", margin: "16px 0 8px" }}>Couleur de marque</div>
+        <div style={{ display: "flex", gap: 10 }}>
+          {(
+            [
+              { valeur: "or" as const, label: "🟤 Or", couleur: "#a8763e" },
+              { valeur: "vert" as const, label: "🟢 Vert", couleur: "#4f7a52" },
+              { valeur: "noir" as const, label: "⚫ Noir & Blanc", couleur: "#171716" },
+            ]
+          ).map((a) => (
+            <button
+              key={a.valeur}
+              onClick={() => set("accent", a.valeur)}
+              style={{
+                flex: 1,
+                padding: "12px 10px",
+                borderRadius: 6,
+                border: contenu.accent === a.valeur ? "2px solid #3b82f6" : "1px solid #3a3a3a",
+                background: contenu.accent === a.valeur ? "#1e293b" : "#141414",
+                color: "#eee",
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
       </SiteSection>
 
       <SiteSection titre="Accroche">

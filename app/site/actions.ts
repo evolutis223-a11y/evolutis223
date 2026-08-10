@@ -28,6 +28,7 @@ export interface SiteUniversCard {
 
 export interface SiteContenu {
   theme: "light" | "dark";
+  accent: "or" | "vert" | "noir";
   eyebrow: string;
   leadText: string;
   badgeAnnees: string;
@@ -43,6 +44,7 @@ export interface SiteContenu {
 
 const SITE_CONTENU_DEFAUT: SiteContenu = {
   theme: "light",
+  accent: "or",
   eyebrow: "Fabriqué à Bamako",
   leadText:
     "Tech · Com · Pub : EVOLUTIS223 conçoit des solutions textiles, créatives et numériques sur mesure, pensées pour porter vos idées plus loin.",

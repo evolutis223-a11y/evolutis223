@@ -208,7 +208,7 @@ export function SiteClient({
   }
 
   return (
-    <div className="site-root" data-theme={theme} style={{ background: "var(--bg)", color: "var(--ink)" }}>
+    <div className="site-root" data-theme={theme} data-accent={contenu.accent} style={{ background: "var(--bg)", color: "var(--ink)" }}>
       <style dangerouslySetInnerHTML={{ __html: SITE_CSS }} />
 
       <nav className={`nav${scrolled ? " scrolled" : ""}`}>
@@ -694,6 +694,12 @@ const SITE_CSS = `
   --footer-bg: #000000; --footer-ink: #f5f3ee; --footer-muted: #77746c;
   --media-bg: #ffffff; --media-shadow: 0 22px 44px -14px rgba(0,0,0,0.55);
 }
+/* Déclinaisons de couleur de marque (Or par défaut / Vert / Noir & Blanc), reglage proprietaire
+   repris de la maquette d'origine — le fond du Catalogue se teinte legerement pour s'accorder. */
+.site-root[data-accent="vert"] { --accent: #4f7a52; --accent-soft: #e4ece3; --catalogue-bg: #e7ede6; }
+.site-root[data-theme="dark"][data-accent="vert"] { --accent: #83b283; --accent-soft: #182219; --catalogue-bg: #131c14; }
+.site-root[data-accent="noir"] { --accent: #171716; --accent-soft: #e6e5e2; --catalogue-bg: #ececea; }
+.site-root[data-theme="dark"][data-accent="noir"] { --accent: #eceae5; --accent-soft: #201f1c; --catalogue-bg: #151512; }
 .site-root { transition: background .4s ease, color .4s ease; }
 .site-root * { box-sizing: border-box; }
 html, body { overflow-x: hidden; max-width: 100%; }
@@ -717,7 +723,7 @@ a { cursor: pointer; }
 .nav-subbrands a { color: var(--muted); text-decoration: none; transition: color .2s ease; }
 .nav-subbrands a:hover { color: var(--accent); }
 @media (max-width: 900px) { .nav-subbrands { display: none; } }
-.nav.scrolled { background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); padding: 14px 5vw; border-color: var(--line); }
+.nav.scrolled { background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(10px); padding: 14px 5vw; border-color: var(--line); }
 .nav-mark { font-size: 19px; font-weight: 800; letter-spacing: 0.02em; }
 .nav-mark span { color: var(--accent); }
 .nav-links { display: flex; align-items: center; gap: 34px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -900,9 +906,12 @@ a { cursor: pointer; }
 .vision-section .eyebrow { color: #d9b98a; }
 .vision-image { position: relative; aspect-ratio: 4/5; background: #1a1a18; border: 1px solid #2a2a28; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .vision-image .glyph { font-size: 90px; opacity: 0.35; }
-.vision-image-label { position: absolute; bottom: 18px; left: 18px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.55); }
+.vision-image-label { position: absolute; bottom: 18px; left: 18px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: color-mix(in srgb, var(--bg) 55%, transparent); }
 @media (max-width: 900px) { .vision-grid { grid-template-columns: 1fr; gap: 34px; } .vision-image { order: 1; aspect-ratio: 16/10; } }
-.vision-text { margin-top: 22px; font-size: 18px; line-height: 1.85; color: rgba(255,255,255,0.82); max-width: 680px; }
+/* Cette section inverse toujours ses couleurs (fond var(--ink), texte var(--bg)) pour rester une
+   bande "sombre" distincte — les couleurs du texte doivent donc suivre var(--bg), jamais du blanc
+   fixe, sinon tout disparaît quand le thème du site est lui-même en sombre (bug du 2026-08-10). */
+.vision-text { margin-top: 22px; font-size: 18px; line-height: 1.85; color: color-mix(in srgb, var(--bg) 82%, transparent); max-width: 680px; }
 
 footer { background: var(--footer-bg); color: var(--footer-ink); padding: 60px 5vw 26px; }
 .footer-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 40px; align-items: start; }
