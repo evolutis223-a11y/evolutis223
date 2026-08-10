@@ -150,6 +150,46 @@ function SiteWebEditor({ contenuInitial }: { contenuInitial: SiteContenu }) {
         </a>
       </div>
 
+      <SiteSection titre="Thème">
+        <div style={{ fontSize: 12.5, color: "#888", marginBottom: 12 }}>
+          S'applique à tous les visiteurs du site — ce n'est pas un choix laissé au client.
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={() => set("theme", "light")}
+            style={{
+              flex: 1,
+              padding: "12px 16px",
+              borderRadius: 6,
+              border: contenu.theme === "light" ? "2px solid #3b82f6" : "1px solid #3a3a3a",
+              background: contenu.theme === "light" ? "#1e293b" : "#141414",
+              color: "#eee",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            ☀ Clair
+          </button>
+          <button
+            onClick={() => set("theme", "dark")}
+            style={{
+              flex: 1,
+              padding: "12px 16px",
+              borderRadius: 6,
+              border: contenu.theme === "dark" ? "2px solid #3b82f6" : "1px solid #3a3a3a",
+              background: contenu.theme === "dark" ? "#1e293b" : "#141414",
+              color: "#eee",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            🌙 Sombre
+          </button>
+        </div>
+      </SiteSection>
+
       <SiteSection titre="Accroche">
         <SiteChamp label="Texte au-dessus du titre (ex. Fabriqué à Bamako)">
           <input style={siteInputStyle} value={contenu.eyebrow} onChange={(e) => set("eyebrow", e.target.value)} />

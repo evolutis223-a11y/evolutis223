@@ -118,18 +118,9 @@ export function SiteClient({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  useEffect(() => {
-    const enregistre = window.localStorage.getItem("evolutis223_site_theme");
-    if (enregistre === "dark" || enregistre === "light") setTheme(enregistre);
-  }, []);
-  function basculerTheme() {
-    setTheme((t) => {
-      const suivant = t === "light" ? "dark" : "light";
-      window.localStorage.setItem("evolutis223_site_theme", suivant);
-      return suivant;
-    });
-  }
+  // Le theme est un choix du proprietaire (Parametres > Site & Marketing), jamais du visiteur —
+  // corrige le 2026-08-10 apres avoir mis un bouton public par erreur.
+  const theme = contenu.theme;
 
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -238,9 +229,6 @@ export function SiteClient({
           <a onClick={() => scrollTo("catalogue")}>Catalogue</a>
         </div>
         <div className="nav-right">
-          <button className="theme-toggle" onClick={basculerTheme} title="Basculer clair/sombre" aria-label="Basculer clair/sombre">
-            <span className="theme-toggle-knob">{theme === "dark" ? "🌙" : "☀"}</span>
-          </button>
           <div className="nav-cart icon-zoom" onClick={() => scrollTo("catalogue")}>
             <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <circle cx="11" cy="11" r="7" />
@@ -735,9 +723,6 @@ a { cursor: pointer; }
 .nav-links { display: flex; align-items: center; gap: 34px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .nav-links a { color: var(--ink); text-decoration: none; position: relative; }
 .nav-right { display: flex; align-items: center; gap: 18px; }
-.theme-toggle { width: 40px; height: 23px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg-soft); position: relative; cursor: pointer; flex-shrink: 0; padding: 0; display: flex; align-items: center; }
-.theme-toggle-knob { position: absolute; top: 1.5px; left: 2px; width: 17px; height: 17px; border-radius: 999px; background: var(--ink); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 9px; transition: transform .3s cubic-bezier(.4,0,.2,1); }
-.site-root[data-theme="dark"] .theme-toggle-knob { transform: translateX(17px); }
 .nav-cart { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .icon-zoom { transition: transform .25s cubic-bezier(.4,0,.2,1); }
 .icon-zoom:hover { transform: scale(1.14); color: var(--accent); }
