@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import type { articles, branches } from "@/db/schema";
-import type { SiteContenu } from "./actions";
+import { envoyerAvisSite, envoyerMessageContact, type SiteContenu } from "./actions";
 
 type Article = typeof articles.$inferSelect;
 type Branche = typeof branches.$inferSelect;
@@ -28,8 +28,8 @@ interface Banniere {
   active: boolean;
 }
 
-const CONTACT_TELEPHONE = "22374744082";
-const CONTACT_AFFICHAGE = "+223 74 74 40 82";
+const CONTACT_TELEPHONE = "22378983849";
+const CONTACT_AFFICHAGE = "+223 78 98 38 49";
 const FAMILLE_GLYPH: Record<string, string> = { A: "👕", B: "☕", C: "🎨", D: "💻", E: "🎁" };
 
 function formatFcfa(v: string | number) {
@@ -140,6 +140,7 @@ export function SiteClient({
   const [vue, setVue] = useState<"grande" | "petite" | "liste" | "galerie">("grande");
   const [galerieIdx, setGalerieIdx] = useState(0);
   const [produitOuvert, setProduitOuvert] = useState<Produit | null>(null);
+  const [messageModal, setMessageModal] = useState<"contact" | "avis" | null>(null);
 
   // Un panneau ouvert (fiche produit) ajoute une entrée d'historique — sur mobile, le bouton
   // "retour" du téléphone doit d'abord refermer le panneau, jamais quitter le site directement
@@ -526,6 +527,12 @@ export function SiteClient({
               WhatsApp
             </a>
           </div>
+          <div className="footer-col">
+            <h4>Échanger</h4>
+            <a onClick={() => setMessageModal("contact")}>Nous écrire</a>
+            <a onClick={() => setMessageModal("avis")}>Laisser un avis</a>
+            <a href="/rejoindre">Rejoignez-nous</a>
+          </div>
         </div>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} EVOLUTIS223. Tous droits réservés.</span>
@@ -534,6 +541,75 @@ export function SiteClient({
       </footer>
 
       {produitOuvert && <DetailPanel produit={produitOuvert} onClose={() => setProduitOuvert(null)} />}
+      {messageModal && <MessageModal mode={messageModal} onClose={() => setMessageModal(null)} />}
+    </div>
+  );
+}
+
+function MessageModal({ mode, onClose }: { mode: "contact" | "avis"; onClose: () => void }) {
+  const [nom, setNom] = useState("");
+  const [contact, setContact] = useState("");
+  const [message, setMessage] = useState("");
+  const [envoi, setEnvoi] = useState(false);
+  const [envoye, setEnvoye] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  async function envoyer() {
+    setEnvoi(true);
+    setErreur(null);
+    const res = mode === "contact" ? await envoyerMessageContact(nom, contact, message) : await envoyerAvisSite(nom, message);
+    setEnvoi(false);
+    if (res.error) setErreur(res.error);
+    else setEnvoye(true);
+  }
+
+  return (
+    <div className="detail-overlay open" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="detail-panel message-panel">
+        <div className="detail-body">
+          <button className="detail-close message-close" onClick={onClose}>
+            ×
+          </button>
+          <h2 style={{ fontSize: 24 }}>{mode === "contact" ? "Nous écrire" : "Laisser un avis"}</h2>
+          {envoye ? (
+            <p style={{ marginTop: 18, fontSize: 15 }}>
+              {mode === "contact"
+                ? "Message envoyé — nous vous répondrons rapidement."
+                : "Merci ! Votre avis sera visible après validation par notre équipe."}
+            </p>
+          ) : (
+            <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 14 }}>
+              <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+                {mode === "avis"
+                  ? "Votre avis ne s'affiche pas immédiatement : nous le validons d'abord."
+                  : "Un message privé, lu par notre équipe — pas affiché publiquement."}
+              </p>
+              <input className="message-input" placeholder="Votre nom" value={nom} onChange={(e) => setNom(e.target.value)} />
+              {mode === "contact" && (
+                <input className="message-input" placeholder="Téléphone ou email (facultatif)" value={contact} onChange={(e) => setContact(e.target.value)} />
+              )}
+              <textarea
+                className="message-input"
+                style={{ minHeight: 120, resize: "vertical" }}
+                placeholder={mode === "contact" ? "Votre message" : "Votre avis"}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+              {erreur && <p style={{ fontSize: 13, color: "#dc2626" }}>{erreur}</p>}
+              <button className="btn-primary" onClick={envoyer} disabled={envoi}>
+                {envoi ? "Envoi…" : "Envoyer"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -749,7 +825,7 @@ a { cursor: pointer; }
 @media (max-width: 1150px) { .nav-cart span { display: none; } .nav-cart svg { width: 23px; height: 23px; } }
 @media (max-width: 900px) { .nav-links { display: none; } }
 
-.hero { position: relative; min-height: 100vh; display: flex; align-items: center; padding: 0 5vw; overflow: hidden; }
+.hero { position: relative; min-height: 66vh; display: flex; align-items: center; padding: 0 5vw; overflow: hidden; }
 .hero-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; align-items: center; gap: 40px; width: 100%; padding-top: 60px; }
 .hero-eyebrow { display: flex; align-items: center; gap: 10px; }
 .hero-eyebrow .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent); }
@@ -793,7 +869,7 @@ a { cursor: pointer; }
 .section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 44px; }
 .section-head h2 { font-size: clamp(34px, 4vw, 52px); }
 
-.catalogue-section { padding-top: 90px; }
+.catalogue-section { padding-top: 45px; }
 .controls-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 30px; }
 .filters { display: flex; flex-wrap: wrap; gap: 10px; }
 .filter-pill { display: flex; align-items: center; gap: 9px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); padding: 11px 20px; border-radius: 999px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; transition: all .25s ease; }
@@ -909,6 +985,10 @@ a { cursor: pointer; }
 .detail-media .glyph { font-size: 150px; opacity: 0.45; }
 .detail-close { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; border-radius: 999px; background: var(--bg); color: var(--ink); border: none; font-size: 18px; cursor: pointer; }
 .detail-body { padding: 34px 36px 44px; }
+.message-panel { position: relative; }
+.message-close { top: 20px; right: 20px; }
+.message-input { width: 100%; box-sizing: border-box; padding: 13px 15px; border: 1.5px solid var(--line); background: transparent; color: var(--ink); font-size: 14px; font-family: inherit; }
+.message-input:focus { outline: none; border-color: var(--ink); }
 .detail-price { margin-top: 14px; font-size: 30px; font-weight: 800; }
 .stock-pill { display: inline-block; margin-top: 10px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; padding: 5px 11px; background: rgba(11,11,11,0.85); color: #fff; }
 .stock-pill.rupture { background: rgba(122,31,31,0.9); }
@@ -933,7 +1013,7 @@ a { cursor: pointer; }
 .vision-text { margin-top: 22px; font-size: 18px; line-height: 1.85; color: color-mix(in srgb, var(--bg) 82%, transparent); max-width: 680px; }
 
 footer { background: var(--footer-bg); color: var(--footer-ink); padding: 60px 5vw 26px; }
-.footer-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 40px; align-items: start; }
+.footer-grid { display: grid; grid-template-columns: 1.4fr 0.85fr 0.85fr 0.85fr; gap: 32px; align-items: start; }
 /* Grand cadre logo (l'utilisateur ajoutera l'image lui-meme) qui prend tout l'espace disponible
    a gauche, bloc de texte pousse a droite au maximum, meme hauteur que le cadre (demande du
    2026-08-09 : "pas un tout petit carre", "meme hauteur", "pousse a droite au maximum"). */

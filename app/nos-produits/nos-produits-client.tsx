@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { articles, branches } from "@/db/schema";
 import { enregistrerContenuNosProduits, type NosProduitsContenu } from "./actions";
@@ -29,7 +30,7 @@ interface Banniere {
   active: boolean;
 }
 
-const CONTACT_TELEPHONE = "22374744082";
+const CONTACT_TELEPHONE = "22378983849";
 const FAMILLE_GLYPH: Record<string, string> = { A: "👕", B: "☕", C: "🎨", D: "💻", E: "🎁" };
 
 function formatFcfa(v: string | number) {
@@ -71,6 +72,7 @@ export function NosProduitsClient({
   banniere,
   contenu: contenuInitial,
   estAdmin,
+  estConnecte,
 }: {
   articles: Article[];
   variantes: VarianteRow[];
@@ -80,7 +82,9 @@ export function NosProduitsClient({
   banniere: Banniere;
   contenu: NosProduitsContenu;
   estAdmin: boolean;
+  estConnecte: boolean;
 }) {
+  const router = useRouter();
   const produits: Produit[] = articleRows.map((article, i) => {
     const variantesArticle = varianteRows.filter((v) => v.articleId === article.id);
     const branche = brancheRows.find((b) => b.id === article.brancheId);
@@ -207,6 +211,16 @@ export function NosProduitsClient({
   return (
     <div className="np-root">
       <style dangerouslySetInnerHTML={{ __html: NOS_PRODUITS_CSS }} />
+
+      {estConnecte ? (
+        <button className="nav-toggle" onClick={() => router.back()} title="Retour">
+          ←
+        </button>
+      ) : (
+        <button className="nav-toggle" onClick={() => window.close()} title="Fermer">
+          ✕
+        </button>
+      )}
 
       {estAdmin && (
         <>
@@ -592,7 +606,8 @@ const NOS_PRODUITS_CSS = `
   .np-root .viewer-dots { bottom: 14px; }
 }
 
-.np-root .admin-toggle { position: fixed; top: 16px; left: 16px; z-index: 200; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--canvas-soft); color: var(--ink); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.np-root .nav-toggle { position: fixed; top: 16px; left: 16px; z-index: 200; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--canvas-soft); color: var(--ink); font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.np-root .admin-toggle { position: fixed; top: 16px; left: 64px; z-index: 200; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--canvas-soft); color: var(--ink); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .np-root .admin-scrim { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 210; display: none; }
 .np-root .admin-scrim.open { display: block; }
 .np-root .admin-menu { position: fixed; top: 0; bottom: 0; left: 0; z-index: 211; width: min(280px, 82vw); background: var(--canvas-soft); border-right: 1px solid var(--line); transform: translateX(-100%); transition: transform .28s cubic-bezier(.2,.7,.3,1); padding: 20px 18px; overflow-y: auto; }

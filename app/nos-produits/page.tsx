@@ -74,6 +74,7 @@ export default async function NosProduitsPage({ searchParams }: { searchParams: 
       banniere={banniere}
       contenu={contenu}
       estAdmin={session ? ["ADMIN", "SUPER_ADMIN"].includes(session.roleCode) : false}
+      estConnecte={Boolean(session)}
     />
   );
 }

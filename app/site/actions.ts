@@ -1,9 +1,9 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { parametresDocuments } from "@/db/schema";
+import { avisSite, messagesContact, parametresDocuments } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { uploadFichier } from "@/lib/blob";
 
@@ -144,4 +144,63 @@ export async function uploaderLogoSite(file: File): Promise<{ url?: string; erro
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Erreur d'envoi." };
   }
+}
+
+// Avis publics (§ demande utilisateur 2026-08-12) — jamais affiché en direct, reste EN_ATTENTE
+// jusqu'à validation Admin/Super Admin depuis Tour de contrôle (voir traiterAvis ci-dessous).
+export async function envoyerAvisSite(nom: string, message: string): Promise<{ error?: string }> {
+  const n = nom.trim();
+  const m = message.trim();
+  if (!n || !m) return { error: "Nom et message requis." };
+  if (m.length > 2000) return { error: "Message trop long." };
+  await db.insert(avisSite).values({ nom: n, message: m });
+  revalidatePath("/validations");
+  return {};
+}
+
+export async function envoyerMessageContact(nom: string, contact: string, message: string): Promise<{ error?: string }> {
+  const n = nom.trim();
+  const m = message.trim();
+  if (!n || !m) return { error: "Nom et message requis." };
+  if (m.length > 2000) return { error: "Message trop long." };
+  await db.insert(messagesContact).values({ nom: n, contact: contact.trim() || null, message: m });
+  revalidatePath("/validations");
+  return {};
+}
+
+export async function chargerAvisEtMessagesEnAttente() {
+  const session = await getSession();
+  if (!session || !["ADMIN", "SUPER_ADMIN"].includes(session.roleCode)) return { avis: [], messages: [] };
+  const [avis, messages] = await Promise.all([
+    db.select().from(avisSite).where(eq(avisSite.statut, "EN_ATTENTE")).orderBy(desc(avisSite.dateCreation)),
+    db.select().from(messagesContact).where(eq(messagesContact.lu, false)).orderBy(desc(messagesContact.dateCreation)),
+  ]);
+  return { avis, messages };
+}
+
+export async function traiterAvisSite(avisId: number, decision: "APPROUVE" | "REJETE"): Promise<{ error?: string }> {
+  try {
+    const session = await requireAdminAccess();
+    await db.update(avisSite).set({ statut: decision, traitePar: session.userId }).where(eq(avisSite.id, avisId));
+    revalidatePath("/validations");
+    revalidatePath("/site");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur." };
+  }
+}
+
+export async function marquerMessageContactLu(messageId: number): Promise<{ error?: string }> {
+  try {
+    await requireAdminAccess();
+    await db.update(messagesContact).set({ lu: true }).where(eq(messagesContact.id, messageId));
+    revalidatePath("/validations");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur." };
+  }
+}
+
+export async function chargerAvisApprouves() {
+  return db.select().from(avisSite).where(eq(avisSite.statut, "APPROUVE")).orderBy(desc(avisSite.dateCreation)).limit(12);
 }
