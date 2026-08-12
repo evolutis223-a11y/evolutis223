@@ -2,7 +2,7 @@
 
 **Document de référence unique pour le développement.** Rédigé le 2026-07-27, consolide et remplace les cinq documents sources du dossier `design/` (Cahier des Charges Étape 1, Schéma Global Application, Spécifications Techniques et Schéma SQL, Schéma Configurateur Articles Personnalisés, Workflow Stock Vente Trésorerie) ainsi que toutes les décisions prises en session de cadrage le 2026-07-27. Les documents sources restent dans `design/` comme archive historique, mais **c'est ce fichier qui fait foi** à partir de maintenant — toute divergence entre ce fichier et un document source doit être résolue en faveur de ce fichier, ou signalée si elle semble être une erreur.
 
-Statut : prêt pour le développement. **Révision v2 (2026-07-27, même jour)** : check profond effectué — 6 corrections techniques sur le schéma SQL (§4.3, §4.5, §4.6, §4.8) et 3 ajouts confirmés par relecture intégrale de `design/Workflow Stock Vente Tresorerie.dc.html`, repérables par l'annotation `CORRECTION 2026-07-27 (v2)` / `AJOUT 2026-07-27 (v2)`. Les points encore ouverts sont listés en fin de document (§16) et ne bloquent pas le démarrage.
+Statut : en développement actif, plusieurs modules déjà en ligne. **Révision v2 (2026-07-27, même jour)** : check profond effectué — 6 corrections techniques sur le schéma SQL (§4.3, §4.5, §4.6, §4.8) et 3 ajouts confirmés par relecture intégrale de `design/Workflow Stock Vente Tresorerie.dc.html`, repérables par l'annotation `CORRECTION 2026-07-27 (v2)` / `AJOUT 2026-07-27 (v2)`. Les points encore ouverts sont listés en fin de document (§16) et ne bloquent pas le démarrage. **Mise à jour de suivi (2026-08-12)** : le document n'avait pas été retouché depuis le 2026-08-04 malgré une semaine de développement actif — §4.10 (nouvelles tables), §16 (nouveaux points ouverts, dont la version mobile) et **§17 (journal détaillé de tout ce qui a été construit depuis)** ajoutés pour rattraper l'écart.
 
 ---
 
@@ -452,7 +452,39 @@ CREATE TABLE journal_audit (
 -- Aucun UPDATE/DELETE autorisé sur journal_audit (GRANT restreint / trigger REVOKE).
 ```
 
-**Ordre de création** : respecter l'ordre des sections 4.1 → 4.9 (clés étrangères).
+### 4.10 Avis publics et messages de contact (AJOUT 2026-08-12)
+
+```sql
+-- Avis publics soumis depuis le site — jamais affichés directement : un visiteur les envoie, ils
+-- restent EN_ATTENTE tant qu'Admin/Super Admin ne les a pas validés depuis Tour de contrôle
+-- (même file d'attente que stock/proformas/maquette), pour éviter qu'un message "bizarre" arrive
+-- en public sans filtre.
+CREATE TABLE avis_site (
+  id            SERIAL PRIMARY KEY,
+  nom           VARCHAR(100) NOT NULL,
+  message       TEXT NOT NULL,
+  statut        VARCHAR(12) NOT NULL DEFAULT 'EN_ATTENTE'
+                  CHECK (statut IN ('EN_ATTENTE','APPROUVE','REJETE')),
+  date_creation TIMESTAMP NOT NULL DEFAULT now(),
+  traite_par    INTEGER REFERENCES utilisateurs(id)
+);
+
+-- Messages "Nous écrire" du site — boîte de réception privée, pas de modération (contrairement à
+-- avis_site) puisqu'ils ne s'affichent jamais publiquement, seulement lus par Admin/Super Admin
+-- depuis Tour de contrôle.
+CREATE TABLE messages_contact (
+  id            SERIAL PRIMARY KEY,
+  nom           VARCHAR(100) NOT NULL,
+  contact       VARCHAR(100),
+  message       TEXT NOT NULL,
+  lu            BOOLEAN NOT NULL DEFAULT FALSE,
+  date_creation TIMESTAMP NOT NULL DEFAULT now()
+);
+```
+
+**Implémenté et vérifié en base réelle (2026-08-12)** : formulaires "Nous écrire" et "Laisser un avis" en pied de page du site public (`/site`), testés de bout en bout (soumission → apparition dans Tour de contrôle → Approuver/Rejeter un avis, Marquer comme lu un message). **Reste à construire** : l'affichage public des avis approuvés (la table le permet déjà, `chargerAvisApprouves()` existe côté serveur, mais aucune section du site ne les affiche encore — à faire quand une place leur sera trouvée sur la page).
+
+**Ordre de création** : respecter l'ordre des sections 4.1 → 4.10 (clés étrangères).
 
 ---
 
@@ -931,6 +963,42 @@ Build solo (l'utilisateur + Claude Code, pas d'équipe externe). Estimation en *
 7. ~~**Seuil de validation des Bons de décaissement**~~ — **RÉSOLU 2026-07-28**, tranché par Claude en l'implémentant : **seuil unique global** (pas par catégorie — plus simple, cohérent avec `parametres_vente_gros` §4.7 qui est aussi un réglage global par défaut), table `parametres_tresorerie` (singleton), 50 000 F par défaut, modifiable par Admin/Super Admin depuis Trésorerie. En dessous du seuil, l'auteur du bon s'auto-valide à la création ; au-delà, un **autre** utilisateur doit valider avant que le montant impacte `calculerSoldeTheorique` — correction associée : auparavant, un bon impactait la caisse dès sa création, jamais en fonction de la validation (`validateurId` n'était pas filtré dans le calcul).
 8. ~~**Répartition de la réserve au prorata des tailles**~~ — **RÉSOLU 2026-07-28**, tranché par Claude en construisant l'écran d'approvisionnement (Phase 1.2) : méthode du **plus grand reste** (largest remainder / Hare). Pour chaque taille : `part = floor(réserve_totale × produit_taille / produit_total)` ; le reliquat non distribué (`réserve_totale − Σ parts`) est attribué une unité à la fois aux tailles ayant le plus grand reste fractionnaire, jusqu'à épuisement. Méthode standard d'apportionnement, déterministe, jamais de reste négatif ni de dépassement de la réserve demandée.
 9. **Unités de mesure au-delà de la pièce/douzaine — nouveau, signalé 2026-07-28, volontairement différé après Stock (1.2) pour les articles simples.** Le tissu et le pagne se vendent au **yard** (unité de base), conditionnés en **pièces** (12 yards pour la gamme EVOLUTIS223 — la norme du marché va plutôt de 3 à 6 yards/pièce selon les fournisseurs, confirmé par recherche) puis en **balles** (50 pièces = 600 yards). Ça ne rentre pas dans le modèle Famille A actuel, qui suppose des douzaines de vêtements en tailles/couleurs — il faudrait généraliser la notion de "conditionnement par palier" (aujourd'hui figée sur la douzaine) plutôt que créer un cas spécial pour le tissu. Séparément, mais lié : le pagne se facture aussi **selon le nombre de cadres/couleurs** — exactement comme la sérigraphie facture selon le nombre de couleurs et le type d'encre. Ce n'est pas un prix fixe par article mais un **calcul** — l'utilisateur avait déjà prévu un module **R&D/Calculateurs** (§7) réunissant plusieurs calculateurs de coût de production/fabrication ; c'est là que cette logique doit vivre, pas comme champ `prix_vente` simple sur `articles`. À concevoir (probablement maquette dédiée) avant de coder — chantier séparé, après le Stock des familles déjà couvertes.
+10. **Version smartphone — pas optimisée, priorité annoncée pour la prochaine session (signalé 2026-08-12).** Contrairement à la version PC (retravaillée en profondeur le 2026-08-12 : en-tête réduit, espacements resserrés), l'expérience mobile du site public et de l'application interne n'a reçu que des correctifs ponctuels (débordement horizontal, empilement de cartes, icônes seules dans les filtres — voir le journal §17) plutôt qu'une vraie passe d'optimisation. L'utilisateur ne demande pas une parité à 100 % avec le PC, mais un vrai chantier dédié, à attaquer explicitement après la présente mise à jour.
+11. **Panier d'achat — jamais construit, malgré une icône qui y ressemble.** L'icône "panier" dans l'en-tête du site (`/site`) est en réalité un raccourci de recherche (`nav-cart`, mal nommé en interne) qui fait défiler jusqu'au catalogue — aucun état de panier, aucun tunnel de commande en ligne classique n'existe. `/nos-produits` et `/configurateur` fonctionnent sans panier (contact WhatsApp/tél. par produit, ou commande directe à la carte). À scoper explicitement si un vrai panier multi-articles est voulu pour la boutique publique.
+12. **Paramètres — onglets Général, Catégories d'articles, Support & bugs, Documentation non construits.** Seuls "Modèles de documents" et "Site & Marketing" ont un contenu réel dans `/parametres` ; les quatre autres affichent un simple message "Onglet pas encore construit". Reporté après l'application et le site web (décision utilisateur, 2026-08-12) — voir §17.
+13. **Tableau de bord VIP — Super Admin uniquement pour l'instant.** Construit et vérifié (§17, 2026-08-12) pour le rôle Super Admin ; les autres rôles gardent le tableau de bord générique existant (§7). L'utilisateur prévoit de faire tester par le reste de l'équipe avant d'envisager des versions dédiées à d'autres rôles.
+
+---
+
+## 17. Journal des mises à jour — 2026-08-04 → 2026-08-12
+
+**Pourquoi cette section existe** : le document n'avait plus été retouché depuis le 2026-08-04, alors qu'une part importante de l'application a été construite ou remaniée depuis. Plutôt que de réécrire chaque section précédente en détail (risque d'incohérence avec les annotations déjà en place), ce journal consolide ce qui a changé, par thème, dans l'esprit "Implémenté et vérifié" du reste du document — pour qu'une trace complète existe avant toute opération risquée (ex. mise à jour d'application).
+
+**Commercial — refonte complète (2026-08-08 → 2026-08-12).** Trois profils réels (Freelance, Commercial, Responsable Commercial) avec ventes/commission/paiements calculés sur données réelles (plus de placeholder). **Système de parrainage** ajouté : chaque utilisateur commercial obtient un lien personnel (`parrainage_liens`, code unique) ; chaque visite via `?ref=CODE` sur `/nos-produits` est journalisée (`parrainage_clics`) sans exiger de session — terrain posé pour la future boutique en ligne (attribution clic→vente, `parrainage_conversions`, pas encore branché sur une vraie conversion). `/commercial` affiche désormais le nombre de visites du mois (soi + équipe pour un Responsable).
+
+**Stocks — refonte visuelle et fonctionnelle (2026-08-08, images 2026-08-12).** Liste/fiche avec statistiques, filtres par famille, recherche, historique des lots, approvisionnement intégré. **2026-08-12** : les photos d'articles et de variantes (`articles.photo_url`, `variantes.photo_url`, §4.3) étaient en base depuis le 2026-07-28 mais jamais chargées ni affichées dans `/stocks` — corrigé : vignette dans la liste, photo dans la fiche, photo par variante dans le tableau "vue d'ensemble" (repli sur la photo de l'article si la variante n'en a pas).
+
+**Trésorerie — fusion et enrichissement (2026-08-08).** Dépenses/Charges fusionnées dans l'écran Trésorerie, bénéfice brut/net calculé en temps réel (voir §7 Rapports pour la formule), charges fixes modifiables, objectifs de CA jour/semaine/mois, prêts (bancaire/personnel/propriétaire), compte d'attente généralisé.
+
+**Commandes — vue Kanban + Liste (2026-08-07).** Bascule en haut à droite, fiche de détail persistante, synchronisée sur `affaires.statut`/`livraisons.statut` réels (fidèle à la maquette de cadrage).
+
+**Nos produits — nouvel écran interne, plusieurs itérations (2026-08-07 → 2026-08-12).** Présentoir vignettes/galerie/liste plein écran (rôle : démarchage tablette/client, distinct de la vitrine publique `/site`) remplace l'ancien raccourci vers `/boutique`. Bandeau publicitaire et dégradé des vignettes persistés (`parametresDocuments`) au lieu d'un état local éphémère. Réutilise le système de parrainage (ci-dessus) pour les liens de partage plutôt que d'en dupliquer un. **2026-08-12** : navigation ajoutée (aucune n'existait) — flèche retour pour le personnel connecté (retourne à l'écran d'origine), "Fermer" pour un visiteur externe via lien de parrainage.
+
+**Site public `/site` — naissance et nombreuses itérations (2026-08-09 → 2026-08-12).** Remplace/complète `/boutique` comme vitrine publique de référence : nav, hero avec diaporama (images réelles importables, réglage boucle/une fois), bandeau promo défilant, catalogue (4 vues : grandes/petites vignettes, liste, galerie), fiche produit en panneau latéral, pied de page. Contenu éditable depuis Paramètres → Site & Marketing (`parametresDocuments`, type `SITE_WEB_CONTENU`). Verrou d'accès public indépendant (mot de passe garanti par le code, `?apercu=evolutis223`, tant que `SITE_OUVERT_AU_PUBLIC` n'est pas activé sur Vercel). De nombreux correctifs mobile ponctuels (débordement horizontal, empilement des vignettes, filtres compactés en icônes, historique du bouton retour) — **voir §16 point 10, ce n'est pas une vraie passe d'optimisation mobile**. **2026-08-12** : logo configurable (deux emplacements — fond clair/fond sombre — modifiables depuis Paramètres, `SiteContenu.logoClairUrl`/`logoSombreUrl`) ; numéro de contact mis à jour (+223 78 98 38 49) ; en-tête réduit de 100vh à 44vh sur PC (retours utilisateur successifs) ; espace catalogue/bandeau promo divisé par deux ; formulaires "Nous écrire" et "Laisser un avis" en pied de page (§4.10) ; pied de page enrichi (colonne "Échanger" : Nous écrire, Laisser un avis, Rejoignez-nous) sans augmenter sa hauteur.
+
+**Tour de contrôle — fusion et enrichissement (2026-08-09, avis/messages 2026-08-12).** Les 3 files (validations stock §9, proformas §12, demandes maquette §10ter) fusionnées en un triage unique avec fiche de détail. Alerte sonore : passée d'un bip isolé toutes les 30s à une sonnerie en boucle (30s son / 1 min silence), 5 sonneries au choix, réglage persisté. **2026-08-12** : nouvelle section "Avis en attente / Messages reçus" (§4.10) — approuver/rejeter un avis, marquer un message comme lu.
+
+**Aide contextuelle — généralisée à toute l'application (2026-08-08, complétée et corrigée 2026-08-12).** Petite bulle "?" par écran (`components/ui/aide-bulle.tsx`), jamais un popup bloquant, toujours avec exemples concrets — présente d'abord sur Commercial/Rapports/Validations/Commandes/Stocks/Trésorerie (2026-08-08), étendue le 2026-08-12 aux 16 écrans qui n'en avaient pas encore (Clients, Fournisseurs, Production, RH, Marketing, Achats, Fonds de circulation, Frais numériques, Affaires, Règlements, Catalogue, R&D Calculateurs, Documents, Paramètres, Vente comptoir, Maquette-admin, Configurateur-admin) — Hub exclu délibérément (deux choix déjà évidents). **Bug corrigé le 2026-08-12** : la bulle s'ouvrait parfois hors de l'écran (positionnement `absolute` naïf, dépendait de la position du bouton déclencheur) — remplacée par un positionnement `fixed` avec correction post-rendu selon la taille réelle du contenu, ne sort plus jamais du viewport.
+
+**Marketing — tiroir de création (2026-08-12).** Le formulaire "Nouvelle promotion" était un pavé toujours ouvert, sans libellés, planté au milieu de la page — transformé en tiroir latéral (même patron que Clients/Fournisseurs), libellé sur chaque champ, aperçu du prix en direct pendant la saisie ("Prix actuel → Prix promo").
+
+**Paiement Mobile Money — Jemenipay, intégration corrigée (2026-08-07).** L'agrégateur retenu (§12 mentionnait PayDunya/CinetPay/Kkiapay comme options) s'est précisé sur **Jemenipay** en pratique : en-têtes d'authentification, formule de signature et mapping webhook corrigés selon la documentation officielle (jemeni.net/docs).
+
+**Fiabilité de la connexion base de données (2026-08-07 et 2026-08-12).** Passage de `pg` brut au pilote officiel Neon serverless (WebSocket) pour éviter les connexions périmées après mise en veille du compute Neon entre deux invocations serverless sur Vercel — cause probable d'échecs aléatoires de création d'affaire observés en production. **2026-08-12** : ce même pilote WebSocket s'est révélé cassé en développement local sur le poste de l'utilisateur (module natif `bufferutil` bloqué par la politique de sécurité Windows du poste) — `db/index.ts` bascule désormais automatiquement sur le pilote HTTP de Neon **en local uniquement** (`NODE_ENV != production`) ; Vercel (production et previews) continue d'utiliser exactement le même pilote WebSocket qu'avant, aucun changement de comportement en ligne.
+
+**Tableau de bord VIP — nouveau, Super Admin uniquement (2026-08-12).** Remplace le tableau de bord générique (§7) pour ce rôle : carte "Vente du jour" mise à jour toutes les 20s (même définition de CA que Trésorerie, §7 — lignes vendues, affaires non annulées, pour un chiffre identique partout), comparatif avec hier et la semaine, animation + signal sonore à chaque nouvelle vente détectée. Widgets réorganisables par glisser-déposer (ordre mémorisé par appareil, `localStorage`) : CA des 7 derniers jours, commandes en ligne (`affaires.provenance = 'Boutique en ligne'`), raccourcis partenaires (réutilise le parrainage ci-dessus). Maquette Artifact validée avant construction (démarche demandée par l'utilisateur pour les écrans à forts enjeux visuels, déjà pratiquée pour le Kanban Production, §8.1). Voir §16 point 13 pour la limite de portée actuelle (Super Admin seul).
+
+**Application interne — retouches diverses (2026-08-09, 2026-08-12).** Icônes SVG remplacent les émojis du bandeau ; recherche globale câblée sur Documents avec bouton visible en plus de la touche Entrée. **2026-08-12** : bouton "Se déconnecter" recoloré en rouge (était gris, peu visible, retour utilisateur direct).
 
 ---
 
