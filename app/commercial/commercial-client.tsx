@@ -153,7 +153,8 @@ export function CommercialClient({
 
         <div>
           <div className="mb-2 text-sm font-semibold text-foreground">Mon activité ce mois-ci</div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <Stat label="Visites de mon lien" value={String(moi.clicsMois)} hint="Nos produits, sans compte" />
             <Stat label="Mes ventes" value={formatFcfa(moi.ventesMois)} hint={`${moi.nombreVentesMois} affaire(s)`} />
             <Stat label="Ma commission (suggérée)" value={formatFcfa(moi.commissionSuggereeMois)} hint={moi.tauxCommission != null ? `Taux : ${moi.tauxCommission}%` : "Aucun taux défini"} />
             <Stat label="Commission déjà payée" value={formatFcfa(moi.commissionPayeeTotal)} />
@@ -177,6 +178,7 @@ export function CommercialClient({
                   <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase text-muted-foreground">
                     <th className="px-3 py-2">Nom</th>
                     <th className="px-3 py-2">Rôle</th>
+                    <th className="px-3 py-2 text-right">Visites du lien</th>
                     <th className="px-3 py-2 text-right">Ventes</th>
                     <th className="px-3 py-2 text-right">Commission suggérée</th>
                   </tr>
@@ -186,6 +188,7 @@ export function CommercialClient({
                     <tr key={m.utilisateurId} className="border-t border-border">
                       <td className="px-3 py-1.5">{m.nom}</td>
                       <td className="px-3 py-1.5 text-xs text-muted-foreground">{m.roleLibelle}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums">{m.clicsMois}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums">
                         {formatFcfa(m.ventesMois)} <span className="text-muted-foreground">({m.nombreVentesMois})</span>
                       </td>

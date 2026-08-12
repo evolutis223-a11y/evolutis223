@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { affaires, bulletinsPaie, clients, lignesAffaire, parrainageLiens, personnel, roles, utilisateurs } from "@/db/schema";
+import { affaires, bulletinsPaie, clients, lignesAffaire, parrainageClics, parrainageLiens, personnel, roles, utilisateurs } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
 import { genererNumero } from "../affaires/actions";
@@ -118,6 +118,18 @@ function bornesMoisCourant() {
   return { debut, fin };
 }
 
+// Nombre de visites du lien de parrainage ce mois-ci (§ 2026-08-12, réutilisé pour "Nos
+// produits") — mesure la portée du lien, indépendant du calcul de commission qui reste basé sur
+// affaires.auteurId ci-dessous.
+async function clicsMoisPourUtilisateur(utilisateurId: number, debut: Date, fin: Date): Promise<number> {
+  const [row] = await db
+    .select({ total: sql<number>`count(*)` })
+    .from(parrainageClics)
+    .innerJoin(parrainageLiens, eq(parrainageLiens.id, parrainageClics.lienId))
+    .where(and(eq(parrainageLiens.utilisateurId, utilisateurId), gte(parrainageClics.dateClic, debut), lt(parrainageClics.dateClic, fin)));
+  return Number(row?.total ?? 0);
+}
+
 async function ventesEtCommission(utilisateurId: number, tauxCommission: number | null, debut: Date, fin: Date) {
   const [row] = await db
     .select({
@@ -136,6 +148,7 @@ async function ventesEtCommission(utilisateurId: number, tauxCommission: number 
 export interface DonneesCommerciales {
   moi: {
     lienCode: string;
+    clicsMois: number;
     tauxCommission: number | null;
     ventesMois: number;
     nombreVentesMois: number;
@@ -149,6 +162,7 @@ export interface DonneesCommerciales {
     nom: string;
     roleLibelle: string;
     tauxCommission: number | null;
+    clicsMois: number;
     ventesMois: number;
     nombreVentesMois: number;
     commissionSuggereeMois: number;
@@ -187,7 +201,10 @@ export async function chargerDonneesCommerciales(): Promise<DonneesCommerciales>
 
   const p = monPersonnel[0];
   const tauxCommission = p?.tauxCommission != null ? Number(p.tauxCommission) : null;
-  const { ventes, nombre, commission } = await ventesEtCommission(session.userId, tauxCommission, debut, fin);
+  const [{ ventes, nombre, commission }, clicsMois] = await Promise.all([
+    ventesEtCommission(session.userId, tauxCommission, debut, fin),
+    clicsMoisPourUtilisateur(session.userId, debut, fin),
+  ]);
 
   let commissionPayeeTotal = 0;
   let commissionEnAttente = 0;
@@ -216,12 +233,13 @@ export async function chargerDonneesCommerciales(): Promise<DonneesCommerciales>
     equipe = await Promise.all(
       membres.map(async (m) => {
         const taux = m.tauxCommission != null ? Number(m.tauxCommission) : null;
-        const r = await ventesEtCommission(m.utilisateurId, taux, debut, fin);
+        const [r, clics] = await Promise.all([ventesEtCommission(m.utilisateurId, taux, debut, fin), clicsMoisPourUtilisateur(m.utilisateurId, debut, fin)]);
         return {
           utilisateurId: m.utilisateurId,
           nom: m.nom,
           roleLibelle: m.roleLibelle,
           tauxCommission: taux,
+          clicsMois: clics,
           ventesMois: r.ventes,
           nombreVentesMois: r.nombre,
           commissionSuggereeMois: r.commission,
@@ -233,6 +251,7 @@ export async function chargerDonneesCommerciales(): Promise<DonneesCommerciales>
   return {
     moi: {
       lienCode,
+      clicsMois,
       tauxCommission,
       ventesMois: ventes,
       nombreVentesMois: nombre,
