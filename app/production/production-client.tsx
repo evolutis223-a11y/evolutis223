@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import { assignerPilote, avancerOf } from "./actions";
 
 interface OfRow {
@@ -110,7 +111,21 @@ export function ProductionClient({
     <div className="mx-auto max-w-6xl p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Ordres de fabrication — Kanban</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold text-foreground">Ordres de fabrication — Kanban</h1>
+            <AideBulle titre="Comment utiliser Production">
+              <p>
+                Un ordre de fabrication (OF) apparaît ici tout seul dès qu&apos;une affaire est validée avec un article personnalisé ou un kit à assembler — rien à créer manuellement.
+              </p>
+              <p>
+                <b>Faire avancer un OF</b> — glisse-dépose sa carte dans la colonne suivante (ex. de &quot;Production&quot; vers &quot;Contrôle qualité&quot;). Impossible de sauter une étape.
+              </p>
+              <p>
+                <b>Pilote</b> — assigne une personne responsable de l&apos;OF ; utilise le filtre &quot;non assignés&quot; pour repérer ce qui attend encore quelqu&apos;un.
+              </p>
+              <p>Une fois à &quot;Prêt&quot;, le retrait ou la livraison se gère ensuite dans Commandes.</p>
+            </AideBulle>
+          </div>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Créé automatiquement à la validation d&apos;une affaire (§8.1 — Famille D, ou Kit marqué
             « nécessite assemblage »). Réception → Conception (si personnalisé) → Production →

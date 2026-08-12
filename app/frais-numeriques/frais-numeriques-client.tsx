@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import { creerFraisNumerique, basculerStatutFrais, supprimerFraisNumerique, type FraisNumeriqueState } from "./actions";
 
 type Ligne = {
@@ -119,7 +120,20 @@ export function FraisNumeriquesClient({
   return (
     <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Frais numériques" modules={modules}>
     <div className="mx-auto max-w-4xl p-6">
-      <h1 className="text-xl font-semibold text-foreground">Frais numériques — registre des coûts de mise en ligne</h1>
+      <div className="flex items-center gap-2">
+        <h1 className="text-xl font-semibold text-foreground">Frais numériques — registre des coûts de mise en ligne</h1>
+        <AideBulle titre="Comment utiliser Frais numériques">
+          <p>
+            Un registre séparé pour les coûts payés en carte personnelle (domaine, hébergement, outils IA, paiement en ligne...) — ça ne passe pas par la caisse, donc ce n&apos;est pas dans Dépenses.
+          </p>
+          <p>
+            <b>Devise</b> — saisis en dollars si c&apos;est facturé en USD (ex. abonnement d&apos;un outil), le montant en FCFA se calcule automatiquement avec le taux indicatif.
+          </p>
+          <p>
+            <b>Fréquence</b> — Unique (achat ponctuel), Mensuel ou Annuel (abonnement récurrent). Le total mensuel affiché en haut ne compte que les lignes au statut &quot;Actif&quot; ; un abonnement annuel y est ramené à son équivalent /12.
+          </p>
+        </AideBulle>
+      </div>
       <p className="mt-1 text-sm text-muted-foreground">
         Domaine, hébergement, outils/IA, paiement en ligne... Coûts payés par carte personnelle, séparés de la
         comptabilité de caisse (/depenses). Taux indicatif : 1 $ ≈ {tauxXofParUsd} F.

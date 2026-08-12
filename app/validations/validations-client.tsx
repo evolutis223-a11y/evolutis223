@@ -15,6 +15,7 @@ import {
   validerDemandeMaquette,
   validerProforma,
 } from "./actions";
+import { chargerAvisEtMessagesEnAttente, marquerMessageContactLu, traiterAvisSite } from "@/app/site/actions";
 
 type Demande = Awaited<ReturnType<typeof listerDemandesEnAttente>>[number];
 interface Proforma {
@@ -227,6 +228,87 @@ function rowSousTitre(row: FluxRow): string {
   if (row.kind === "proforma") return `${row.data.clientNom} — ${formatFcfa(row.data.montantTtc)}`;
   const d = row.data;
   return `${d.nomClient}${d.forfaitNom ? " — " + d.forfaitNom : ""}`;
+}
+
+type AvisRow = { id: number; nom: string; message: string; dateCreation: Date };
+type MessageRow = { id: number; nom: string; contact: string | null; message: string; dateCreation: Date };
+
+// File d'attente avis/messages du site (§ demande utilisateur 2026-08-12) — chargée à part (fetch
+// client au montage) plutôt que via les props de page.tsx : évite de retoucher toute la chaîne de
+// chargement serveur existante pour une file secondaire, même esprit que les autres files déjà là.
+function AvisEtMessagesSection() {
+  const [avis, setAvis] = useState<AvisRow[]>([]);
+  const [messages, setMessages] = useState<MessageRow[]>([]);
+  const [charge, setCharge] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    chargerAvisEtMessagesEnAttente().then((r) => {
+      setAvis(r.avis);
+      setMessages(r.messages);
+      setCharge(true);
+    });
+  }, []);
+
+  async function traiterAvis(id: number, decision: "APPROUVE" | "REJETE") {
+    setBusy(`avis-${id}`);
+    await traiterAvisSite(id, decision);
+    setAvis((prev) => prev.filter((a) => a.id !== id));
+    setBusy(null);
+  }
+
+  async function lireMessage(id: number) {
+    setBusy(`msg-${id}`);
+    await marquerMessageContactLu(id);
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+    setBusy(null);
+  }
+
+  if (!charge || (avis.length === 0 && messages.length === 0)) return null;
+
+  return (
+    <section className="grid gap-3 sm:grid-cols-2">
+      {avis.length > 0 && (
+        <div className="rounded-md border border-border bg-card p-3">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Avis en attente ({avis.length})</div>
+          <div className="flex flex-col gap-2">
+            {avis.map((a) => (
+              <div key={a.id} className="rounded border border-border p-2 text-sm">
+                <div className="font-semibold text-foreground">{a.nom}</div>
+                <p className="mt-0.5 text-muted-foreground">{a.message}</p>
+                <div className="mt-1.5 flex gap-2">
+                  <Button size="sm" disabled={busy === `avis-${a.id}`} onClick={() => traiterAvis(a.id, "APPROUVE")}>
+                    Approuver
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={busy === `avis-${a.id}`} onClick={() => traiterAvis(a.id, "REJETE")}>
+                    Rejeter
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {messages.length > 0 && (
+        <div className="rounded-md border border-border bg-card p-3">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Messages reçus ({messages.length})</div>
+          <div className="flex flex-col gap-2">
+            {messages.map((m) => (
+              <div key={m.id} className="rounded border border-border p-2 text-sm">
+                <div className="font-semibold text-foreground">
+                  {m.nom} {m.contact && <span className="font-normal text-muted-foreground">— {m.contact}</span>}
+                </div>
+                <p className="mt-0.5 text-muted-foreground">{m.message}</p>
+                <Button size="sm" variant="outline" className="mt-1.5" disabled={busy === `msg-${m.id}`} onClick={() => lireMessage(m.id)}>
+                  Marquer comme lu
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: "warning" }) {
@@ -595,6 +677,8 @@ export function ValidationsClient({
             </div>
           )}
         </section>
+
+        <AvisEtMessagesSection />
 
         {erreur && (
           <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-sm text-destructive">{erreur}</p>

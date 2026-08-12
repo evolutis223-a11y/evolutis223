@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import type { articles, clients } from "@/db/schema";
 import {
   ajouterCadre,
@@ -296,7 +297,17 @@ export function RdCalculateursClient({
     <div className="mx-auto max-w-6xl p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Marquage personnalisé (§10bis)</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold text-foreground">Marquage personnalisé (§10bis)</h1>
+            <AideBulle titre="Comment utiliser R&D Calculateurs">
+              <p>
+                Choisis un article déjà en Stock, puis configure un marquage (ex. broderie ou sérigraphie sur un polo) — le calculateur donne un prix, mais ça reste une ligne de vente calculée : ça ne crée jamais un nouvel article dans le Catalogue.
+              </p>
+              <p>
+                <b>Configuration libre</b> — tu choisis chaque option toi-même. <b>Modèles prêts</b> — repars d&apos;une combinaison déjà enregistrée pour aller plus vite.
+              </p>
+            </AideBulle>
+          </div>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Configurez un marquage sur un article existant du Stock — une vente configurée devient
             une ligne d&apos;affaire calculée, jamais un nouvel article Catalogue.

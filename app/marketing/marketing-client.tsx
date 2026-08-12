@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import { ajouterPromotion, definirBanniere, retirerPromotion } from "./actions";
 
 type Promotion = {
@@ -54,7 +55,17 @@ export function MarketingClient({
   return (
     <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Marketing" modules={modules}>
     <div className="mx-auto max-w-3xl p-6">
-      <h1 className="text-xl font-semibold text-foreground">Marketing (§7)</h1>
+      <div className="flex items-center gap-2">
+        <h1 className="text-xl font-semibold text-foreground">Marketing (§7)</h1>
+        <AideBulle titre="Comment utiliser Marketing">
+          <p>
+            <b>Promotions</b> — choisis un article, une réduction (pourcentage ou montant fixe) et une période. Le prix barré apparaît en boutique, mais le prix du Catalogue n&apos;est jamais touché : à la fin de la promotion, tout revient au prix normal automatiquement.
+          </p>
+          <p>
+            <b>Bannière boutique</b> — le message qui défile en haut de la boutique en ligne (ex. &quot;Livraison offerte à Bamako dès 3 pièces&quot;). Un interrupteur pour l&apos;activer/désactiver sans effacer le texte.
+          </p>
+        </AideBulle>
+      </div>
       <p className="mt-1 text-sm text-muted-foreground">
         Promotions sur les prix affichés en boutique et bannière d&apos;annonce — le prix réel du Catalogue n&apos;est jamais
         modifié, la promotion est une couche d&apos;affichage réversible. Voir <Link href="/boutique" className="text-primary hover:underline">/boutique</Link> pour le rendu client.
@@ -83,6 +94,15 @@ export function MarketingClient({
   );
 }
 
+function ChampLabel({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-semibold uppercase text-muted-foreground">{label}</label>
+      {children}
+    </div>
+  );
+}
+
 function PromotionsTab({
   promotions,
   setPromotions,
@@ -92,6 +112,7 @@ function PromotionsTab({
   setPromotions: (fn: (p: Promotion[]) => Promotion[]) => void;
   articles: ArticleOpt[];
 }) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [nom, setNom] = useState("");
   const [articleId, setArticleId] = useState("");
   const [type, setType] = useState("POURCENTAGE");
@@ -100,6 +121,25 @@ function PromotionsTab({
   const [dateFin, setDateFin] = useState("");
   const [pending, setPending] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+
+  const articleChoisi = articles.find((a) => a.id === Number(articleId));
+  const valeurNum = Number(valeur);
+  const previewValide = articleChoisi && Number.isFinite(valeurNum) && valeurNum > 0;
+  const prixApres = previewValide
+    ? type === "POURCENTAGE"
+      ? articleChoisi!.prixVente * (1 - valeurNum / 100)
+      : Math.max(0, articleChoisi!.prixVente - valeurNum)
+    : null;
+
+  function fermerDrawer() {
+    setDrawerOpen(false);
+    setErreur(null);
+    setNom("");
+    setArticleId("");
+    setValeur("");
+    setDateDebut(ajourdhui());
+    setDateFin("");
+  }
 
   async function handleAjouter() {
     const article = articles.find((a) => a.id === Number(articleId));
@@ -138,10 +178,7 @@ function PromotionsTab({
       },
       ...prev,
     ]);
-    setNom("");
-    setArticleId("");
-    setValeur("");
-    setDateFin("");
+    fermerDrawer();
   }
 
   async function handleRetirer(id: number) {
@@ -151,7 +188,12 @@ function PromotionsTab({
 
   return (
     <div>
-      <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-semibold text-foreground">Promotions ({promotions.filter((p) => p.actif).length} active{promotions.filter((p) => p.actif).length > 1 ? "s" : ""})</div>
+        <Button size="sm" onClick={() => setDrawerOpen(true)}>+ Nouvelle promotion</Button>
+      </div>
+
+      <div className="mt-3 flex flex-col gap-2">
         {promotions.map((p) => (
           <div key={p.id} className={`rounded-md border border-border bg-card p-3 ${!p.actif ? "opacity-50" : ""}`}>
             <div className="flex items-start justify-between gap-2">
@@ -168,31 +210,76 @@ function PromotionsTab({
             </div>
           </div>
         ))}
-        {promotions.length === 0 && <p className="text-sm text-muted-foreground">Aucune promotion.</p>}
+        {promotions.length === 0 && <p className="text-sm text-muted-foreground">Aucune promotion pour l&apos;instant.</p>}
       </div>
 
-      <div className="mt-4 flex flex-col gap-2 rounded-md border border-border bg-card p-3">
-        <Input placeholder="Nom (ex. Soldes fin d'année)" value={nom} onChange={(e) => setNom(e.target.value)} />
-        <select value={articleId} onChange={(e) => setArticleId(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
-          <option value="">Article publié en boutique...</option>
-          {articles.map((a) => (
-            <option key={a.id} value={a.id}>{a.nom} — {fmt(a.prixVente)}</option>
-          ))}
-        </select>
-        <div className="grid grid-cols-2 gap-2">
-          <select value={type} onChange={(e) => setType(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
-            <option value="POURCENTAGE">Pourcentage (%)</option>
-            <option value="MONTANT_FIXE">Montant fixe (F)</option>
-          </select>
-          <Input type="number" placeholder="Valeur" value={valeur} onChange={(e) => setValeur(e.target.value)} />
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 z-30 flex justify-end bg-black/40"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) fermerDrawer();
+          }}
+        >
+          <div className="h-full w-full max-w-md overflow-y-auto bg-background p-6 shadow-xl">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-lg font-semibold text-foreground">Nouvelle promotion</h2>
+              <button onClick={fermerDrawer} className="text-xl leading-none text-muted-foreground" aria-label="Fermer">
+                &times;
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <ChampLabel label="Nom de la promotion">
+                <Input placeholder="Ex. Soldes fin d'année" value={nom} onChange={(e) => setNom(e.target.value)} />
+              </ChampLabel>
+
+              <ChampLabel label="Article (doit être publié en boutique)">
+                <select value={articleId} onChange={(e) => setArticleId(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+                  <option value="">Choisir un article...</option>
+                  {articles.map((a) => (
+                    <option key={a.id} value={a.id}>{a.nom} — {fmt(a.prixVente)}</option>
+                  ))}
+                </select>
+              </ChampLabel>
+
+              <div className="grid grid-cols-2 gap-3">
+                <ChampLabel label="Type de réduction">
+                  <select value={type} onChange={(e) => setType(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+                    <option value="POURCENTAGE">Pourcentage (%)</option>
+                    <option value="MONTANT_FIXE">Montant fixe (F)</option>
+                  </select>
+                </ChampLabel>
+                <ChampLabel label={type === "POURCENTAGE" ? "Valeur (%)" : "Valeur (FCFA)"}>
+                  <Input type="number" placeholder={type === "POURCENTAGE" ? "Ex. 20" : "Ex. 2000"} value={valeur} onChange={(e) => setValeur(e.target.value)} />
+                </ChampLabel>
+              </div>
+
+              {previewValide && (
+                <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
+                  <span className="text-muted-foreground">Prix actuel {fmt(articleChoisi!.prixVente)} → prix promo </span>
+                  <span className="font-semibold text-primary">{fmt(prixApres!)}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <ChampLabel label="Du">
+                  <Input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)} />
+                </ChampLabel>
+                <ChampLabel label="Au">
+                  <Input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} />
+                </ChampLabel>
+              </div>
+
+              {erreur && <p className="text-sm text-destructive" role="alert">{erreur}</p>}
+
+              <div className="flex justify-end gap-2 border-t border-border pt-4">
+                <Button type="button" variant="outline" onClick={fermerDrawer}>Annuler</Button>
+                <Button onClick={handleAjouter} disabled={pending}>{pending ? "Création..." : "Créer la promotion"}</Button>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)} />
-          <Input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} />
-        </div>
-        <Button onClick={handleAjouter} disabled={pending}>{pending ? "..." : "Créer la promotion"}</Button>
-        {erreur && <p className="text-xs text-destructive">{erreur}</p>}
-      </div>
+      )}
     </div>
   );
 }

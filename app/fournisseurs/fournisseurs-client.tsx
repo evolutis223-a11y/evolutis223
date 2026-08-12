@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import type { fournisseurs } from "@/db/schema";
 import { createFournisseur, toggleFournisseurActif, type CreateFournisseurState } from "./actions";
 
@@ -75,7 +76,20 @@ export function FournisseursClient({
     <div className="mx-auto max-w-3xl p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Fournisseurs</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold text-foreground">Fournisseurs</h1>
+            <AideBulle titre="Comment utiliser Fournisseurs">
+              <p>
+                Une fiche simple (nom, contact, délai de livraison habituel) — pas de bon de commande ici, juste un carnet d&apos;adresses.
+              </p>
+              <p>
+                Un fournisseur créé ici devient <b>sélectionnable</b> dans Stocks au moment d&apos;approvisionner un lot (ex. tu reçois 3 douzaines de COMATEX, tu le choisis dans la liste).
+              </p>
+              <p>
+                <b>Actif / Inactif</b> — bascule un fournisseur qui n&apos;est plus utilisé sans supprimer son historique de lots.
+              </p>
+            </AideBulle>
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Saisie manuelle (contact, délais) — sélectionnable à l&apos;approvisionnement dans Stocks (§7).
           </p>

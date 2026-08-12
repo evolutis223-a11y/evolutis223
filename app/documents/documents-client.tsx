@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import { formatFcfa } from "@/lib/format";
 import { DocumentPreview, type DocumentPreviewData } from "@/components/documents/document-preview";
 
@@ -122,7 +123,15 @@ export function DocumentsClient({
     <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Documents" modules={modules}>
       <div style={{ display: "flex", gap: 20, padding: 20, height: "calc(100vh - 118px)", boxSizing: "border-box" }}>
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 16 }}>Documents</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Documents</div>
+            <AideBulle titre="Comment utiliser Documents">
+              <p>
+                Les archives de toutes les affaires (devis, proforma, factures, reçus...) déjà créées ailleurs — rien ne se crée ici, c&apos;est une recherche pour retrouver et réimprimer un document.
+              </p>
+              <p>Filtre par type de document, ou cherche par numéro, client ou objet.</p>
+            </AideBulle>
+          </div>
           <input placeholder="Rechercher (n°, client, objet)..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ background: "#121212", border: "1px solid #333", color: "#e0e0e0", padding: "10px 12px", borderRadius: 8, fontSize: 14, marginBottom: 10, boxSizing: "border-box" }} />
           <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
             {TYPE_FILTERS.map((opt) => (

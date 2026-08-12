@@ -206,8 +206,12 @@ export function AppShell({
             </div>
           </div>
           <form action={logout}>
-            <button type="submit" title="Se déconnecter" style={{ background: "none", border: "1px solid #333", color: "#888", borderRadius: 20, width: 40, height: 40, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Icon path={BANDEAU_ICONS.deconnexion} size={18} />
+            <button
+              type="submit"
+              title="Se déconnecter"
+              style={{ background: "rgba(239,68,68,0.12)", border: "1.5px solid #ef4444", color: "#ef4444", borderRadius: 20, width: 40, height: 40, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <Icon path={BANDEAU_ICONS.deconnexion} size={19} />
             </button>
           </form>
         </div>

@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type CSSProperties } from "react";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import {
   accorderAvance,
   accorderPret,
@@ -147,6 +148,22 @@ export function RhClient({
   return (
     <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="RH" modules={modules}>
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16, height: "calc(100vh - 118px)", boxSizing: "border-box", overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <AideBulle titre="Comment utiliser RH">
+            <p>
+              <b>Employés</b> — personnel salarié (CDI/CDD/Stagiaire). <b>Partenaires &amp; Journaliers</b> — personnel payé à la tâche ou au jour, commission possible (ex. commerciaux).
+            </p>
+            <p>
+              <b>Paie</b> — génère les bulletins du mois, déduit automatiquement les avances/prêts en cours et marque le paiement effectué.
+            </p>
+            <p>
+              <b>Incidents</b> — déclare un événement touchant un employé (maladie, décès...) avec son impact et les obligations légales associées, pour garder une trace.
+            </p>
+            <p>
+              <b>Prévisions</b> — besoins saisonniers à venir (ex. 5 couturières pour la période scolaire d&apos;août), suivis jusqu&apos;au recrutement.
+            </p>
+          </AideBulle>
+        </div>
         <div style={{ display: "flex", gap: 4, background: "#1e1e1e", border: "1px solid #333", borderRadius: 8, padding: 4, width: "fit-content", flexShrink: 0 }}>
           <button
             onClick={() => setTab("employes")}

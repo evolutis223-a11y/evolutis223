@@ -48,10 +48,31 @@ interface VarianteRow {
   articleId: number;
   taille: string | null;
   couleur: string | null;
+  photoUrl: string | null;
   seuilAlerte: number;
   stockDetail: number | null;
   stockGros: number | null;
   reserveDetail: number | null;
+}
+
+function VignetteArticle({ url, taille = 40 }: { url: string | null | undefined; taille?: number }) {
+  return (
+    <div
+      className="flex flex-shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/40 text-muted-foreground"
+      style={{ width: taille, height: taille }}
+    >
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <svg width={taille * 0.45} height={taille * 0.45} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+          <circle cx="9" cy="10" r="1.6" />
+          <path d="M21 16.5 15.5 11 6 20" />
+        </svg>
+      )}
+    </div>
+  );
 }
 
 interface LotRow {
@@ -533,11 +554,14 @@ export function StocksClient({
                   className={`rounded-lg border p-3 text-left transition-colors ${a.id === selectedId ? "border-primary bg-primary/10" : "border-border bg-card hover:border-border/70"}`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="text-sm font-semibold text-foreground">{a.nom}</div>
-                      <div className="font-mono text-[10.5px] text-muted-foreground">{a.code}</div>
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <VignetteArticle url={a.photoUrl} />
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-foreground">{a.nom}</div>
+                        <div className="font-mono text-[10.5px] text-muted-foreground">{a.code}</div>
+                      </div>
                     </div>
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10.5px] font-bold text-muted-foreground">{a.famille}</span>
+                    <span className="flex-shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10.5px] font-bold text-muted-foreground">{a.famille}</span>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                     <span>
@@ -556,9 +580,12 @@ export function StocksClient({
             ) : (
               <>
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
-                  <div>
-                    <div className="text-lg font-bold text-foreground">{selected.nom}</div>
-                    <div className="mt-0.5 font-mono text-xs text-muted-foreground">{selected.code}</div>
+                  <div className="flex items-center gap-3">
+                    <VignetteArticle url={selected.photoUrl} taille={56} />
+                    <div>
+                      <div className="text-lg font-bold text-foreground">{selected.nom}</div>
+                      <div className="mt-0.5 font-mono text-xs text-muted-foreground">{selected.code}</div>
+                    </div>
                   </div>
                   {selected.famille !== "E" && (
                     <Button size="sm" onClick={() => setShowAppro((s) => !s)}>
@@ -633,6 +660,7 @@ export function StocksClient({
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-left text-xs uppercase text-muted-foreground">
+                            <th className="py-1.5"></th>
                             <th className="py-1.5">Variante</th>
                             {selected.famille === "A" && <th className="py-1.5">Gros</th>}
                             <th className="py-1.5">Détail dispo.</th>
@@ -646,6 +674,9 @@ export function StocksClient({
                             const dispo = r.stockDetail ?? 0;
                             return (
                               <tr key={r.id} className="border-t border-border">
+                                <td className="py-1.5">
+                                  <VignetteArticle url={r.photoUrl ?? selected.photoUrl} taille={32} />
+                                </td>
                                 <td className="py-1.5">{r.taille || r.couleur ? `${r.taille ?? ""} ${r.couleur ?? ""}`.trim() : "Défaut"}</td>
                                 {selected.famille === "A" && <td className="py-1.5 tabular-nums">{r.stockGros ?? 0}</td>}
                                 <td className="py-1.5 tabular-nums">{dispo}</td>

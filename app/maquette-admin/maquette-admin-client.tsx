@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import { ajouterModele, basculerVerrouillage, definirParametresParcours, retirerModele } from "../maquette/actions";
 
 type Donnees = {
@@ -59,7 +60,17 @@ export function MaquetteAdminClient({
   return (
     <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Maquette — Paramètres" modules={modules}>
     <div className="mx-auto max-w-3xl p-6">
-      <h1 className="text-xl font-semibold text-foreground">Paramètres — Parcours maquette (§10ter)</h1>
+      <div className="flex items-center gap-2">
+        <h1 className="text-xl font-semibold text-foreground">Paramètres — Parcours maquette (§10ter)</h1>
+        <AideBulle titre="Comment utiliser Maquette — Paramètres">
+          <p>
+            Alimente ce que le client public voit sur /maquette, sans jamais y apparaître soi-même côté public.
+          </p>
+          <p>
+            <b>Bibliothèque</b> — les visuels d&apos;exemple proposés au client. <b>Disposition des logos</b> — où et comment un logo client peut être placé sur le produit. <b>Guide technique</b> — les consignes de fichier à respecter (format, résolution...).
+          </p>
+        </AideBulle>
+      </div>
       <p className="mt-1 text-sm text-muted-foreground">
         Bibliothèque de modèles, disposition des logos, guide technique — invisible du côté client public.
       </p>

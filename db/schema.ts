@@ -1145,3 +1145,32 @@ export const fraisNumeriques = pgTable(
     check("frais_numeriques_statut_check", sql`${table.statut} in ('PREVU','ACTIF')`),
   ]
 );
+
+// Avis publics soumis depuis le site (§ demande utilisateur 2026-08-12) — jamais affichés
+// directement : un visiteur les envoie, ils restent EN_ATTENTE tant qu'Admin/Super Admin ne les a
+// pas validés depuis Tour de contrôle (même file d'attente que stock/proformas/maquette), pour
+// éviter qu'un message "bizarre" arrive en public sans filtre.
+export const avisSite = pgTable(
+  "avis_site",
+  {
+    id: serial("id").primaryKey(),
+    nom: varchar("nom", { length: 100 }).notNull(),
+    message: text("message").notNull(),
+    statut: varchar("statut", { length: 12 }).notNull().default("EN_ATTENTE"),
+    dateCreation: timestamp("date_creation").notNull().defaultNow(),
+    traitePar: integer("traite_par").references(() => utilisateurs.id),
+  },
+  (table) => [check("avis_site_statut_check", sql`${table.statut} in ('EN_ATTENTE','APPROUVE','REJETE')`)]
+);
+
+// Messages "Nous écrire" du site — boîte de réception privée, pas de modération (contrairement à
+// avis_site) puisqu'ils ne s'affichent jamais publiquement, seulement lus par Admin/Super Admin
+// depuis Tour de contrôle.
+export const messagesContact = pgTable("messages_contact", {
+  id: serial("id").primaryKey(),
+  nom: varchar("nom", { length: 100 }).notNull(),
+  contact: varchar("contact", { length: 100 }),
+  message: text("message").notNull(),
+  lu: boolean("lu").notNull().default(false),
+  dateCreation: timestamp("date_creation").notNull().defaultNow(),
+});

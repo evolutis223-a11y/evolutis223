@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import type { clients } from "@/db/schema";
 import { createClient, type CreateClientState } from "./actions";
 
@@ -68,7 +69,18 @@ export function ClientsClient({
       <div style={{ padding: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Clients</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Clients</div>
+              <AideBulle titre="Comment utiliser Clients">
+                <p>
+                  <b>Boutique</b> — client comptant, paiement immédiat. Pas de champ contrat à remplir.
+                </p>
+                <p>
+                  <b>ONG / Contrat</b> — paiement différé (ex. 30 jours) avec une référence de contrat. Ce client passe d&apos;abord par une proforma en Commercial avant la facture finale.
+                </p>
+                <p>La recherche filtre par nom ou par contact au fur et à mesure que tu tapes.</p>
+              </AideBulle>
+            </div>
             <div style={{ marginTop: 2, fontSize: 12.5, color: "#888" }}>Boutique (client comptant) ou ONG/Contrat (paiement différé, proforma en amont).</div>
           </div>
           <button onClick={() => setDrawerOpen(true)} style={darkButton("#3b82f6")}>
