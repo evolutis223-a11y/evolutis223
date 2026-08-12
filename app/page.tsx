@@ -7,6 +7,8 @@ import { getSession } from "@/lib/auth";
 import { hasModuleAccess, type ModuleName } from "@/lib/permissions";
 import { AppShell } from "@/components/app-shell";
 import { buildShellModules } from "@/lib/shell-modules";
+import { chargerDonneesVip } from "./dashboard-vip/actions";
+import { DashboardVipClient } from "./dashboard-vip/dashboard-vip-client";
 
 function fmt(n: number) {
   return `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
@@ -32,6 +34,20 @@ export default async function DashboardPage() {
   const estAdminOuSuper = user.roleCode === "ADMIN" || user.roleCode === "SUPER_ADMIN";
 
   const modules = buildShellModules(user.roleCode);
+
+  // Tableau de bord VIP (§ demande utilisateur 2026-08-12) — dédié Super Admin uniquement pour
+  // l'instant ("difficile de vérifier le tout, je vais mettre d'autres membres de l'équipe" pour
+  // les autres rôles plus tard) : vente du jour en direct, comparatif, widgets réorganisables.
+  if (user.roleCode === "SUPER_ADMIN") {
+    const donneesVip = await chargerDonneesVip();
+    return (
+      <AppShell userName={user.nom} roleLibelle={user.roleLibelle} pageTitle="Tableau de bord" modules={modules}>
+        <div style={{ padding: "24px 28px", maxWidth: 1200, margin: "0 auto", boxSizing: "border-box" }}>
+          <DashboardVipClient userName={user.nom} initial={donneesVip} />
+        </div>
+      </AppShell>
+    );
+  }
 
   const [affairesAgg] = await db
     .select({

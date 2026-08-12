@@ -825,7 +825,7 @@ a { cursor: pointer; }
 @media (max-width: 1150px) { .nav-cart span { display: none; } .nav-cart svg { width: 23px; height: 23px; } }
 @media (max-width: 900px) { .nav-links { display: none; } }
 
-.hero { position: relative; min-height: 66vh; display: flex; align-items: center; padding: 0 5vw; overflow: hidden; }
+.hero { position: relative; min-height: 44vh; display: flex; align-items: center; padding: 0 5vw; overflow: hidden; }
 .hero-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; align-items: center; gap: 40px; width: 100%; padding-top: 60px; }
 .hero-eyebrow { display: flex; align-items: center; gap: 10px; }
 .hero-eyebrow .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent); }
