@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { articles, branches } from "@/db/schema";
+import { enregistrerContenuNosProduits, type NosProduitsContenu } from "./actions";
 
 type Article = typeof articles.$inferSelect;
 type Branche = typeof branches.$inferSelect;
@@ -68,6 +69,7 @@ export function NosProduitsClient({
   kitStocks,
   promotions,
   banniere,
+  contenu: contenuInitial,
   estAdmin,
 }: {
   articles: Article[];
@@ -76,6 +78,7 @@ export function NosProduitsClient({
   kitStocks: KitStock[];
   promotions: PromotionActive[];
   banniere: Banniere;
+  contenu: NosProduitsContenu;
   estAdmin: boolean;
 }) {
   const produits: Produit[] = articleRows.map((article, i) => {
@@ -108,7 +111,13 @@ export function NosProduitsClient({
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bannerMessages.length]);
-  const [bannerOn, setBannerOn] = useState(true);
+  // ---------------- RÉGLAGES PERSISTÉS (bandeau, dégradé) ----------------
+  const [contenu, setContenu] = useState(contenuInitial);
+  function majReglage<K extends keyof NosProduitsContenu>(cle: K, valeur: NosProduitsContenu[K]) {
+    const suivant = { ...contenu, [cle]: valeur };
+    setContenu(suivant);
+    enregistrerContenuNosProduits(suivant);
+  }
 
   // ---------------- MODE D'AFFICHAGE ----------------
   const [vue, setVue] = useState<"grille" | "galerie" | "liste">("grille");
@@ -187,9 +196,13 @@ export function NosProduitsClient({
   const [adminOuvert, setAdminOuvert] = useState(false);
   const [gestionOuvert, setGestionOuvert] = useState(false);
   const [gestionPlein, setGestionPlein] = useState(false);
-  const [degradeOn, setDegradeOn] = useState(false);
 
   const produitGalerie = produits[galerieIdx];
+  const bannerNode = (
+    <div className={`banner${contenu.bannerTaille === "grande" ? " grand" : ""}`}>
+      <b>Info</b> · {bannerMessages[bIdx]}
+    </div>
+  );
 
   return (
     <div className="np-root">
@@ -208,13 +221,32 @@ export function NosProduitsClient({
               <div className="titre">Réglages rapides</div>
               <div className="admin-row">
                 Bandeau publicitaire
-                <button className={`sw${bannerOn ? " on" : ""}`} onClick={() => setBannerOn((v) => !v)}>
+                <button className={`sw${contenu.bannerActif ? " on" : ""}`} onClick={() => majReglage("bannerActif", !contenu.bannerActif)}>
+                  <span className="knob" />
+                </button>
+              </div>
+              <div className="admin-row">
+                Position du bandeau
+                <button
+                  className={`sw${contenu.bannerPosition === "bas" ? " on" : ""}`}
+                  onClick={() => majReglage("bannerPosition", contenu.bannerPosition === "haut" ? "bas" : "haut")}
+                  title="Haut / Bas"
+                >
+                  <span className="knob" />
+                </button>
+              </div>
+              <div className="admin-row">
+                Grande taille du bandeau
+                <button
+                  className={`sw${contenu.bannerTaille === "grande" ? " on" : ""}`}
+                  onClick={() => majReglage("bannerTaille", contenu.bannerTaille === "fine" ? "grande" : "fine")}
+                >
                   <span className="knob" />
                 </button>
               </div>
               <div className="admin-row">
                 Dégradés sur les vignettes
-                <button className={`sw${degradeOn ? " on" : ""}`} onClick={() => setDegradeOn((v) => !v)}>
+                <button className={`sw${contenu.degradeActif ? " on" : ""}`} onClick={() => majReglage("degradeActif", !contenu.degradeActif)}>
                   <span className="knob" />
                 </button>
               </div>
@@ -292,11 +324,7 @@ export function NosProduitsClient({
         </>
       )}
 
-      {bannerOn && (
-        <div className="banner">
-          <b>Info</b> · {bannerMessages[bIdx]}
-        </div>
-      )}
+      {contenu.bannerActif && contenu.bannerPosition === "haut" && bannerNode}
 
       <div className="topbar">
         <div className="mark">
@@ -322,9 +350,11 @@ export function NosProduitsClient({
         </button>
       </div>
 
+      {contenu.bannerActif && contenu.bannerPosition === "bas" && bannerNode}
+
       {vue === "grille" && (
         <>
-          <div className={`grid${degradeOn ? " degrade" : ""}`}>
+          <div className={`grid${contenu.degradeActif ? " degrade" : ""}`}>
             {produits.map((p, i) => (
               <div key={p.article.id} className={`tile ${p.grande ? "big" : "small"}`} onClick={() => ouvrir(i)}>
                 <span className={`tile-stock${p.dispo !== null && p.dispo <= 0 ? " rupture" : ""}`} style={{ display: p.dispo === null ? "none" : undefined }} />
@@ -493,6 +523,7 @@ const NOS_PRODUITS_CSS = `
 .np-root .mark b { color: var(--accent); font-weight: 800; }
 
 .np-root .banner { background: var(--canvas-soft); border-bottom: 1px solid var(--line); padding: 7px 14px; text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
+.np-root .banner.grand { padding: 15px 14px; font-size: 13px; }
 .np-root .banner b { color: var(--accent); }
 
 .np-root .modes { display: flex; justify-content: center; gap: 8px; padding: 4px 0 16px; }

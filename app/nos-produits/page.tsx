@@ -6,6 +6,7 @@ import { calculerStockKit } from "@/app/stocks/actions";
 import { chargerBanniereBoutique, chargerPromotionsActives } from "@/app/marketing/actions";
 import { getSession } from "@/lib/auth";
 import { hasModuleAccess } from "@/lib/permissions";
+import { chargerContenuNosProduits } from "./actions";
 import { NosProduitsClient } from "./nos-produits-client";
 
 // Présentoir "Nos produits" (2026-08-12) — remplace l'ancien raccourci vers /boutique dans le menu
@@ -23,7 +24,7 @@ export default async function NosProduitsPage() {
     );
   }
 
-  const [articleRows, varianteRows, brancheRows, promotionsActives, banniere] = await Promise.all([
+  const [articleRows, varianteRows, brancheRows, promotionsActives, banniere, contenu] = await Promise.all([
     db.select().from(articles).where(eq(articles.publieBoutique, true)).orderBy(asc(articles.nom)),
     db
       .select({
@@ -39,6 +40,7 @@ export default async function NosProduitsPage() {
     db.select().from(branches),
     chargerPromotionsActives(),
     chargerBanniereBoutique(),
+    chargerContenuNosProduits(),
   ]);
 
   const kitStocks = await Promise.all(
@@ -56,6 +58,7 @@ export default async function NosProduitsPage() {
       kitStocks={kitStocks}
       promotions={promotionsActives}
       banniere={banniere}
+      contenu={contenu}
       estAdmin={["ADMIN", "SUPER_ADMIN"].includes(session.roleCode)}
     />
   );
