@@ -299,13 +299,16 @@ export function NosProduitsClient({
               <div className="manage-card">
                 <div className="titre">Liens &amp; accès partagés</div>
                 <div className="note" style={{ marginTop: 6 }}>
-                  Pas encore disponible — nécessite le système de tickets d&apos;accès par utilisateur (à construire séparément).
+                  Chaque commercial a son lien nominatif (page Commercial → « Mon lien de parrainage »), utilisable sans compte. Les visites sont comptabilisées.
                 </div>
+                <Link className="lien" href="/commercial">
+                  Voir dans Commercial →
+                </Link>
               </div>
               <div className="manage-card">
                 <div className="titre">Commerciaux &amp; chiffre d&apos;affaires généré</div>
                 <div className="note" style={{ marginTop: 6 }}>
-                  Sera relié une fois les liens nominatifs en place. En attendant, consulte Commercial et Rapports directement.
+                  L&apos;attribution automatique d&apos;une vente à un lien viendra avec le futur système de commande. En attendant, consulte Commercial et Rapports directement.
                 </div>
                 <Link className="lien" href="/rapports">
                   Voir Rapports →

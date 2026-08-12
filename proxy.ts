@@ -54,12 +54,20 @@ async function verifierVerrouPublic(request: NextRequest): Promise<NextResponse 
 }
 
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
 
   const reponseVerrou = await verifierVerrouPublic(request);
   if (reponseVerrou) return reponseVerrou;
 
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
+
+  // Lien de parrainage (§ 2026-08-12) : un visiteur sans session mais avec un ?ref= valide accède
+  // à "Nos produits" sans se connecter — la page elle-même vérifie le code et affiche un message
+  // clair si le lien est invalide/désactivé (pas de redirection vers /login, déroutant pour un
+  // client externe).
+  if (pathname.startsWith("/nos-produits") && searchParams.get("ref")) {
     return NextResponse.next();
   }
 

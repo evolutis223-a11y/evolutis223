@@ -42,7 +42,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 
 function LienParrainage({ code }: { code: string }) {
   const [copie, setCopie] = useState(false);
-  const lien = `https://evolutis223.com/boutique?ref=${code}`;
+  const lien = `https://evolutis223.com/nos-produits?ref=${code}`;
 
   async function copier() {
     try {
@@ -58,7 +58,8 @@ function LienParrainage({ code }: { code: string }) {
     <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
       <div className="text-sm font-semibold text-foreground">Mon lien de parrainage</div>
       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-        Partage-le sur tes pages/réseaux — une vente réalisée via ce lien te sera automatiquement attribuée dès que la boutique en ligne sera ouverte.
+        Partage-le pour montrer &laquo; Nos produits &raquo; sans que la personne ait besoin d&apos;un compte — chaque visite via ce lien est comptabilisée.
+        L&apos;attribution automatique des ventes/commissions arrivera avec le futur système de commande.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <code className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-xs text-foreground">{lien}</code>

@@ -3,7 +3,7 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { parametresDocuments } from "@/db/schema";
+import { parametresDocuments, parrainageClics, parrainageLiens, utilisateurs } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 
 const TYPE_DOCUMENT = "NOS_PRODUITS_CONTENU";
@@ -60,4 +60,19 @@ export async function enregistrerContenuNosProduits(contenu: NosProduitsContenu)
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Erreur." };
   }
+}
+
+// Réutilise le système de parrainage déjà construit dans Commercial (§ 2026-08-08) plutôt que
+// d'en refaire un séparé pour "Nos produits" — un lien = un commercial, le clic est journalisé ici
+// (ce qui manquait), la conversion en vente/commission viendra avec le futur panier.
+export async function verifierLienParrainage(code: string): Promise<{ valide: boolean; nomCommercial?: string }> {
+  const [lien] = await db
+    .select({ id: parrainageLiens.id, actif: parrainageLiens.actif, nomCommercial: utilisateurs.nom })
+    .from(parrainageLiens)
+    .innerJoin(utilisateurs, eq(utilisateurs.id, parrainageLiens.utilisateurId))
+    .where(eq(parrainageLiens.code, code))
+    .limit(1);
+  if (!lien || !lien.actif) return { valide: false };
+  await db.insert(parrainageClics).values({ lienId: lien.id });
+  return { valide: true, nomCommercial: lien.nomCommercial };
 }
