@@ -484,7 +484,11 @@ export function SiteClient({
         <div className="footer-grid">
           <div className="footer-identity">
             <div className="footer-logo-frame">
-              <span className="footer-logo-label">Logo</span>
+              {contenu.logoSombreUrl ? (
+                <img src={contenu.logoSombreUrl} alt="EVOLUTIS223" className="footer-logo-img" />
+              ) : (
+                <span className="footer-logo-label">Logo</span>
+              )}
             </div>
             <div className="footer-identity-text">
               <div className="footer-mark">
@@ -934,8 +938,9 @@ footer { background: var(--footer-bg); color: var(--footer-ink); padding: 60px 5
    a gauche, bloc de texte pousse a droite au maximum, meme hauteur que le cadre (demande du
    2026-08-09 : "pas un tout petit carre", "meme hauteur", "pousse a droite au maximum"). */
 .footer-identity { display: flex; gap: 16px; align-items: stretch; }
-.footer-logo-frame { flex: 1; min-height: 90px; border: 1.5px dashed rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; }
+.footer-logo-frame { flex: 1; min-height: 90px; border: 1.5px dashed rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; padding: 12px; }
 .footer-logo-label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--footer-muted); }
+.footer-logo-img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .footer-identity-text { flex-shrink: 0; text-align: right; }
 .footer-mark { font-size: 24px; font-weight: 800; }
 .footer-mark span { color: var(--accent); }

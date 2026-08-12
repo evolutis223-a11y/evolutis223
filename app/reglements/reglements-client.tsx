@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useActionState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import { DocumentPreview, type DocumentPreviewData } from "@/components/documents/document-preview";
 import { formatFcfa } from "@/lib/format";
 import { enregistrerReglement, type ReglementLibreState } from "./actions";
@@ -198,7 +199,17 @@ export function ReglementsClient({
     <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Règlements" modules={modules}>
       <div style={{ flex: 1, padding: 20, display: "flex", gap: 20, overflow: "hidden" }}>
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 14, flexShrink: 0 }}>Fiche de règlement</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexShrink: 0 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Fiche de règlement</div>
+            <AideBulle titre="Comment utiliser Règlements">
+              <p>
+                <b>Lié à une affaire</b> — recherche par nom/n° de facture, l&apos;encaissement vient réduire ce qu&apos;il reste à payer sur cette affaire précise.
+              </p>
+              <p>
+                <b>Sans affaire</b> — encaissement libre (ex. un acompte informel) : renseigne le payeur, le mode (espèces, Mobile Money, chèque, virement) et le montant, un reçu se génère.
+              </p>
+            </AideBulle>
+          </div>
           <div style={{ fontSize: 13, color: "#888", marginBottom: 8, flexShrink: 0 }}>Lier à une affaire (facultatif — nom, n° de facture, objet...)</div>
           <input
             placeholder="Rechercher une affaire..."

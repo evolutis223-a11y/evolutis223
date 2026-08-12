@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import { creerBonAchat } from "./actions";
 
 type Fournisseur = { id: number; nom: string; contact: string | null; delaiLivraisonJours: number | null; actif: boolean };
@@ -74,7 +75,17 @@ export function AchatsClient({
   return (
     <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Achats" modules={modules}>
     <div className="mx-auto max-w-4xl p-6">
-      <h1 className="text-xl font-semibold text-foreground">Achats (§7)</h1>
+      <div className="flex items-center gap-2">
+        <h1 className="text-xl font-semibold text-foreground">Achats (§7)</h1>
+        <AideBulle titre="Comment utiliser Achats">
+          <p>
+            Un tableau de bord de lecture, pas une nouvelle saisie : les lots réceptionnés viennent de Stocks, les sorties &quot;Achat marchandise&quot; viennent de Trésorerie.
+          </p>
+          <p>
+            <b>Bon d&apos;achat</b> — sert seulement à enregistrer une petite sortie de caisse ponctuelle (ex. achat de fournitures de bureau) avec un motif, sans passer par un lot de stock.
+          </p>
+        </AideBulle>
+      </div>
       <p className="mt-1 text-sm text-muted-foreground">
         Vue consolidée des approvisionnements (Stock) et des sorties de caisse Achat marchandise (Trésorerie) — pas de
         nouvelle logique, juste un écran dédié sur des données déjà réelles.

@@ -2,9 +2,10 @@
 
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import { DocumentPreview } from "@/components/documents/document-preview";
 import { enregistrerMastheadTexte, type ExempleDocument } from "./actions";
-import { enregistrerContenuSiteWeb, uploaderImageHeroSite, type SiteBannerSlide, type SiteContenu, type SiteHeroSlide } from "@/app/site/actions";
+import { enregistrerContenuSiteWeb, uploaderImageHeroSite, uploaderLogoSite, type SiteBannerSlide, type SiteContenu, type SiteHeroSlide } from "@/app/site/actions";
 
 const TABS = [
   { key: "apparence", label: "Général" },
@@ -55,7 +56,18 @@ export function ParametresClient({
   return (
     <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Paramètres" modules={modules}>
       <div style={{ padding: 20 }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 16 }}>Paramètres</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Paramètres</div>
+          <AideBulle titre="Comment utiliser Paramètres">
+            <p>
+              <b>Modèles de documents</b> — le texte d&apos;en-tête et les exemples affichés sur chaque type de document imprimable (facture, devis...).
+            </p>
+            <p>
+              <b>Site &amp; Marketing</b> — édite le contenu du site public (evolutis223.com/site) : logo, thème, accroche, diaporama, bandeau promo, sans toucher au code.
+            </p>
+            <p>Les autres onglets (Général, Catégories d&apos;articles, Support, Documentation) arrivent au fur et à mesure.</p>
+          </AideBulle>
+        </div>
         <div style={{ display: "flex", gap: 6, background: "#121212", border: "1px solid #333", borderRadius: 8, padding: 4, marginBottom: 22, width: "fit-content", flexWrap: "wrap" }}>
           {TABS.map((t) => (
             <button
@@ -117,6 +129,15 @@ function SiteWebEditor({ contenuInitial }: { contenuInitial: SiteContenu }) {
     else if (res.error) setErreur(res.error);
   }
 
+  const [envoiLogoEnCours, setEnvoiLogoEnCours] = useState<"logoClairUrl" | "logoSombreUrl" | null>(null);
+  async function handleUploadLogo(champ: "logoClairUrl" | "logoSombreUrl", file: File) {
+    setEnvoiLogoEnCours(champ);
+    const res = await uploaderLogoSite(file);
+    setEnvoiLogoEnCours(null);
+    if (res.url) set(champ, res.url);
+    else if (res.error) setErreur(res.error);
+  }
+
   function updateUniversCard(i: number, patch: { glyph?: string; label?: string }) {
     setContenu((c) => ({ ...c, universCards: c.universCards.map((u, ui) => (ui === i ? { ...u, ...patch } : u)) }));
     setSaved(false);
@@ -168,6 +189,54 @@ function SiteWebEditor({ contenuInitial }: { contenuInitial: SiteContenu }) {
           Voir le site ↗
         </a>
       </div>
+
+      <SiteSection titre="Logo">
+        <div style={{ fontSize: 12.5, color: "#888", marginBottom: 14 }}>
+          Deux versions monochromes : une pour les fonds clairs, une pour les fonds sombres (pied de page). Remplaçables à tout moment.
+        </div>
+        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+          {(
+            [
+              { champ: "logoClairUrl" as const, label: "Logo — fond clair", fond: "#ffffff" },
+              { champ: "logoSombreUrl" as const, label: "Logo — fond sombre", fond: "#121212" },
+            ]
+          ).map((l) => (
+            <div key={l.champ} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: "0.04em" }}>{l.label}</label>
+              <div
+                style={{
+                  width: 180,
+                  height: 90,
+                  borderRadius: 6,
+                  border: "1px solid #3a3a3a",
+                  background: contenu[l.champ] ? `${l.fond} url(${contenu[l.champ]}) center/contain no-repeat` : l.fond,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 11,
+                  color: l.fond === "#121212" ? "#666" : "#bbb",
+                }}
+              >
+                {!contenu[l.champ] && "Aucun logo"}
+              </div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "#93c5fd", cursor: "pointer", textAlign: "center" }}>
+                {envoiLogoEnCours === l.champ ? "Envoi…" : contenu[l.champ] ? "Remplacer" : "Importer"}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  style={{ display: "none" }}
+                  disabled={envoiLogoEnCours !== null}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadLogo(l.champ, file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+          ))}
+        </div>
+      </SiteSection>
 
       <SiteSection titre="Thème">
         <div style={{ fontSize: 12.5, color: "#888", marginBottom: 12 }}>

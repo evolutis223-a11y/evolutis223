@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import { validerRemise } from "./actions";
 
 interface FondsRow {
@@ -55,7 +56,17 @@ export function FondsCirculationClient({
     <div className="mx-auto max-w-3xl p-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Fonds en circulation (§8.2)</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-semibold text-foreground">Fonds en circulation (§8.2)</h1>
+            <AideBulle titre="Comment utiliser Fonds en circulation">
+              <p>
+                Quand un livreur encaisse de l&apos;argent chez le client (livraison réglée en espèces), cet argent reste &quot;en circulation&quot; tant qu&apos;il ne l&apos;a pas remis physiquement.
+              </p>
+              <p>
+                <b>Valider une remise</b> — saisis le montant réellement remis par le livreur ; s&apos;il diffère du montant attendu, l&apos;écart apparaît immédiatement. Rien n&apos;entre en Trésorerie tant que la remise n&apos;est pas validée.
+              </p>
+            </AideBulle>
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Espèces collectées sur le terrain par un livreur — rapprochement et validation
             Admin/Comptable avant impact sur la Trésorerie centrale.

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import {
   encaisserVenteComptoir,
   type CatalogueComptoirArticle,
@@ -201,7 +202,17 @@ export function VenteComptoirClient({ initialCatalogue }: { initialCatalogue: Ca
   return (
     <main className="mx-auto max-w-2xl p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-foreground">Poste de vente comptoir</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-semibold text-foreground">Poste de vente comptoir</h1>
+          <AideBulle titre="Comment utiliser Vente comptoir">
+            <p>
+              Pensé pour vendre même sans connexion : le catalogue reste disponible hors ligne (mis en cache), et une vente encaissée sans réseau part dans une file d&apos;attente.
+            </p>
+            <p>
+              Dès que &quot;Hors ligne&quot; repasse à &quot;En ligne&quot;, les ventes en attente s&apos;envoient automatiquement — pas besoin de tout ressaisir.
+            </p>
+          </AideBulle>
+        </div>
         <span
           className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${enLigne ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"}`}
         >

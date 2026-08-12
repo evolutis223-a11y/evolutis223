@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import { formatFcfa, formatNombre } from "@/lib/format";
 import { DocumentPreview, type DocumentPreviewData } from "@/components/documents/document-preview";
 import type { affaires, articles, demandesValidationStock, lignesAffaire, reglements } from "@/db/schema";
@@ -948,7 +949,18 @@ export function AffairesClient({
         {/* Liste */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexShrink: 0 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Affaires</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Affaires</div>
+              <AideBulle titre="Comment utiliser Affaires">
+                <p>
+                  Une affaire regroupe un client, des lignes d&apos;articles et un type de document (Devis, Proforma, Bon de commande, Reçu, Facture, Avoir) — &quot;+ Nouvelle&quot; ouvre le formulaire complet.
+                </p>
+                <p>
+                  <b>Validation</b> — si le stock d&apos;un article Famille A est insuffisant, l&apos;affaire n&apos;est pas bloquée définitivement : une demande part vers Admin/Super Admin pour arbitrage.
+                </p>
+                <p>Les règlements (acompte, paiement partiel ou total) s&apos;enregistrent directement depuis la fiche de l&apos;affaire ouverte.</p>
+              </AideBulle>
+            </div>
             <button onClick={() => setDrawerOpen(true)} style={darkButton("#3b82f6")}>
               + Nouvelle
             </button>

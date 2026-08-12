@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import type { articles, branches } from "@/db/schema";
 import {
   createArticle,
@@ -214,7 +215,20 @@ export function CatalogueClient({
         {/* Liste */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexShrink: 0 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Catalogue</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Catalogue</div>
+              <AideBulle titre="Comment utiliser Catalogue">
+                <p>
+                  <b>Familles</b> — A (textile/douzaines), B (unité simple), E (kits, stock recalculé automatiquement). Filtre en haut pour ne voir qu&apos;une famille, ou &quot;Modèles&quot; pour les gabarits réutilisables.
+                </p>
+                <p>
+                  <b>Publié en boutique</b> — la barre verte à gauche d&apos;un article indique qu&apos;il est visible sur la boutique en ligne ; bascule-le depuis sa fiche.
+                </p>
+                <p>
+                  <b>Nécessite assemblage</b> — coche cette option sur un kit pour qu&apos;il génère un ordre de fabrication dans Production au lieu d&apos;être vendu directement du stock.
+                </p>
+              </AideBulle>
+            </div>
             {isSuperAdmin && (
               <button onClick={() => setDrawerOpen(true)} style={darkButton("#3b82f6")}>
                 + Nouvel article

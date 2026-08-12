@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { AppShell, type ShellModule } from "@/components/app-shell";
+import { AideBulle } from "@/components/ui/aide-bulle";
 import {
   ajouterFinition,
   ajouterModeleConfigurateur,
@@ -173,7 +174,17 @@ export function ConfigurateurAdminClient({
   return (
     <AppShell userName={userName} roleLibelle={roleLibelle} pageTitle="Configurateur — Paramètres" modules={modules}>
     <div className="mx-auto max-w-3xl p-6">
-      <h1 className="text-xl font-semibold text-foreground">Paramètres — Configurateur (§3.3/§10)</h1>
+      <div className="flex items-center gap-2">
+        <h1 className="text-xl font-semibold text-foreground">Paramètres — Configurateur (§3.3/§10)</h1>
+        <AideBulle titre="Comment utiliser Configurateur — Paramètres">
+          <p>
+            Alimente ce que le client public voit sur /configurateur, sans jamais y apparaître soi-même côté public.
+          </p>
+          <p>
+            <b>Modèles (chemin court)</b> — les gabarits prêts à choisir avec un prix de départ. <b>Finitions (chemin long)</b> — les options de personnalisation détaillée proposées au client.
+          </p>
+        </AideBulle>
+      </div>
       <p className="mt-1 text-sm text-muted-foreground">
         Galerie de modèles chemin court et finitions du chemin long — invisible du côté client public.
       </p>

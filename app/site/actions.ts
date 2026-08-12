@@ -31,6 +31,8 @@ export interface SiteUniversCard {
 export interface SiteContenu {
   theme: "light" | "dark";
   accent: "or" | "vert" | "noir";
+  logoClairUrl?: string;
+  logoSombreUrl?: string;
   eyebrow: string;
   leadText: string;
   badgeAnnees: string;
@@ -128,6 +130,16 @@ export async function uploaderImageHeroSite(file: File): Promise<{ url?: string;
   try {
     await requireAdminAccess();
     const { url } = await uploadFichier(file, "site-hero");
+    return { url };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur d'envoi." };
+  }
+}
+
+export async function uploaderLogoSite(file: File): Promise<{ url?: string; error?: string }> {
+  try {
+    await requireAdminAccess();
+    const { url } = await uploadFichier(file, "site-logo");
     return { url };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Erreur d'envoi." };

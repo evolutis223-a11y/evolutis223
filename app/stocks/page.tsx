@@ -33,6 +33,7 @@ export default async function StocksPage() {
         articleId: variantes.articleId,
         taille: variantes.taille,
         couleur: variantes.couleur,
+        photoUrl: variantes.photoUrl,
         seuilAlerte: variantes.seuilAlerte,
         stockDetail: vStockVariante.stockDetail,
         stockGros: vStockVariante.stockGros,
